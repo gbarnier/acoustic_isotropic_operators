@@ -1,0 +1,3 @@
+[submodule "acoustic_iso_lib/external/genericIO"]
+	path = acoustic_iso_lib/external/genericIO
+	url = http://cees-gitlab.Stanford.EDU/bob/genericIO.git
