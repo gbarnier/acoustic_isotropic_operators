@@ -18,17 +18,13 @@ set(ACOUSTIC_ISOTROPIC_OPERATORS_STRING ${ACOUSTIC_ISOTROPIC_OPERATORS_MAJOR_VER
 
 #Required packages
 find_package(Boost REQUIRED)
-
-#Other packages/libraries
-find_package(genericIO)
-find_package(sepVector)
-find_package(hypercube)
+find_package(OpenMP)
 
 #Adding genericIO submodule
 # execute_process(COMMAND git submodule add http://cees-gitlab.Stanford.EDU/bob/genericIO.git external/genericIO WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 #Updating genericIO library
   execute_process(COMMAND git submodule update --init --recursive -- external/genericIO WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-  # add_subdirectory(external/genericIO)
+  add_subdirectory(external/genericIO)
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/external/genericIO)
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/external/genericIO/external/sepVector)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/cpp)
