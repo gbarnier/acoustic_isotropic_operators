@@ -43,7 +43,7 @@ add_subdirectory(acoustic_iso_double)
 # include folder for ACOUSTIC_ISO_DOUBLE library
 include_directories(acoustic_iso_double/include)
 # include folder for pyAcousticIsotropic library
-# add_subdirectory(python)
+add_subdirectory(python)
 
 include(InstallRequiredSystemLibraries)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
