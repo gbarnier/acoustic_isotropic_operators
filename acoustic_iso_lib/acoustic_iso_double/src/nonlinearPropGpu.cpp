@@ -30,7 +30,7 @@ void nonlinearPropGpu::forward(const bool add, const std::shared_ptr<double2DReg
 	if (!add) data->scale(0.0);
 
  	std::clock_t start;
-    double duration;
+  double duration;
 
 	/* Allocation */
 	std::shared_ptr<double2DReg> modelRegDts(new double2DReg(_fdParam->_nts, _nSourcesReg));
@@ -56,6 +56,7 @@ void nonlinearPropGpu::forward(const bool add, const std::shared_ptr<double2DReg
 
 	/* Interpolate to irregular grid */
 	_receivers->forward(true, dataRegDts, data);
+
 
 }
 

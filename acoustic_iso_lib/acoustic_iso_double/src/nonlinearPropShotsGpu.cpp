@@ -79,6 +79,7 @@ void nonlinearPropShotsGpu::forward(const bool add, const std::shared_ptr<double
 
 		int iGpu = omp_get_thread_num();
 
+
 		// Copy model slice
 		if(constantSrcSignal == 1) {
 			memcpy(modelSliceVector[iGpu]->getVals(), &(model->getVals()[0]), sizeof(double)*hyperModelSlice->getAxis(1).n*hyperModelSlice->getAxis(2).n);
