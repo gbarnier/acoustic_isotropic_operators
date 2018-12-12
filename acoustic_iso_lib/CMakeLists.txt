@@ -46,6 +46,8 @@ add_subdirectory(acoustic_iso_double)
 include_directories(acoustic_iso_double/include)
 # include folder for pyAcousticIsotropic library
 add_subdirectory(python)
+# include folder for pyOperator module
+add_subdirectory(external/pySolver/python)
 
 include(InstallRequiredSystemLibraries)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")

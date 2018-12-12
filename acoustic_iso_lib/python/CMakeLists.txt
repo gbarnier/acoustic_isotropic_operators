@@ -27,7 +27,7 @@ if (pybind11_FOUND)
 
   #Installing library
   install( TARGETS pyAcoustic_iso_double DESTINATION lib/python)
-  # install( FILES Derivative.py DESTINATION lib/python)
+  install( FILES Acoustic_iso_double.py DESTINATION lib/python)
 
 else(pybind11_FOUND)
   MESSAGE("WARNING!Did not find pybid11. Not compiling ${PROJECT-NAME}")

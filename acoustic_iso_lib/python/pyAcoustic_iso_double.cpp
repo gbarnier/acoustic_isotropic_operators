@@ -35,5 +35,7 @@ PYBIND11_MODULE(pyAcoustic_iso_double, clsGeneric) {
 
       .def("adjointWavefield",(void (nonlinearPropShotsGpu::*)(const bool, const std::shared_ptr<double3DReg>, std::shared_ptr<double3DReg>)) &nonlinearPropShotsGpu::adjointWavefield, "Adjoint wavefield")
 
+      .def("dotTest",(bool (nonlinearPropShotsGpu::*)(const bool, const float)) &nonlinearPropShotsGpu::dotTest,"Dot-Product Test")
+
       ;
 }
