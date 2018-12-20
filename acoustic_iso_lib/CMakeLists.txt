@@ -25,7 +25,11 @@ find_package(OpenMP)
 #Adding genericIO submodule
 # execute_process(COMMAND git submodule add http://cees-gitlab.Stanford.EDU/bob/genericIO.git external/genericIO WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 #Updating genericIO library
-  execute_process(COMMAND git submodule update --init --recursive -- external/genericIO WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+if(NOT DEFINED AddGenericIO)
+    set(AddGenericIO TRUE)
+endif()
+if(${AddGenericIO})
+  # execute_process(COMMAND git submodule update --init --recursive --remote external/genericIO WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   add_subdirectory(external/genericIO)
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/external/genericIO)
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/external/genericIO/external/sepVector)
@@ -34,6 +38,8 @@ find_package(OpenMP)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/sepVector/external/hypercube/lib)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/buffers/external/json)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/buffers/lib)
+  set(AddGenericIO FALSE)
+endif()
 
 #Finding multithread libraries
 find_package(Threads)
@@ -47,8 +53,8 @@ include_directories(acoustic_iso_double/include)
 # include folder for pyAcousticIsotropic library
 add_subdirectory(python)
 # include folder for pySolver module
-execute_process(COMMAND git submodule update --init --recursive -- external/pySolver WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-add_subdirectory(external/pySolver/python)
+execute_process(COMMAND git submodule update --init --remote external/pySolver WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_subdirectory(external/pySolver/GenericSolver)
 
 include(InstallRequiredSystemLibraries)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
