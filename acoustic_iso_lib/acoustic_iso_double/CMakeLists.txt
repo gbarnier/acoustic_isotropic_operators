@@ -33,25 +33,6 @@ set(SOURCE_BORN_EXT ${SRC_DIR}/fdParam.cpp
 		        	${SRC_DIR}/BornExtShotsGpu.cpp
 		        	${SRC_DIR}/BornExtGpu.cpp
 )
-#Executables to be compiled
-# set(EXECS ${SRC_DIR}/nonlinearPropShotsGpuMain.cpp ${SRC_DIR}/BornShotsGpuMain.cpp ${SRC_DIR}/BornExtShotsGpuMain.cpp)
-
-#Header files to include during installation
-# set(INC_DIR include)
-# set(HEADERS ${INC_DIR}/deviceGpu.h
-# 			${INC_DIR}/fdParam.h
-# 			${INC_DIR}/seismicOperator2D.h
-# 			${INC_DIR}/nonlinearPropGpu.h
-# 			${INC_DIR}/interpTimeLinTbb.h
-# 			${INC_DIR}/nonlinearPropShotsGpu.h
-# 			${INC_DIR}/secondTimeDerivative.h
-# 			${INC_DIR}/BornShotsGpu.h
-# 			${INC_DIR}/BornShotsGpuFunctions.h
-# 			${INC_DIR}/BornGpu.h
-# 			${INC_DIR}/BornExtShotsGpu.h
-# 			${INC_DIR}/BornExtShotsGpuFunctions.h
-# 			${INC_DIR}/BornExtGpu.h
-# )
 
 #SEP LIBRARY DIRECTORIES
 link_directories(${Generic-cpp_BINARY_DIR}

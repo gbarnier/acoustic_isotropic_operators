@@ -10,22 +10,22 @@
 namespace py = pybind11;
 using namespace SEP;
 
-
-PYBIND11_MODULE(pyAcoustic_iso_double, clsGeneric) {
+//Definition of Device object and non-linear propagator
+PYBIND11_MODULE(pyAcoustic_iso_double1, clsGeneric) {
 
   py::add_ostream_redirect(clsGeneric, "ostream_redirect");
 
   py::class_<deviceGpu, std::shared_ptr<deviceGpu>>(clsGeneric, "deviceGpu")
-      .def(py::init<const std::shared_ptr<SEP::double1DReg>, const std::shared_ptr<SEP::double1DReg>, const std::shared_ptr<double2DReg>, int &>(), "Initlialize a deviceGPU object using location, velocity, and nt")
+      .def(py::init<const std::shared_ptr<SEP::double1DReg>, const std::shared_ptr<SEP::double1DReg>, const std::shared_ptr<double2DReg>, int &>(), "Initialize a deviceGPU object using location, velocity, and nt")
 
       .def(py::init<const std::vector<int> &, const std::vector<int> &, const std::shared_ptr<double2DReg>, int &>(), "Initlialize a deviceGPU object using coordinates and nt")
 
       .def(py::init<const int &, const int &, const int &, const int &, const int &, const int &, const std::shared_ptr<double2DReg>, int &>(), "Initlialize a deviceGPU object using sampling in z and x axes, velocity, and nt")
 
-      ;
+  ;
 
   py::class_<nonlinearPropShotsGpu, std::shared_ptr<nonlinearPropShotsGpu>>(clsGeneric,"nonlinearPropShotsGpu")
-      .def(py::init<std::shared_ptr<SEP::double2DReg>, std::shared_ptr<paramObj>, std::vector<std::shared_ptr<deviceGpu>>, std::vector<std::shared_ptr<deviceGpu>>>(), "Initlialize a nonlinearPropShotsGpu")
+      .def(py::init<std::shared_ptr<SEP::double2DReg>, std::shared_ptr<paramObj>, std::vector<std::shared_ptr<deviceGpu>>, std::vector<std::shared_ptr<deviceGpu>>>(), "Initialize a nonlinearPropShotsGpu")
 
       .def("forward", (void (nonlinearPropShotsGpu::*)(const bool, const std::shared_ptr<double3DReg>, std::shared_ptr<double3DReg>)) &nonlinearPropShotsGpu::forward, "Forward")
 
@@ -37,5 +37,6 @@ PYBIND11_MODULE(pyAcoustic_iso_double, clsGeneric) {
 
       .def("dotTest",(bool (nonlinearPropShotsGpu::*)(const bool, const float)) &nonlinearPropShotsGpu::dotTest,"Dot-Product Test")
 
-      ;
+  ;
+
 }

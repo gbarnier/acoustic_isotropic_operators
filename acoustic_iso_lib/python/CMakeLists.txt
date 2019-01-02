@@ -19,14 +19,20 @@ if (pybind11_FOUND)
   include_directories(${GENERIC_EXPORT_INC_DIRS})
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
-  set(LIBS ACOUSTIC_ISO_DOUBLE_NL ACOUSTIC_ISO_DOUBLE_BORN ACOUSTIC_ISO_DOUBLE_BORN_EXT genericCpp buffers jsonCpp hypercube  ${OpenMP_EXE_LINKER_FLAGS} ${TBB_LIBRARIES} ${GENERIC_EXPORT_LIBS})
+  set(LIBS genericCpp buffers jsonCpp hypercube  ${OpenMP_EXE_LINKER_FLAGS} ${TBB_LIBRARIES} ${GENERIC_EXPORT_LIBS})
 
   #Compiling and adding module to library
-  pybind11_add_module(pyAcoustic_iso_double MODULE pyAcoustic_iso_double.cpp)
-  target_link_libraries(pyAcoustic_iso_double PRIVATE ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_double1 MODULE pyAcoustic_iso_double1.cpp)
+  target_link_libraries(pyAcoustic_iso_double1 PRIVATE ACOUSTIC_ISO_DOUBLE_NL ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_double2 MODULE pyAcoustic_iso_double2.cpp)
+  target_link_libraries(pyAcoustic_iso_double2 PRIVATE ACOUSTIC_ISO_DOUBLE_BORN ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_double3 MODULE pyAcoustic_iso_double3.cpp)
+  target_link_libraries(pyAcoustic_iso_double3 PRIVATE ACOUSTIC_ISO_DOUBLE_BORN_EXT ${LIBS})
 
   #Installing library
-  install( TARGETS pyAcoustic_iso_double DESTINATION lib/python)
+  install( TARGETS pyAcoustic_iso_double1 DESTINATION lib/python) #Module for non-linear operator
+  install( TARGETS pyAcoustic_iso_double2 DESTINATION lib/python) #Module for Born operator
+  install( TARGETS pyAcoustic_iso_double3 DESTINATION lib/python) #Module for Extended Born operator
   install( FILES Acoustic_iso_double.py DESTINATION lib/python)
 
 else(pybind11_FOUND)
