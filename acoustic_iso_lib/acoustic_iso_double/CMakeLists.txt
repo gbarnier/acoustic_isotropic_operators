@@ -7,12 +7,12 @@ include_directories(include)
 #Files to be compiled
 set(SRC_DIR src)
 set(SOURCE ${SRC_DIR}/nonlinearPropShotsGpu.cpp
-		   		 ${SRC_DIR}/nonlinearPropGpu.cpp
-	   	  	 ${SRC_DIR}/fdParam.cpp
-	   	     ${SRC_DIR}/deviceGpu.cpp
-	   	     ${SRC_DIR}/nonlinearShotsGpuFunctions.cu
-	   	     ${SRC_DIR}/interpTimeLinTbb.cpp
-		       ${SRC_DIR}/secondTimeDerivative.cpp
+		   ${SRC_DIR}/nonlinearPropGpu.cpp
+	   	   ${SRC_DIR}/fdParam.cpp
+	   	   ${SRC_DIR}/deviceGpu.cpp
+	   	   ${SRC_DIR}/nonlinearShotsGpuFunctions.cu
+	   	   ${SRC_DIR}/interpTimeLinTbb.cpp
+		   ${SRC_DIR}/secondTimeDerivative.cpp
 	   )
 #Executables to be compiled
 set(EXECS ${SRC_DIR}/nonlinearPropShotsGpuMain.cpp)
@@ -20,21 +20,21 @@ set(EXECS ${SRC_DIR}/nonlinearPropShotsGpuMain.cpp)
 #Header files to include during installation
 set(INC_DIR include)
 set(HEADERS ${INC_DIR}/deviceGpu.h
-			      ${INC_DIR}/fdParam.h
-			      ${INC_DIR}/nonlinearPropGpu.h
-			      ${INC_DIR}/interpTimeLinTbb.h
-			      ${INC_DIR}/nonlinearPropShotsGpu.h
-			      ${INC_DIR}/secondTimeDerivative.h
-		)
+			${INC_DIR}/fdParam.h
+			${INC_DIR}/nonlinearPropGpu.h
+			${INC_DIR}/interpTimeLinTbb.h
+			${INC_DIR}/nonlinearPropShotsGpu.h
+			${INC_DIR}/secondTimeDerivative.h
+)
 
 #SEP LIBRARY DIRECTORIES
 link_directories(${Generic-cpp_BINARY_DIR}
-								 ${hypercube_BINARY_DIR}
-								 ${buffers-lib_BINARY_DIR}
-								 ${json_BINARY_DIR}
-							   ${sepVector-lib_BINARY_DIR}
-							   /opt/SEP/SEP8_jarvis/lib/
-							   )
+				 ${hypercube_BINARY_DIR}
+				 ${buffers-lib_BINARY_DIR}
+				 ${json_BINARY_DIR}
+				 ${sepVector-lib_BINARY_DIR}
+				 /net/server/homes/sep/ettore/research/packages/acoustic_isotropic_operators/iolibs/local/lib/
+)
 
 #Compiling the project library
 add_library(ACOUSTIC_ISO_DOUBLE ${SOURCE})

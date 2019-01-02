@@ -15,6 +15,7 @@ make install
 ```
 If SEPIO is already installed, then skip the previous step.
 
+Open te file ./acoustic_iso_lib/acoustic_iso_double/CMAKELists.txt and change the path '/net/server/homes/sep/ettore/research/packages/acoustic_isotropic_operators/iolibs/local/lib/' to the one in which the SEPIO library was installed.
 Change pathtoSEPIO and run to build the library:
 ```
 cd build
