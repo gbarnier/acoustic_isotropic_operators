@@ -16,7 +16,7 @@ nonlinearPropShotsGpu::nonlinearPropShotsGpu(std::shared_ptr<SEP::double2DReg> v
 	assert(getGpuInfo(_nGpu, _info, _deviceNumberInfo)); // Get info on GPU cluster and check that there are enough available GPUs
 	_saveWavefield = _par->getInt("saveWavefield", 0);
 	_wavefieldShotNumber = _par->getInt("wavefieldShotNumber", 0);
-	if (_info == 1){std::cout << "Saving wavefield(s) for shot # " << _wavefieldShotNumber << std::endl;}
+	if (_info == 1 && _saveWavefield == 1){std::cout << "Saving wavefield(s) for shot # " << _wavefieldShotNumber << std::endl;}
 	_sourcesVector = sourcesVector;
 	_receiversVector = receiversVector;
 
@@ -78,7 +78,6 @@ void nonlinearPropShotsGpu::forward(const bool add, const std::shared_ptr<double
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
-
 
 		// Copy model slice
 		if(constantSrcSignal == 1) {

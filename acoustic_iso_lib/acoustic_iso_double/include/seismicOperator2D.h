@@ -44,7 +44,7 @@ class seismicOperator2D : public Operator <V1, V2> {
 
 		// Acquisition
 		void setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared_ptr<deviceGpu> receivers, const std::shared_ptr<V1> model, const std::shared_ptr<V2> data); // Nonlinear
-		void setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared_ptr<V2> sourcesSignals, std::shared_ptr<deviceGpu> receivers, const std::shared_ptr<V1> model, const std::shared_ptr<V2> data); // Born + Tomo + Wemva
+		void setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared_ptr<V2> sourcesSignals, std::shared_ptr<deviceGpu> receivers, const std::shared_ptr<V1> model, const std::shared_ptr<V2> data); // Born + Tomo
 
 		// Scaling
 		void scaleSeismicSource(const std::shared_ptr<deviceGpu> seismicSource, std::shared_ptr<V2> signal, const std::shared_ptr<fdParam> parObj) const;
@@ -52,7 +52,7 @@ class seismicOperator2D : public Operator <V1, V2> {
 		// Other mutators
 		void setGpuNumber(int iGpu){_iGpu = iGpu;}
 		std::shared_ptr<double3DReg> setWavefield(int wavefieldFlag); // If flag=1, allocates a wavefield (with the correct size) and returns it. If flag=0, return a dummy wavefield of size 1x1x1
-		virtual void setAllWavefields(int wavefieldFlag) = 0; // Allocates all wavefields associated with a seismic operator --> this function has to be implemented by child classes
+		virtual void setAllWavefields(int wavefieldFlag) = 0; // Allocates all wavefields associated with a seismic operator --> this function HAS to be implemented by child classes (it will call setWavefield)
 
 		// Accessors
 		std::shared_ptr<fdParam> getFdParam(){ return _fdParam; }

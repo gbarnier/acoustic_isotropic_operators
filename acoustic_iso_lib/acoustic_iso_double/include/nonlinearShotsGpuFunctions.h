@@ -3,7 +3,7 @@
 
 /*********************************** Initialization **************************************/
 bool getGpuInfo(int nGpu, int info, int deviceNumber);
-void initNonlinearGpu(double dz, double dx, int nz, int nx, int nts, double dts, int sub, int minPad, double alphaCos, int nGpu, int iGpu);
+void initNonlinearGpu(double dz, double dx, int nz, int nx, int nts, double dts, int sub, int minPad, int blockSize, double alphaCos, int nGpu, int iGpu);
 void allocateNonlinearGpu(double *vel2Dtw2, int iGpu);
 void deallocateNonlinearGpu(int iGpu);
 

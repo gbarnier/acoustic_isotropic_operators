@@ -15,9 +15,9 @@
 #include "double3DReg.h"
 #include "ioModes.h"
 #include "deviceGpu.h"
-#include "fdParam.h"
-#include "nonlinearPropShotsGpu.h"
+#include "BornExtShotsGpu.h"
 #include <vector>
+#include <string>
 
 using namespace SEP;
 
@@ -27,26 +27,22 @@ int main(int argc, char **argv) {
 	ioModes modes(argc, argv);
 	std::shared_ptr <SEP::genericIO> io = modes.getDefaultIO();
 	std::shared_ptr <paramObj> par = io->getParamObj();
-
-	/* General parameters */
 	int adj = par->getInt("adj", 0);
 	int saveWavefield = par->getInt("saveWavefield");
 	int dotProd = par->getInt("dotProd", 0);
-	int nShot = par->getInt("nShot");
-	axis shotAxis = axis(nShot, 1.0, 1.0);
 
-	if (adj == 0 && dotProd == 0 ){
+	if (adj == 0 && dotProd == 0){
 		std::cout << " " << std::endl;
 		std::cout << "-------------------------------------------------------------------" << std::endl;
-		std::cout << "----------------------- Running nonlinear forward -----------------" << std::endl;
+		std::cout << "------------------ Running extended Born forward ------------------" << std::endl;
 		std::cout << "-------------------------------------------------------------------" << std::endl;
 		std::cout << " " << std::endl;
 	}
 
-	if (adj == 1 && dotProd == 0 ){
+	if (adj == 1 && dotProd == 0){
 		std::cout << " " << std::endl;
 		std::cout << "-------------------------------------------------------------------" << std::endl;
-		std::cout << "----------------------- Running nonlinear adjoint -----------------" << std::endl;
+		std::cout << "------------------ Running extended Born adjoint ------------------" << std::endl;
 		std::cout << "-------------------------------------------------------------------" << std::endl;
 		std::cout << " " << std::endl;
 	}
@@ -58,12 +54,16 @@ int main(int argc, char **argv) {
 		std::cout << " " << std::endl;
 	}
 
+
 	/* Model and data declaration */
-	std::shared_ptr<double3DReg> model1Double, data1Double;
-	std::shared_ptr<float3DReg> model1Float, data1Float;
-	std::shared_ptr<float3DReg> wavefield1Float;
-	std::shared_ptr<double3DReg> wavefield1Double;
-	std::shared_ptr <genericRegFile> model1File, data1File, wavefield1File, dampFile;
+	std::shared_ptr<float2DReg> sourcesSignalTempFloat;
+	std::shared_ptr<double2DReg> sourcesSignalTempDouble;
+	std::shared_ptr<double3DReg> model1Double, model2Double; // Model
+	std::shared_ptr<float3DReg> model1Float, model2Float;
+	std::shared_ptr<double3DReg> data1Double, data2Double; // Data
+	std::shared_ptr<float3DReg> data1Float, data2Float;
+	std::shared_ptr <genericRegFile> sourcesFile, model1File, model2File, data1File, data2File, sourcesSignalsFile;
+	std::shared_ptr <hypercube> model1Hyper, data1Hyper;
 
 	/* Read time parameters */
 	int nts = par->getInt("nts");
@@ -73,6 +73,22 @@ int main(int argc, char **argv) {
 	int ntw = (nts - 1) * sub + 1;
 	double dtw = dts / double(sub);
 	axis timeAxisFine = axis(ntw, 0.0, dtw);
+
+	/* Read extension parameters */
+	axis extAxis;
+	std::string extension = par->getString("extension", "none");
+	int nExt = par->getInt("nExt", 1);
+	if (nExt%2 == 0){std::cout << "Length of extension axis must be an uneven number" << std::endl; assert(1==2);}
+	int hExt = (nExt-1)/2;
+	if (extension == "time"){
+		double dExt = par->getFloat("dExt", dts);
+		double oExt = par->getFloat("oExt", -dExt*hExt);
+		extAxis = axis(nExt, oExt, dExt);
+	} else {
+		double dExt = par->getFloat("dExt", par->getFloat("dx", -1.0));
+		double oExt = par->getFloat("oExt", -dExt*hExt);
+		extAxis = axis(nExt, oExt, dExt);
+	}
 
 	/* Read padding parameters */
 	int zPadMinus = par->getInt("zPadMinus");
@@ -97,7 +113,6 @@ int main(int argc, char **argv) {
 	}
 
 	/********************************* Create sources vector ****************************/
-	// Create source device vector
 	int nzSource = 1;
 	int ozSource = par->getInt("zSource") - 1 + zPadMinus + fat;
 	int dzSource = 1;
@@ -107,11 +122,13 @@ int main(int argc, char **argv) {
 	int spacingShots = par->getInt("spacingShots", spacingShots);
 	axis sourceAxis(nxSource, oxSource, dxSource);
 	std::vector<std::shared_ptr<deviceGpu>> sourcesVector;
+	int nShot = par->getInt("nShot");
 	for (int iShot; iShot<nShot; iShot++){
 		std::shared_ptr<deviceGpu> sourceDevice(new deviceGpu(nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, velDouble, nts));
 		sourcesVector.push_back(sourceDevice);
 		oxSource = oxSource + spacingShots;
 	}
+	axis shotAxis = axis(nShot, oxSource, dxSource);
 
 	/********************************* Create receivers vector **************************/
 	int nzReceiver = 1;
@@ -128,32 +145,48 @@ int main(int argc, char **argv) {
 		receiversVector.push_back(recDevice);
 	}
 
+	/******************************* Create sources signals vector **********************/
+	// Read sources signals file - we use one identical wavelet for all shots
+	sourcesSignalsFile = io->getRegFile(std::string("sources"),usageIn);
+	std::shared_ptr <hypercube> sourcesSignalsHyper = sourcesSignalsFile->getHyper();
+	std::vector<std::shared_ptr<double2DReg>> sourcesSignalsVector;
+	if (sourcesSignalsHyper->getNdim() == 1){
+		axis a(1);
+		sourcesSignalsHyper->addAxis(a);
+	}
+	sourcesSignalTempFloat = std::make_shared<float2DReg>(sourcesSignalsHyper);
+	sourcesSignalTempDouble = std::make_shared<double2DReg>(sourcesSignalsHyper);
+	sourcesSignalsFile->readFloatStream(sourcesSignalTempFloat);
+	for (int its=0; its<nts; its++){(*sourcesSignalTempDouble->_mat)[0][its] = (*sourcesSignalTempFloat->_mat)[0][its];}
+	sourcesSignalsVector.push_back(sourcesSignalTempDouble);
+
 	/*********************************** Allocation *************************************/
+
 	/* Forward propagation */
 	if (adj == 0) {
 
 		/* Allocate and read model */
-		// Provide one wavelet for all shots
 		model1File = io->getRegFile(std::string("model1"),usageIn);
 		std::shared_ptr <hypercube> model1Hyper = model1File->getHyper();
-		if (model1Hyper->getNdim() == 1){
+		if (model1Hyper->getNdim() == 2){
 			axis a(1);
 			model1Hyper->addAxis(a);
-			model1Hyper->addAxis(a);
 		}
+
 		model1Float = std::make_shared<float3DReg>(model1Hyper);
 		model1Double = std::make_shared<double3DReg>(model1Hyper);
 		model1File->readFloatStream(model1Float);
 
-		for (int i = 0; i < model1Hyper->getAxis(2).n; i++) {
-			#pragma omp parallel for num_threads(24)
-			for (int it = 0; it < model1Hyper->getAxis(1).n; it++) {
-				(*model1Double->_mat)[0][i][it] = (*model1Float->_mat)[0][i][it];
+		for (int iExt=0; iExt<nExt; iExt++){
+			for (int ix=0; ix<model1Hyper->getAxis(2).n; ix++) {
+				for (int iz=0; iz<model1Hyper->getAxis(1).n; iz++) {
+					(*model1Double->_mat)[iExt][ix][iz] = (*model1Float->_mat)[iExt][ix][iz];
+				}
 			}
 		}
 
-		/* Data double allocation */
-		std::shared_ptr<hypercube> data1Hyper(new hypercube(model1Hyper->getAxis(1), receiverAxis, shotAxis));
+		/* Data allocation */
+		std::shared_ptr<hypercube> data1Hyper(new hypercube(sourcesSignalsHyper->getAxis(1), receiverAxis, shotAxis));
 		data1Double = std::make_shared<double3DReg>(data1Hyper);
 		data1Float = std::make_shared<float3DReg>(data1Hyper);
 
@@ -161,121 +194,124 @@ int main(int argc, char **argv) {
 		data1File = io->getRegFile(std::string("data1"), usageOut);
 		data1File->setHyper(data1Hyper);
 		data1File->writeDescription();
+
 	}
 
+	/* Adjoint propagation */
 	if (adj == 1) {
 
 		/* Allocate and read data */
 		data1File = io->getRegFile(std::string("data1"),usageIn);
-
 		std::shared_ptr <hypercube> data1Hyper = data1File->getHyper();
-		if (data1Hyper->getNdim() == 2) {
+
+		// Case where only one receiver and 1 shot
+		if (data1Hyper->getNdim() == 1){
+			axis a(1);
+			data1Hyper->addAxis(a);
+			data1Hyper->addAxis(a);
+		}
+
+		// Case where only multiple receivers and 1 shot
+		if (data1Hyper->getNdim() == 2){
 			axis a(1);
 			data1Hyper->addAxis(a);
 		}
 
-		data1Double = std::make_shared<double3DReg>(data1Hyper);
 		data1Float = std::make_shared<float3DReg>(data1Hyper);
+		data1Double = std::make_shared<double3DReg>(data1Hyper);
 		data1File->readFloatStream(data1Float);
-
-		for (int iShot = 0; iShot < data1Hyper->getAxis(3).n; iShot++) {
-			for (int iReceiver = 0; iReceiver < data1Hyper->getAxis(2).n; iReceiver++) {
-				for (int its = 0; its < data1Hyper->getAxis(1).n; its++) {
-					(*data1Double->_mat)[iShot][iReceiver][its] = (*data1Float->_mat)[iShot][iReceiver][its];
+		for (int iShot=0; iShot<nShot; iShot++){
+			for (int ix=0; ix<data1Hyper->getAxis(2).n; ix++) {
+				for (int iz=0; iz<data1Hyper->getAxis(1).n; iz++) {
+					(*data1Double->_mat)[iShot][ix][iz] = (*data1Float->_mat)[iShot][ix][iz];
 				}
 			}
 		}
 
-		/* Allocate model */
-		axis a(1);
-		std::shared_ptr <hypercube> model1Hyper(new hypercube(timeAxisCoarse, a, a));
+		/* Allocate and read model */
+		std::shared_ptr<hypercube> model1Hyper = velHyper;
+		model1Hyper->addAxis(extAxis);
 		model1Float = std::make_shared<float3DReg>(model1Hyper);
 		model1Double = std::make_shared<double3DReg>(model1Hyper);
 
-		for (int i = 0; i < model1Hyper->getAxis(2).n; i++) {
-			for (int it = 0; it < model1Hyper->getAxis(1).n; it++) {
-				(*model1Double->_mat)[0][i][it] = (*model1Float->_mat)[0][i][it];
-			}
-		}
-
-		/* Files shits */
+		/* Stupid files shits */
 		model1File = io->getRegFile(std::string("model1"),usageOut);
 		model1File->setHyper(model1Hyper);
 		model1File->writeDescription();
+
 	}
 
-	if (saveWavefield == 1){
-		// The wavefield(s) allocation is done inside the nonlinearPropShotsGpu object -> no need to allocate outside
-		std::shared_ptr<hypercube> wavefield1Hyper(new hypercube(velFloat->getHyper()->getAxis(1), velFloat->getHyper()->getAxis(2), timeAxisCoarse));
-		wavefield1File = io->getRegFile(std::string("wavefield1"), usageOut);
-		wavefield1File->setHyper(wavefield1Hyper);
-		wavefield1File->writeDescription();
-	}
+	/* Wavefields */
+	std::shared_ptr<double3DReg> srcWavefield1Double, srcWavefield2Double, secWavefield1Double;
+	std::shared_ptr<float3DReg> srcWavefield1Float, srcWavefield2Float, secWavefield1Float;
+	std::shared_ptr<genericRegFile> srcWavefield1File = io->getRegFile(std::string("srcWavefield1"), usageOut);
+	std::shared_ptr<genericRegFile> srcWavefield2File = io->getRegFile(std::string("srcWavefield2"), usageOut);
+	std::shared_ptr<genericRegFile> secWavefield1File = io->getRegFile(std::string("secWavefield1"), usageOut);
 
 	/************************************************************************************/
 	/******************************** SIMULATIONS ***************************************/
 	/************************************************************************************/
 
-	/* Create nonlinear propagation object */
-	std::shared_ptr<nonlinearPropShotsGpu> object1(new nonlinearPropShotsGpu(velDouble, par, sourcesVector, receiversVector));
+	/* Create Born extended object */
+	std::shared_ptr<BornExtShotsGpu> object1(new BornExtShotsGpu(velDouble, par, sourcesVector, sourcesSignalsVector, receiversVector));
 
 	/********************************** FORWARD *****************************************/
-	if (adj == 0 && dotProd == 0) {
+	if (adj == 0 && dotProd ==0) {
 
-		/* Apply forward */
 		if (saveWavefield == 1){
 			object1->forwardWavefield(false, model1Double, data1Double);
 		} else {
 			object1->forward(false, model1Double, data1Double);
 		}
 
-		/* Copy data */
-		#pragma omp parallel for
+		// Data
 		for (int iShot=0; iShot<nShot; iShot++){
-			for (int iReceiver = 0; iReceiver < data1Double->getHyper()->getAxis(2).n; iReceiver++) {
-				for (int it = 0; it < data1Double->getHyper()->getAxis(1).n; it++) {
-					(*data1Float->_mat)[iShot][iReceiver][it] = (*data1Double->_mat)[iShot][iReceiver][it];
+			for (int ix=0; ix<data1Double->getHyper()->getAxis(2).n; ix++) {
+				for (int iz=0; iz<data1Double->getHyper()->getAxis(1).n; iz++) {
+					(*data1Float->_mat)[iShot][ix][iz] = (*data1Double->_mat)[iShot][ix][iz];
 				}
 			}
 		}
-
-		/* Output data */
 		data1File->writeFloatStream(data1Float);
 
 		/* Wavefield */
 		if (saveWavefield == 1){
-			std::cout << "Writing wavefield..." << std::endl;
-			wavefield1Double = object1->getWavefield();
-			wavefield1Float = std::make_shared<float3DReg>(wavefield1Double->getHyper());
-
-			#pragma omp parallel for
+			std::shared_ptr<hypercube> wavefield1Hyper(new hypercube(velFloat->getHyper()->getAxis(1), velFloat->getHyper()->getAxis(2), timeAxisCoarse));
+			srcWavefield1Double = object1->getSrcWavefield();
+			secWavefield1Double = object1->getSecWavefield();
+			srcWavefield1Float = std::make_shared<float3DReg>(srcWavefield1Double->getHyper());
+			secWavefield1Float = std::make_shared<float3DReg>(srcWavefield1Double->getHyper());
 			for (int its = 0; its < nts; its++){
 				for (int ix = 0; ix < nx; ix++){
 					for (int iz = 0; iz < nz; iz++){
-						(*wavefield1Float->_mat)[its][ix][iz] = (*wavefield1Double->_mat)[its][ix][iz];
+						(*srcWavefield1Float->_mat)[its][ix][iz] = (*srcWavefield1Double->_mat)[its][ix][iz];
+						(*secWavefield1Float->_mat)[its][ix][iz] = (*secWavefield1Double->_mat)[its][ix][iz];
 					}
 				}
 			}
-			wavefield1File->writeFloatStream(wavefield1Float);
-			std::cout << "Done!" << std::endl;
+			srcWavefield1File->setHyper(wavefield1Hyper);
+			srcWavefield1File->writeDescription();
+			srcWavefield1File->writeFloatStream(srcWavefield1Float);
+			secWavefield1File->setHyper(wavefield1Hyper);
+			secWavefield1File->writeDescription();
+			secWavefield1File->writeFloatStream(secWavefield1Float);
 		}
 	}
 
 	/********************************** ADJOINT *****************************************/
-	if (adj == 1 && dotProd == 0){
+	if (adj == 1 && dotProd ==0) {
 
-		/* Apply adjoint */
 		if (saveWavefield == 1){
 			object1->adjointWavefield(false, model1Double, data1Double);
 		} else {
 			object1->adjoint(false, model1Double, data1Double);
 		}
 
-		/* Copy model */
-		for (int iShot=0; iShot<model1Double->getHyper()->getAxis(3).n; iShot++){
-			for (int iSource=0; iSource<model1Double->getHyper()->getAxis(2).n; iSource++){
-				for (int its=0; its<model1Double->getHyper()->getAxis(1).n; its++){
-					(*model1Float->_mat)[iShot][iSource][its] = (*model1Double->_mat)[iShot][iSource][its];
+		// Model
+		for (int iExt=0; iExt<model1Double->getHyper()->getAxis(3).n; iExt++) {
+			for (int ix=0; ix<model1Double->getHyper()->getAxis(2).n; ix++) {
+				for (int iz=0; iz<model1Double->getHyper()->getAxis(1).n; iz++) {
+					(*model1Float->_mat)[iExt][ix][iz] = (*model1Double->_mat)[iExt][ix][iz];
 				}
 			}
 		}
@@ -283,24 +319,34 @@ int main(int argc, char **argv) {
 
 		/* Wavefield */
 		if (saveWavefield == 1){
-			std::cout << "Writing wavefield..." << std::endl;
-			wavefield1Double = object1->getWavefield();
-			wavefield1Float = std::make_shared<float3DReg>(wavefield1Double->getHyper());
-			#pragma omp parallel for
+
+			std::shared_ptr<hypercube> wavefield1Hyper(new hypercube(velFloat->getHyper()->getAxis(1), velFloat->getHyper()->getAxis(2), timeAxisCoarse));
+			srcWavefield1Double = object1->getSrcWavefield();
+			secWavefield1Double = object1->getSecWavefield();
+			srcWavefield1Float = std::make_shared<float3DReg>(srcWavefield1Double->getHyper());
+			secWavefield1Float = std::make_shared<float3DReg>(srcWavefield1Double->getHyper());
+
 			for (int its = 0; its < nts; its++){
 				for (int ix = 0; ix < nx; ix++){
 					for (int iz = 0; iz < nz; iz++){
-						(*wavefield1Float->_mat)[its][ix][iz] = (*wavefield1Double->_mat)[its][ix][iz];
+						(*srcWavefield1Float->_mat)[its][ix][iz] = (*srcWavefield1Double->_mat)[its][ix][iz];
+						(*secWavefield1Float->_mat)[its][ix][iz] = (*secWavefield1Double->_mat)[its][ix][iz];
 					}
 				}
 			}
-			wavefield1File->writeFloatStream(wavefield1Float);
-			std::cout << "Done!" << std::endl;
+
+			srcWavefield1File->setHyper(wavefield1Hyper);
+			srcWavefield1File->writeDescription();
+			srcWavefield1File->writeFloatStream(srcWavefield1Float);
+			secWavefield1File->setHyper(wavefield1Hyper);
+			secWavefield1File->writeDescription();
+			secWavefield1File->writeFloatStream(secWavefield1Float);
 		}
+
 	}
 
-	/****************************** DOT PRODUCT TEST ************************************/
-	if (dotProd == 1){
+	/* Dot product test */
+	if (dotProd == 1) {
 		object1->setDomainRange(model1Double, data1Double);
 		bool dotprod;
 		dotprod = object1->dotTest(true);

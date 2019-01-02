@@ -64,7 +64,7 @@ bool getGpuInfo(int nGpu, int info, int deviceNumberInfo){
   	if (nGpu<nDevice+1) {return true;}
   	else {std::cout << "Number of requested GPU greater than available GPUs" << std::endl; return false;}
 }
-void initNonlinearGpu(double dz, double dx, int nz, int nx, int nts, double dts, int sub, int minPad, double alphaCos, int nGpu, int iGpu){
+void initNonlinearGpu(double dz, double dx, int nz, int nx, int nts, double dts, int sub, int minPad, int blockSize, double alphaCos, int nGpu, int iGpu){
 
 	// Set GPU
 	cudaSetDevice(iGpu);
@@ -150,6 +150,12 @@ void initNonlinearGpu(double dz, double dx, int nz, int nx, int nts, double dts,
 		cosDampingCoeff[iFilter-FAT] = arg;
 	}
 
+	// Check that the block size is consistent between parfile and "varDeclare.h"
+	if (blockSize != BLOCK_SIZE) {
+		std::cout << "**** ERROR: Block size for time stepper is not consistent with parfile ****" << std::endl;
+		assert (1==2);
+	}
+
 	/**************************** COPY TO CONSTANT MEMORY *******************************/
 	// Laplacian coefficients
 	cuda_call(cudaMemcpyToSymbol(dev_zCoeff, zCoeff, COEFF_SIZE*sizeof(double), 0, cudaMemcpyHostToDevice)); // Copy Laplacian coefficients to device
@@ -188,10 +194,10 @@ void allocateNonlinearGpu(double *vel2Dtw2, int iGpu){
 
 }
 void deallocateNonlinearGpu(int iGpu){
-	cudaSetDevice(iGpu); // Set device number on GPU cluster
-  cuda_call(cudaFree(dev_vel2Dtw2[iGpu])); // Deallocate scaled velocity
-	cuda_call(cudaFree(dev_p0[iGpu]));
-  cuda_call(cudaFree(dev_p1[iGpu]));
+		cudaSetDevice(iGpu); // Set device number on GPU cluster
+    	cuda_call(cudaFree(dev_vel2Dtw2[iGpu])); // Deallocate scaled velocity
+		cuda_call(cudaFree(dev_p0[iGpu]));
+    	cuda_call(cudaFree(dev_p1[iGpu]));
 }
 
 /****************************************************************************************/
@@ -213,15 +219,15 @@ void propShotsFwdGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
 
 	// Model
-	cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate input on device
+  	cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate input on device
 	cuda_call(cudaMemcpy(dev_modelRegDtw[iGpu], modelRegDtw, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy input signals on device
 
 	// Data
-	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate output on device
-	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize output on device
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate output on device
+  	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize output on device
 
 	// Time slices
-	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
 	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
 
 	// Laplacian grid and blocks
@@ -232,6 +238,11 @@ void propShotsFwdGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 
 	// Extraction grid size
 	int nblockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+
+	// Timer
+	std::clock_t start;
+	double duration;
+	start = std::clock();
 
 	// Start propagation
 	for (int its = 0; its < host_nts-1; its++){
@@ -262,14 +273,17 @@ void propShotsFwdGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 		}
 	}
 
+	duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+	std::cout << "duration: " << duration << std::endl;
+
 	// Copy data back to host
 	cuda_call(cudaMemcpy(dataRegDts, dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 
 	// Deallocate all slices
-  cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
-  cuda_call(cudaFree(dev_dataRegDts[iGpu]));
-  cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
-  cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 
 }
 void propShotsFwdGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *wavefieldDts, int iGpu) {
@@ -288,19 +302,19 @@ void propShotsFwdGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sour
 	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
 
 	// Model
-  cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate input on device
+  	cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate input on device
 	cuda_call(cudaMemcpy(dev_modelRegDtw[iGpu], modelRegDtw, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy input signals on device
 
 	// Data
-  cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate output on device
-  cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize output on device
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate output on device
+  	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize output on device
 
  	// Wavefield
 	cuda_call(cudaMalloc((void**) &dev_wavefieldDts, host_nz*host_nx*host_nts*sizeof(double))); // Allocate on device
 	cuda_call(cudaMemset(dev_wavefieldDts, 0, host_nz*host_nx*host_nts*sizeof(double))); // Initialize wavefield on device
 
 	// Time slices
-	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double))); // Initialize time slices on device
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double))); // Initialize time slices on device
 	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
 
 	// Laplacian grid and blocks
@@ -351,10 +365,10 @@ void propShotsFwdGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sour
 	cuda_call(cudaMemcpy(wavefieldDts, dev_wavefieldDts, host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 
 	// Deallocate all slices
-  cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
-  cuda_call(cudaFree(dev_dataRegDts[iGpu]));
-  cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
-  cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 	cuda_call(cudaFree(dev_wavefieldDts));
 
 }
@@ -378,16 +392,16 @@ void propShotsAdjGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
 
 	// Model
-  cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate model on device
-  cuda_call(cudaMemset(dev_modelRegDtw[iGpu], 0, nSourcesReg*host_ntw*sizeof(double))); // Initialize model on device
+  	cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate model on device
+  	cuda_call(cudaMemset(dev_modelRegDtw[iGpu], 0, nSourcesReg*host_ntw*sizeof(double))); // Initialize model on device
 
 	// Data
-  cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate data on device
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate data on device
 	cuda_call(cudaMemcpy(dev_dataRegDts[iGpu], dataRegDts, nReceiversReg*host_nts*sizeof(double), cudaMemcpyHostToDevice)); // Copy data on device
 
 	// Initialize time slices on device
 	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
-  cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
 
 	// Grid and block dimensions for stepper
 	int nblockx = (host_nz-2*FAT) / BLOCK_SIZE;
@@ -430,10 +444,10 @@ void propShotsAdjGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 	cuda_call(cudaMemcpy(modelRegDtw, dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double), cudaMemcpyDeviceToHost));
 
 	// Deallocate all slices
-  cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
-  cuda_call(cudaFree(dev_dataRegDts[iGpu]));
-  cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
-  cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 
 }
 void propShotsAdjGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *wavefieldDts, int iGpu) {
@@ -452,11 +466,11 @@ void propShotsAdjGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sour
 	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
 
 	// Model
-  cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate model on device
-	cuda_call(cudaMemset(dev_modelRegDtw[iGpu], 0, nSourcesReg*host_ntw*sizeof(double))); // Initialize model on device
+  	cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate model on device
+  	cuda_call(cudaMemset(dev_modelRegDtw[iGpu], 0, nSourcesReg*host_ntw*sizeof(double))); // Initialize model on device
 
 	// Data
-  cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate data on device
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate data on device
 	cuda_call(cudaMemcpy(dev_dataRegDts[iGpu], dataRegDts, nReceiversReg*host_nts*sizeof(double), cudaMemcpyHostToDevice)); // Copy data on device
 
  	// Wavefield
@@ -464,8 +478,8 @@ void propShotsAdjGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sour
 	cuda_call(cudaMemset(dev_wavefieldDts, 0, host_nz*host_nx*host_nts*sizeof(double))); // Initialize wavefield on device
 
 	// Initialize time slices on device
-	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
-	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
 
 	// Grid and block dimensions for stepper
 	int nblockx = (host_nz-2*FAT) / BLOCK_SIZE;
@@ -514,10 +528,10 @@ void propShotsAdjGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sour
 	cuda_call(cudaMemcpy(wavefieldDts, dev_wavefieldDts, host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 
 	// Deallocate all slices
-  cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
-  cuda_call(cudaFree(dev_dataRegDts[iGpu]));
-  cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
-  cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 	cuda_call(cudaFree(dev_wavefieldDts));
 
 }

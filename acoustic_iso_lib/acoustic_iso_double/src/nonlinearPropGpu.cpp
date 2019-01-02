@@ -10,7 +10,7 @@ nonlinearPropGpu::nonlinearPropGpu(std::shared_ptr<SEP::double2DReg> vel, std::s
 	_nGpu = nGpu;
 
 	// Initialize GPU
-	initNonlinearGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_alphaCos, _nGpu, _iGpu);
+	initNonlinearGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _nGpu, _iGpu);
 }
 
 void nonlinearPropGpu::setAllWavefields(int wavefieldFlag){
@@ -19,8 +19,8 @@ void nonlinearPropGpu::setAllWavefields(int wavefieldFlag){
 
 bool nonlinearPropGpu::checkParfileConsistency(const std::shared_ptr<SEP::double2DReg> model, const std::shared_ptr<SEP::double2DReg> data) const{
 
-	if (_fdParam->checkParfileConsistencyTime(data, 1) != true) {return false;} // Check data time axis
-	if (_fdParam->checkParfileConsistencyTime(model,1) != true) {return false;}; // Check model time axis
+	if (_fdParam->checkParfileConsistencyTime(data, 1, "Data file") != true) {return false;} // Check data time axis
+	if (_fdParam->checkParfileConsistencyTime(model,1, "Model file") != true) {return false;}; // Check model time axis
 
 	return true;
 }
@@ -30,7 +30,7 @@ void nonlinearPropGpu::forward(const bool add, const std::shared_ptr<double2DReg
 	if (!add) data->scale(0.0);
 
  	std::clock_t start;
-  double duration;
+    double duration;
 
 	/* Allocation */
 	std::shared_ptr<double2DReg> modelRegDts(new double2DReg(_fdParam->_nts, _nSourcesReg));
@@ -56,7 +56,6 @@ void nonlinearPropGpu::forward(const bool add, const std::shared_ptr<double2DReg
 
 	/* Interpolate to irregular grid */
 	_receivers->forward(true, dataRegDts, data);
-
 
 }
 
