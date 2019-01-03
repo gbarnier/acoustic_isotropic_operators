@@ -63,8 +63,9 @@ class BornShotsGpu(Op.Operator):
 			velocity = velocity.getCpp()
 		if("getCpp" in dir(paramP)):
 			paramP = paramP.getCpp()
-		if("getCpp" in dir(sourcesSignalsVector)):
-			sourcesSignalsVector = sourcesSignalsVector.getCpp()
+		for idx,sourceSignal in enumerate(sourcesSignalsVector):
+			if("getCpp" in dir(sourceSignal)):
+				sourcesSignalsVector[idx] = sourceSignal.getCpp()
 		self.pyOp = pyAcoustic_iso_double2.BornShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector)
 		return
 
@@ -106,8 +107,9 @@ class BornExtShotsGpu(Op.Operator):
 			velocity = velocity.getCpp()
 		if("getCpp" in dir(paramP)):
 			paramP = paramP.getCpp()
-		if("getCpp" in dir(sourcesSignalsVector)):
-			sourcesSignalsVector = sourcesSignalsVector.getCpp()
+		for idx,sourceSignal in enumerate(sourcesSignalsVector):
+			if("getCpp" in dir(sourceSignal)):
+				sourcesSignalsVector[idx] = sourceSignal.getCpp()
 		self.pyOp = pyAcoustic_iso_double3.BornExtShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector)
 		return
 
