@@ -40,7 +40,7 @@ link_directories(${Generic-cpp_BINARY_DIR}
 				 ${buffers-lib_BINARY_DIR}
 				 ${json_BINARY_DIR}
 				 ${sepVector-lib_BINARY_DIR}
-				 /net/server/homes/sep/ettore/research/packages/acoustic_isotropic_operators/iolibs/local/lib/
+				 ${SEPlib_LIBDIR}
 )
 
 #Compiling the project library
