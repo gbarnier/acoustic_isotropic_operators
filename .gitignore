@@ -2,3 +2,4 @@ obj/*
 *.pyc
 build/
 *.H
+.ipynb_checkpoints
