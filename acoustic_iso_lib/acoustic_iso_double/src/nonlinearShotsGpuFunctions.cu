@@ -274,7 +274,6 @@ void propShotsFwdGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 	}
 
 	duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
-	std::cout << "duration: " << duration << std::endl;
 
 	// Copy data back to host
 	cuda_call(cudaMemcpy(dataRegDts, dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
