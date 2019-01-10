@@ -1,42 +1,12 @@
+// Sources setup for Nonlinear modeling
 template <class V1, class V2>
-void seismicOperator2D <V1, V2>::setReceivers(std::shared_ptr<deviceGpu> receivers){
-	_receivers = receivers;
-	_nReceiversReg = _receivers->getNDeviceReg();
-	_receiversPositionReg = _receivers->getRegPosUnique();
+void seismicOperator2D <V1, V2>::setSources(std::shared_ptr<deviceGpu> sources){
+	_sources = sources;
+	_nSourcesReg = _sources->getNDeviceReg();
+	_sourcesPositionReg = _sources->getRegPosUnique();
 }
 
-template <class V1, class V2>
-void seismicOperator2D <V1, V2>::setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared_ptr<deviceGpu> receivers, const std::shared_ptr<V1> model, const std::shared_ptr<V2> data){
-	setSources(sources);
-	setReceivers(receivers);
-	this->setDomainRange(model, data);
-	assert(checkParfileConsistency(model, data));
-}
-
-template <class V1, class V2>
-void seismicOperator2D <V1, V2>::setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared_ptr<V2> sourcesSignals, std::shared_ptr<deviceGpu> receivers, const std::shared_ptr<V1> model, const std::shared_ptr<V2> data){
-	setSources(sources, sourcesSignals);
-	setReceivers(receivers);
-	this->setDomainRange(model, data);
-	assert(checkParfileConsistency(model, data));
-}
-
-template <class V1, class V2>
-void seismicOperator2D <V1, V2>::scaleSeismicSource(const std::shared_ptr<deviceGpu> seismicSource, std::shared_ptr<V2> signal, const std::shared_ptr<fdParam> parObj) const{
-
-	std::shared_ptr<double2D> sig = signal->_mat;
-	double *v = _fdParam->_vel->getVals();
-	int *pos = seismicSource->getRegPosUnique();
-
-	#pragma omp parallel for
-	for (int iGridPoint = 0; iGridPoint < seismicSource->getNDeviceReg(); iGridPoint++){
-		double scale = _fdParam->_dtw * _fdParam->_dtw * v[pos[iGridPoint]]*v[pos[iGridPoint]];
-		for (int it = 0; it < signal->getHyper()->getAxis(1).n; it++){
-			(*sig)[iGridPoint][it] = (*sig)[iGridPoint][it] * scale;
-		}
-	}
-}
-
+// Sources setup for Born and Tomo
 template <class V1, class V2>
 void seismicOperator2D <V1, V2>::setSources(std::shared_ptr<deviceGpu> sourcesDevices, std::shared_ptr<V2> sourcesSignals){
 
@@ -65,15 +35,53 @@ void seismicOperator2D <V1, V2>::setSources(std::shared_ptr<deviceGpu> sourcesDe
 	// Interpolate to fine time-sampling
 	_timeInterp->forward(false, _sourcesSignalsRegDtsDt2, _sourcesSignalsRegDtwDt2); // Interpolate sources signals to fine time-sampling
 	_timeInterp->forward(false, _sourcesSignalsRegDts, _sourcesSignalsRegDtw); // Interpolate sources signals to fine time-sampling
+
 }
 
+// Receivers setup for Nonlinear modeling, Born and Tomo
 template <class V1, class V2>
-void seismicOperator2D <V1, V2>::setSources(std::shared_ptr<deviceGpu> sources){
-	_sources = sources;
-	_nSourcesReg = _sources->getNDeviceReg();
-	_sourcesPositionReg = _sources->getRegPosUnique();
+void seismicOperator2D <V1, V2>::setReceivers(std::shared_ptr<deviceGpu> receivers){
+	_receivers = receivers;
+	_nReceiversReg = _receivers->getNDeviceReg();
+	_receiversPositionReg = _receivers->getRegPosUnique();
 }
 
+// Set acquisiton for Nonlinear modeling
+template <class V1, class V2>
+void seismicOperator2D <V1, V2>::setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared_ptr<deviceGpu> receivers, const std::shared_ptr<V1> model, const std::shared_ptr<V2> data){
+	setSources(sources);
+	setReceivers(receivers);
+	this->setDomainRange(model, data);
+	assert(checkParfileConsistency(model, data));
+}
+
+// Set acquisiton for Born and Tomo
+template <class V1, class V2>
+void seismicOperator2D <V1, V2>::setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared_ptr<V2> sourcesSignals, std::shared_ptr<deviceGpu> receivers, const std::shared_ptr<V1> model, const std::shared_ptr<V2> data){
+	setSources(sources, sourcesSignals);
+	setReceivers(receivers);
+	this->setDomainRange(model, data);
+	assert(checkParfileConsistency(model, data));
+}
+
+// Scale seismic source
+template <class V1, class V2>
+void seismicOperator2D <V1, V2>::scaleSeismicSource(const std::shared_ptr<deviceGpu> seismicSource, std::shared_ptr<V2> signal, const std::shared_ptr<fdParam> parObj) const{
+
+	std::shared_ptr<double2D> sig = signal->_mat;
+	double *v = _fdParam->_vel->getVals();
+	int *pos = seismicSource->getRegPosUnique();
+
+	#pragma omp parallel for
+	for (int iGridPoint = 0; iGridPoint < seismicSource->getNDeviceReg(); iGridPoint++){
+		double scale = _fdParam->_dtw * _fdParam->_dtw * v[pos[iGridPoint]]*v[pos[iGridPoint]];
+		for (int it = 0; it < signal->getHyper()->getAxis(1).n; it++){
+			(*sig)[iGridPoint][it] = (*sig)[iGridPoint][it] * scale;
+		}
+	}
+}
+
+// Wavefield setup
 template <class V1, class V2>
 std::shared_ptr<SEP::double3DReg> seismicOperator2D <V1, V2>:: setWavefield(int wavefieldFlag){
 

@@ -34,6 +34,10 @@ if (pybind11_FOUND)
   install( TARGETS pyAcoustic_iso_double2 DESTINATION lib/python) #Module for Born operator
   install( TARGETS pyAcoustic_iso_double3 DESTINATION lib/python) #Module for Extended Born operator
   install( FILES Acoustic_iso_double.py DESTINATION lib/python)
+  #Installing Python executables
+  install( FILES nonlinearPythonDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES BornPythonDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES BornExtPythonDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 
 else(pybind11_FOUND)
   MESSAGE("WARNING!Did not find pybid11. Not compiling ${PROJECT-NAME}")

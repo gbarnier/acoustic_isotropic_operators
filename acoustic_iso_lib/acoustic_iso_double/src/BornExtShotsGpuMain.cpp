@@ -257,7 +257,6 @@ int main(int argc, char **argv) {
 
 	/********************************** FORWARD *****************************************/
 	if (adj == 0 && dotProd ==0) {
-
 		if (saveWavefield == 1){
 			object1->forwardWavefield(false, model1Double, data1Double);
 		} else {
@@ -276,11 +275,13 @@ int main(int argc, char **argv) {
 
 		/* Wavefield */
 		if (saveWavefield == 1){
+
 			std::shared_ptr<hypercube> wavefield1Hyper(new hypercube(velFloat->getHyper()->getAxis(1), velFloat->getHyper()->getAxis(2), timeAxisCoarse));
 			srcWavefield1Double = object1->getSrcWavefield();
 			secWavefield1Double = object1->getSecWavefield();
 			srcWavefield1Float = std::make_shared<float3DReg>(srcWavefield1Double->getHyper());
 			secWavefield1Float = std::make_shared<float3DReg>(srcWavefield1Double->getHyper());
+
 			for (int its = 0; its < nts; its++){
 				for (int ix = 0; ix < nx; ix++){
 					for (int iz = 0; iz < nz; iz++){
@@ -289,6 +290,7 @@ int main(int argc, char **argv) {
 					}
 				}
 			}
+
 			srcWavefield1File->setHyper(wavefield1Hyper);
 			srcWavefield1File->writeDescription();
 			srcWavefield1File->writeFloatStream(srcWavefield1Float);
@@ -319,7 +321,6 @@ int main(int argc, char **argv) {
 
 		/* Wavefield */
 		if (saveWavefield == 1){
-
 			std::shared_ptr<hypercube> wavefield1Hyper(new hypercube(velFloat->getHyper()->getAxis(1), velFloat->getHyper()->getAxis(2), timeAxisCoarse));
 			srcWavefield1Double = object1->getSrcWavefield();
 			secWavefield1Double = object1->getSecWavefield();

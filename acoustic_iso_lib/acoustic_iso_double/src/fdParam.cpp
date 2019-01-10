@@ -140,7 +140,7 @@ void fdParam::getInfo(){
 		// Horizontal spatial sampling
 		std::cout << "-------------------- Horizontal spatial sampling ------------------" << std::endl;
 		std::cout << std::setprecision(2);
-		std::cout << "nx = " << _nx << " [samples], dx = " << _dx << " [km], ox = " << _ox+(_fat+_xPadMinus)*_dx << " [km]" << std::endl;
+		std::cout << "nx = " << _nx-2*_fat-_xPadMinus-_xPadPlus << " [samples], dx = " << _dx << " [km], ox = " << _ox+(_fat+_xPadMinus)*_dx << " [km]" << std::endl;
 		std::cout << "Model width = " << _ox+(_nx-2*_fat-_xPadMinus-_xPadPlus-1)*_dx << " [km]" << std::endl;
 		std::cout << "Left padding = " << _xPadMinus << " [samples], right padding = " << _xPadPlus << " [samples]" << std::endl;
 		std::cout << " " << std::endl;
@@ -151,6 +151,7 @@ void fdParam::getInfo(){
 			std::cout << "-------------------- Extended axis: time-lags ---------------------" << std::endl;
 			std::cout << "nTau = " << _hExt << " [samples], dTau= " << _dExt << " [s], oTau = " << _oExt << " [s]" << std::endl;
 			std::cout << "Total extension length nTau = " << _nExt << " [samples], which corresponds to " << _nExt*_dExt << " [s]" << std::endl;
+			std::cout << " " << std::endl;
 		}
 
 		if ( (_nExt>1) && (_extension=="offset") ){
@@ -158,6 +159,7 @@ void fdParam::getInfo(){
 			std::cout << "---------- Extended axis: horizontal subsurface offsets -----------" << std::endl;
 			std::cout << "nOffset = " << _hExt << " [samples], dOffset= " << _dExt << " [km], oOffset = " << _oExt << " [km]" << std::endl;
 			std::cout << "Total extension length nOffset = " << _nExt << " [samples], which corresponds to " << _nExt*_dExt << " [km]" << std::endl;
+			std::cout << " " << std::endl;
 		}
 
 		// GPU FD parameters
@@ -227,8 +229,8 @@ bool fdParam::checkModelSize(){
 
 bool fdParam::checkParfileConsistencyTime(const std::shared_ptr<double2DReg> seismicTraces, int timeAxisIndex, std::string fileToCheck) const {
 	if (_nts != seismicTraces->getHyper()->getAxis(timeAxisIndex).n) {std::cout << "**** [" << fileToCheck << "] ERROR: nts not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_dts - seismicTraces->getHyper()->getAxis(timeAxisIndex).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dts not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_ots - seismicTraces->getHyper()->getAxis(timeAxisIndex).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: ots not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_dts - seismicTraces->getHyper()->getAxis(timeAxisIndex).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dts not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_ots - seismicTraces->getHyper()->getAxis(timeAxisIndex).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: ots not consistent with parfile ****" << std::endl; return false;}
 	return true;
 }
 
@@ -236,34 +238,33 @@ bool fdParam::checkParfileConsistencySpace(const std::shared_ptr<double2DReg> mo
 
 	// Vertical axis
 	if (_nz != model->getHyper()->getAxis(1).n) {std::cout << "**** ["<< fileToCheck << "] ERROR: nz not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_dz - model->getHyper()->getAxis(1).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dz not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_oz - model->getHyper()->getAxis(1).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: oz not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_dz - model->getHyper()->getAxis(1).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dz not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_oz - model->getHyper()->getAxis(1).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: oz not consistent with parfile ****" << std::endl; return false;}
 
 	// Vertical axis
 	if (_nx != model->getHyper()->getAxis(2).n) {std::cout << "**** [" << fileToCheck << "] ERROR: nx not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_dx - model->getHyper()->getAxis(2).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dx not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_ox - model->getHyper()->getAxis(2).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: ox not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_dx - model->getHyper()->getAxis(2).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dx not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_ox - model->getHyper()->getAxis(2).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: ox not consistent with parfile ****" << std::endl; return false;}
 
 	return true;
 }
 
 bool fdParam::checkParfileConsistencySpace(const std::shared_ptr<double3DReg> modelExt, std::string fileToCheck) const {
-
 	// Vertical axis
 	if (_nz != modelExt->getHyper()->getAxis(1).n) {std::cout << "**** ["<< fileToCheck << "] ERROR: nz not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_dz - modelExt->getHyper()->getAxis(1).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dz not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_oz - modelExt->getHyper()->getAxis(1).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: oz not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_dz - modelExt->getHyper()->getAxis(1).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dz not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_oz - modelExt->getHyper()->getAxis(1).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: oz not consistent with parfile ****" << std::endl; return false;}
 
 	// Vertical axis
 	if (_nx != modelExt->getHyper()->getAxis(2).n) {std::cout << "**** [" << fileToCheck << "] ERROR: nx not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_dx - modelExt->getHyper()->getAxis(2).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dx not consistent with parfile ****" << std::endl; return false;}
-	if ( abs(_ox - modelExt->getHyper()->getAxis(2).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: ox not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_dx - modelExt->getHyper()->getAxis(2).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dx not consistent with parfile ****" << std::endl; return false;}
+	if ( std::abs(_ox - modelExt->getHyper()->getAxis(2).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: ox not consistent with parfile ****" << std::endl; return false;}
 
 	// Extended axis
 	if (_nExt != modelExt->getHyper()->getAxis(3).n) {std::cout << "**** [" << fileToCheck << "] ERROR: nExt not consistent with parfile ****" << std::endl; return false;}
 	if (_nExt>1) {
-		if ( abs(_dExt - modelExt->getHyper()->getAxis(3).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dExt not consistent with parfile ****" << std::endl; return false;}
-		if ( abs(_oExt - modelExt->getHyper()->getAxis(3).o) > _errorTolerance ) { std::cout << "**** [" << fileToCheck << "] ERROR: oExt not consistent with parfile ****" << std::endl; return false;}
+		if ( std::abs(_dExt - modelExt->getHyper()->getAxis(3).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dExt not consistent with parfile ****" << std::endl; return false;}
+		if ( std::abs(_oExt - modelExt->getHyper()->getAxis(3).o) > _errorTolerance ) { std::cout << "**** [" << fileToCheck << "] ERROR: oExt not consistent with parfile ****" << std::endl; return false;}
 	}
 
 	return true;

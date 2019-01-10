@@ -70,6 +70,17 @@ __global__ void copyValueScaleDebug(double *dev_wavefield, double *dev_timeSlice
 
 }
 
+__global__ void interpWavefieldScale(double *dev_wavefield, double *dev_timeSlice, double *dev_vel2Dtw2, int its, int it2) {
+
+	int izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+	int ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+	int iGlobal = dev_nz * ixGlobal + izGlobal; // 1D array index for the model on the global memory
+	int iGlobalWavefield = its * dev_nz * dev_nx + iGlobal;
+	dev_wavefield[iGlobalWavefield] += dev_timeSlice[iGlobal] * dev_interpFilter[it2] * dev_vel2Dtw2[iGlobal]; // its
+	dev_wavefield[iGlobalWavefield+dev_nz*dev_nx] += dev_timeSlice[iGlobal] * dev_interpFilter[dev_hInterpFilter+it2] * dev_vel2Dtw2[iGlobal]; // its+1
+
+}
+
 /****************************************************************************************/
 /***************************************** Injection ************************************/
 /****************************************************************************************/
@@ -241,6 +252,15 @@ __global__ void imagingAdjGpu(double *dev_model, double *dev_timeSlice, double *
 	dev_model[iGlobal] += dev_srcWavefieldDts[iGlobalWavefield] * dev_timeSlice[iGlobal];
 }
 
+__global__ void imagingAdjTomoGpu(double *dev_wavefieldIn, double *dev_timeSliceOut, double *dev_extReflectivityIn, int its) {
+
+	int izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+	int ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+	int iGlobal = dev_nz * ixGlobal + izGlobal; // 1D array index for the model on the global memory
+	int iGlobalWavefield = its * dev_nz * dev_nx + iGlobal;
+	dev_timeSliceOut[iGlobal] = dev_extReflectivityIn[iGlobal] * dev_wavefieldIn[iGlobalWavefield];
+}
+
 // Time-lags
 __global__ void imagingTimeFwdGpu(double *dev_model, double *dev_timeSlice, double *dev_srcWavefieldDts, int its, int iExtMin, int iExtMax){
 
@@ -271,6 +291,20 @@ __global__ void imagingTimeAdjGpu(double *dev_model, double *dev_receiverTimeSli
 	}
 }
 
+__global__ void imagingWemvaTimeAdjGpu(double *dev_model, double *dev_scatteredTimeSlice, double *dev_recWavefield, int its, int iExtMin, int iExtMax){
+
+	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate
+	int ix = FAT + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate
+	int iSpace = dev_nz * ix + iz; // 1D array index on spatial grid
+	int iExt = iExtMin + blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // Extended axis coordinate
+	int iRecWavefield = (its+2*(iExt-dev_hExt)) * dev_nz * dev_nx + iSpace; // Index for receiver wavefield at its
+	int iModel = iExt * dev_nz * dev_nx + iSpace; // Extended model index
+
+	if (iExt < iExtMax){
+		dev_model[iModel] += dev_scatteredTimeSlice[iSpace] * dev_recWavefield[iRecWavefield]; // Try without +=
+	}
+}
+
 // Subsurface offsets
 __global__ void imagingOffsetFwdGpu(double *dev_model, double *dev_timeSlice, double *dev_srcWavefieldDts, int its){
 
@@ -282,6 +316,7 @@ __global__ void imagingOffsetFwdGpu(double *dev_model, double *dev_timeSlice, do
 	int iExtMax=min2(ix-dev_hExt-FAT, dev_hExt)+1;
 
 	for (int iExt=iExtMin; iExt<iExtMax; iExt++){
+
 		int iModel = dev_nz * dev_nx * (iExt+dev_hExt) + dev_nz * (ix-iExt) + iz; // model(iz, ix-iOffset, iOffset+hOffset)
 		int iSrcWavefield = dev_nz * dev_nx * its + (ix-2*iExt) * dev_nz + iz; // src(iz, ix-2*iOffset, its)
 		dev_timeSlice[iSpace] += dev_model[iModel] * dev_srcWavefieldDts[iSrcWavefield];
@@ -300,17 +335,41 @@ __global__ void imagingOffsetAdjGpu(double *dev_model, double *dev_timeSlice, do
 		int iSrcWavefield = dev_nz * dev_nx * its + dev_nz * (ix-iExtShift) + iz; // Source wavefield index
 		int iRecWavefield = dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
 		dev_model[iModel] += dev_timeSlice[iRecWavefield] * dev_srcWavefieldDts[iSrcWavefield];
+
 	}
 }
 
-// Non-extended
-__global__ void imagingAdjTomoGpu(double *dev_wavefieldIn, double *dev_timeSliceOut, double *dev_extReflectivityIn, int its) {
+// Imaging condition like the one in the Fortran code
+__global__ void imagingOffsetAdjGpuFortran(double *dev_model, double *dev_timeSlice, double *dev_srcWavefieldDts, int its){
 
-	int izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
-	int ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
-	int iGlobal = dev_nz * ixGlobal + izGlobal; // 1D array index for the model on the global memory
-	int iGlobalWavefield = its * dev_nz * dev_nx + iGlobal;
-	dev_timeSliceOut[iGlobal] = dev_extReflectivityIn[iGlobal] * dev_wavefieldIn[iGlobalWavefield];
+	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate on main grid
+	int ix = FAT + dev_hExt + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate on main grid for the model where we evaluate the image
+	int iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // offset coordinate (iOffset = 0, ..., dev_nOffset-1)
+
+	if ( (ix < dev_nx-FAT-dev_hExt) && (iExt < dev_nExt) ){
+		int iExtShift=iExt-dev_hExt;
+		int iModel = dev_nz * dev_nx * iExt + dev_nz * ix + iz; // Model index
+		int iSrcWavefield = dev_nz * dev_nx * its + dev_nz * (ix-iExtShift) + iz; // Source wavefield index
+		int iRecWavefield = dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
+		dev_model[iModel] += dev_timeSlice[iRecWavefield] * dev_srcWavefieldDts[iSrcWavefield];
+
+	}
+}
+
+// Extended imaging condition for Wemva fwd
+__global__ void imagingOffsetWemvaFwdGpu(double *dev_model, double *dev_timeSlice, double *dev_recWavefield, int its){
+
+	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate on main grid
+	int ix = FAT + dev_hExt + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate on main grid for the model where we evaluate the image
+	int iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // offset coordinate (iOffset = 0, ..., dev_nOffset-1)
+
+	if ( (ix < dev_nx-FAT-dev_hExt) && (iExt < dev_nExt) ){
+		int iExtShift=iExt-dev_hExt;
+		int iModel = dev_nz * dev_nx * iExt + dev_nz * ix + iz; // Model index for extended image
+		int iRecWavefield = dev_nz * dev_nx * its + dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
+		int iScatWavefield = dev_nz * (ix-iExtShift) + iz; // Scattered wavefield index
+		dev_model[iModel] += dev_timeSlice[iScatWavefield] * dev_recWavefield[iRecWavefield];
+	}
 }
 
 __global__ void imagingTimeTomoAdjGpu(double *dev_wavefieldIn, double *dev_timeSliceOut, double *dev_extReflectivityIn, int its, int iExtMin, int iExtMax) {
@@ -328,7 +387,37 @@ __global__ void imagingTimeTomoAdjGpu(double *dev_wavefieldIn, double *dev_timeS
 	}
 }
 
+__global__ void imagingOffsetTomoAdjGpu(double *dev_wavefieldIn, double *dev_timeSliceOut, double *dev_extReflectivityIn, int its) {
 
+	int iz = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // z-coordinate on main grid
+	int ix = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // x-coordinate on main grid
+	int iSpace = dev_nz * ix + iz; // 1D array index for the model on the global memory
+
+	int iExtMin=max2(-dev_hExt, FAT+dev_hExt-ix);
+	int iExtMax=min2(dev_nx-1-FAT-ix-dev_hExt, dev_hExt)+1;
+
+	for (int iExt=iExtMin; iExt<iExtMax; iExt++){
+		int iModel = dev_nz * dev_nx * (iExt+dev_hExt) + dev_nz * (ix+iExt) + iz; // model(iz, ix-iOffset, iOffset+hOffset)
+		int iRecWavefield = dev_nz * dev_nx * its + (ix+2*iExt) * dev_nz + iz; // src(iz, ix-2*iOffset, its)
+		dev_timeSliceOut[iSpace] += dev_extReflectivityIn[iModel] * dev_wavefieldIn[iRecWavefield];
+	}
+}
+
+__global__ void imagingOffsetWemvaAdjGpu(double *dev_wavefieldIn, double *dev_timeSliceOut, double *dev_extReflectivityIn, int its) {
+
+	int iz = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // z-coordinate on main grid
+	int ix = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // x-coordinate on main grid
+	int iSpace = dev_nz * ix + iz; // 1D array index for the model on the global memory
+
+	int iExtMin=max2(-dev_hExt, FAT+dev_hExt-ix);
+	int iExtMax=min2(dev_nx-1-FAT-ix, dev_hExt)+1;
+
+	for (int iExt=iExtMin; iExt<iExtMax; iExt++){
+		int iModel = dev_nz * dev_nx * (iExt+dev_hExt) + dev_nz * (ix-iExt) + iz; // model(iz, ix-iOffset, iOffset+hOffset)
+		int iSrcWavefield = dev_nz * dev_nx * its + (ix-2*iExt) * dev_nz + iz; // src(iz, ix-2*iOffset, its)
+		dev_timeSliceOut[iSpace] += dev_extReflectivityIn[iModel] * dev_wavefieldIn[iSrcWavefield];
+	}
+}
 /****************************************************************************************/
 /*********************************** Forward steppers ***********************************/
 /****************************************************************************************/

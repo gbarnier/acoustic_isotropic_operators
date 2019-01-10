@@ -59,7 +59,6 @@ void BornExtShotsGpu::forward(const bool add, const std::shared_ptr<double3DReg>
 		// Create data slice for this GPU number
 		std::shared_ptr<SEP::double2DReg> dataSlice(new SEP::double2DReg(hyperDataSlice));
 		dataSliceVector.push_back(dataSlice);
-
 	}
 
 	// Launch Born forward
@@ -315,7 +314,7 @@ void BornExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double3DR
 	else {constantRecGeom=0;}
 
 	// Create vectors for each GPU
-	std::shared_ptr<SEP::hypercube> hyperModelSlice(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2)));
+	std::shared_ptr<SEP::hypercube> hyperModelSlice(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2), model->getHyper()->getAxis(3)));
 	std::shared_ptr<SEP::hypercube> hyperDataSlice(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2)));
 	std::vector<std::shared_ptr<double2DReg>> dataSliceVector;
 	std::vector<std::shared_ptr<double3DReg>> modelSliceVector;
@@ -338,12 +337,13 @@ void BornExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double3DR
 
 		// Model slice
 		std::shared_ptr<SEP::double3DReg> modelSlice(new SEP::double3DReg(hyperModelSlice));
-		modelSlice->scale(0.0); 
+		modelSlice->scale(0.0);
 		modelSliceVector.push_back(modelSlice);
 
 		// Create data slice for this GPU number
 		std::shared_ptr<SEP::double2DReg> dataSlice(new SEP::double2DReg(hyperDataSlice));
 		dataSliceVector.push_back(dataSlice);
+
 	}
 
 	// Launch Born adjoint

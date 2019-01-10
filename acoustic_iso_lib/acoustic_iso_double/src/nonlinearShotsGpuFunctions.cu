@@ -240,9 +240,9 @@ void propShotsFwdGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 	int nblockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
 
 	// Timer
-	std::clock_t start;
-	double duration;
-	start = std::clock();
+	// std::clock_t start;
+	// double duration;
+	// start = std::clock();
 
 	// Start propagation
 	for (int its = 0; its < host_nts-1; its++){
@@ -273,7 +273,8 @@ void propShotsFwdGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 		}
 	}
 
-	duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+	// duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+	// std::cout << "duration: " << duration << std::endl;
 
 	// Copy data back to host
 	cuda_call(cudaMemcpy(dataRegDts, dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double), cudaMemcpyDeviceToHost));

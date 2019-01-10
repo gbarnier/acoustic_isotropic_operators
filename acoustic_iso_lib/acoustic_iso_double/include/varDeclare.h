@@ -50,18 +50,32 @@ double **dev_p0, **dev_p1, **dev_temp1; // Temporary slices for stepping
 double **dev_ss0, **dev_ss1, **dev_ss2, **dev_ssTemp2;
 double **dev_ssLeft, **dev_ssRight, **dev_ssTemp1; // Temporary slices for secondary source
 double **dev_scatLeft, **dev_scatRight, **dev_scatTemp1; // Temporary slices for scattered wavefield (used in tomo)
-double **dev_modelRegDtw; // Model for nonlinear propagation (wavelet)
-double **dev_dataRegDts; // Data on device at coarse time-sampling (converted to regular grid)
-// double **dev_interpFilterTime; // Time interpolation filter (second order) to interpolate wavefields and data as we propagate
-double *dev_wavefieldDts, **dev_BornSrcWavefield, *dev_BornSecWavefield;
-double **dev_tomoSrcWavefieldDt2, **dev_tomoScatWavefield1, **dev_tomoScatWavefield2, **dev_tomoRecWavefield;
-double **dev_sourcesSignals; // Sources for Born modeling
+double **dev_sourcesSignals; // Sources for modeling
 double **dev_vel2Dtw2; // Precomputed scaling v^2 * dtw^2
 double **dev_reflectivityScale; // scale = -2.0 / (vel*vel*vel)
+
+// Nonlinear modeling
+double **dev_modelRegDtw; // Model for nonlinear propagation (wavelet)
+double **dev_dataRegDts; // Data on device at coarse time-sampling (converted to regular grid)
+double *dev_wavefieldDts; // Source wavefield
+
+// Born
 double **dev_modelBorn, **dev_modelBornExt; // Reflectivity model for Born / Born extended
+double **dev_BornSrcWavefield, *dev_BornSecWavefield;
+
+// Tomo
 double **dev_modelTomo;  // Model for tomo
 double **dev_extReflectivity; // Extended reflectivity for tomo
-cudaStream_t *stream1, *stream2; // Streams
+double **dev_tomoSrcWavefieldDt2, **dev_tomoSecWavefield1, **dev_tomoSecWavefield2;
+
+// Wemva
+double **dev_modelWemva;
+double **dev_wemvaDataRegDts; // Seismic data for Wemva operator
+double **dev_wemvaExtImage; // Output of Wemva forward
+double **dev_wemvaSrcWavefieldDt2, **dev_wemvaSecWavefield1, **dev_wemvaSecWavefield2;
+
+// Streams
+cudaStream_t *stream1, *stream2;
 
 /************************************* HOST DECLARATION *********************************/
 long long host_nz; // Includes padding + FAT

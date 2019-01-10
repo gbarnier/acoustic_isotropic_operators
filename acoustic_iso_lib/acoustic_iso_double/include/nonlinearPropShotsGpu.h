@@ -42,6 +42,9 @@ class nonlinearPropShotsGpu : public Operator<SEP::double3DReg, SEP::double3DReg
 		/* Accessor */
 		std::shared_ptr<SEP::double3DReg> getWavefield(){ return _wavefield; }
 
+		/* Mutator */
+		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; }
+
 };
 
 #endif

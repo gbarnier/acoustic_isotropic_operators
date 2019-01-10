@@ -18,7 +18,7 @@
 using namespace SEP;
 
 class BornShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
-	
+
 	private:
 		int _nShot, _nGpu;
 		int _saveWavefield, _wavefieldShotNumber, _info, _deviceNumberInfo;
@@ -27,27 +27,28 @@ class BornShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 		std::shared_ptr<paramObj> _par;
 		std::vector<std::shared_ptr<deviceGpu>> _sourcesVector, _receiversVector;
 		std::shared_ptr<SEP::double3DReg> _srcWavefield, _secWavefield;
-	
+
 	public:
 
-		/* Overloaded constructors */ 	
+		/* Overloaded constructors */
 		BornShotsGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, std::vector<std::shared_ptr<deviceGpu>> sourcesVector, std::vector<std::shared_ptr<SEP::double2DReg>> sourcesSignalsVector, std::vector<std::shared_ptr<deviceGpu>> receiversVector);
-		
+
 		/* Destructor */
 		~BornShotsGpu(){};
-		
+
 		/* FWD / ADJ */
-		void forward(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data) const;	
-		void forwardWavefield(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data);			
-		void adjoint(const bool add, std::shared_ptr<double2DReg> model, const std::shared_ptr<double3DReg> data) const; 	
-		void adjointWavefield(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data);			
-						
+		void forward(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data) const;
+		void forwardWavefield(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data);
+		void adjoint(const bool add, std::shared_ptr<double2DReg> model, const std::shared_ptr<double3DReg> data) const;
+		void adjointWavefield(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data);
+
 		/* Accessor */
 		std::shared_ptr<double3DReg> getSrcWavefield(){ return _srcWavefield; }
-		std::shared_ptr<double3DReg> getSecWavefield(){ return _secWavefield; }		
-		
+		std::shared_ptr<double3DReg> getSecWavefield(){ return _secWavefield; }
 
-			
+		/* Mutators */
+		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; }	
+
 };
 
-#endif	
+#endif
