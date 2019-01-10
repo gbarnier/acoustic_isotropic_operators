@@ -34,6 +34,26 @@ set(SOURCE_BORN_EXT ${SRC_DIR}/fdParam.cpp
 		        	${SRC_DIR}/BornExtGpu.cpp
 )
 
+#Files for Extended tomo operator library
+set(SOURCE_TOMO_EXT ${SRC_DIR}/fdParam.cpp
+	   	        	${SRC_DIR}/deviceGpu.cpp
+	   	        	${SRC_DIR}/interpTimeLinTbb.cpp
+		        	${SRC_DIR}/secondTimeDerivative.cpp
+		        	${SRC_DIR}/tomoExtShotsGpuFunctions.cu
+		        	${SRC_DIR}/tomoExtShotsGpu.cpp
+		        	${SRC_DIR}/tomoExtGpu.cpp
+)
+
+#Files for Extended wemva operator library
+set(SOURCE_WEMVA_EXT ${SRC_DIR}/fdParam.cpp
+	   	        	${SRC_DIR}/deviceGpu.cpp
+	   	        	${SRC_DIR}/interpTimeLinTbb.cpp
+		        	${SRC_DIR}/secondTimeDerivative.cpp
+		        	${SRC_DIR}/wemvaExtShotsGpuFunctions.cu
+		        	${SRC_DIR}/wemvaExtShotsGpu.cpp
+		        	${SRC_DIR}/wemvaExtGpu.cpp
+)
+
 #SEP LIBRARY DIRECTORIES
 link_directories(${Generic-cpp_BINARY_DIR}
 				 ${hypercube_BINARY_DIR}
@@ -47,6 +67,8 @@ link_directories(${Generic-cpp_BINARY_DIR}
 add_library(ACOUSTIC_ISO_DOUBLE_NL ${SOURCE_NL})
 add_library(ACOUSTIC_ISO_DOUBLE_BORN ${SOURCE_BORN})
 add_library(ACOUSTIC_ISO_DOUBLE_BORN_EXT ${SOURCE_BORN_EXT})
+add_library(ACOUSTIC_ISO_DOUBLE_TOMO_EXT ${SOURCE_TOMO_EXT})
+add_library(ACOUSTIC_ISO_DOUBLE_WEMVA_EXT ${SOURCE_WEMVA_EXT})
 # Compiling the project executables
 #Non-linear operator
 add_executable(nonlinearPropShotsGpuMain ${SRC_DIR}/nonlinearPropShotsGpuMain.cpp)
@@ -57,6 +79,12 @@ target_link_libraries(BornShotsGpuMain ACOUSTIC_ISO_DOUBLE_BORN genericCpp OpenM
 #Exetended Born operator
 add_executable(BornExtShotsGpuMain ${SRC_DIR}/BornExtShotsGpuMain.cpp)
 target_link_libraries(BornExtShotsGpuMain ACOUSTIC_ISO_DOUBLE_BORN_EXT genericCpp OpenMP::OpenMP_CXX)
+#Exetended Tomo operator
+add_executable(tomoExtShotsGpuMain ${SRC_DIR}/tomoExtShotsGpuMain.cpp)
+target_link_libraries(tomoExtShotsGpuMain ACOUSTIC_ISO_DOUBLE_TOMO_EXT genericCpp OpenMP::OpenMP_CXX)
+#Exetended Tomo operator
+add_executable(wemvaExtShotsGpuMain ${SRC_DIR}/wemvaExtShotsGpuMain.cpp)
+target_link_libraries(wemvaExtShotsGpuMain ACOUSTIC_ISO_DOUBLE_WEMVA_EXT genericCpp OpenMP::OpenMP_CXX)
 #Adding libray and header files to install destination
 install(TARGETS ACOUSTIC_ISO_DOUBLE_NL DESTINATION lib)
 install(TARGETS nonlinearPropShotsGpuMain DESTINATION bin)
@@ -64,4 +92,8 @@ install(TARGETS ACOUSTIC_ISO_DOUBLE_BORN DESTINATION lib)
 install(TARGETS BornShotsGpuMain DESTINATION bin)
 install(TARGETS ACOUSTIC_ISO_DOUBLE_BORN_EXT DESTINATION lib)
 install(TARGETS BornExtShotsGpuMain DESTINATION bin)
+install(TARGETS ACOUSTIC_ISO_DOUBLE_TOMO_EXT DESTINATION lib)
+install(TARGETS tomoExtShotsGpuMain DESTINATION bin)
+install(TARGETS ACOUSTIC_ISO_DOUBLE_WEMVA_EXT DESTINATION lib)
+install(TARGETS wemvaExtShotsGpuMain DESTINATION bin)
 install(FILES ${HEADERS} DESTINATION include)

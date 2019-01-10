@@ -1,0 +1,63 @@
+#include "tomoExtGpu.h"
+
+tomoExtGpu::tomoExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, std::shared_ptr<SEP::double3DReg> reflectivityExt, int nGpu, int iGpu) {
+
+	// Finite-difference parameters
+	_fdParam = std::make_shared<fdParam>(vel, par);
+	_timeInterp = std::make_shared<interpTimeLinTbb>(_fdParam->_nts, _fdParam->_dts, _fdParam->_ots, _fdParam->_sub);
+	_secTimeDer = std::make_shared<secondTimeDerivative>(_fdParam->_nts, _fdParam->_dts);
+	_reflectivityExt = reflectivityExt;
+	_leg1 = par->getInt("leg1", 1);
+	_leg2 = par->getInt("leg2", 1);
+	_iGpu = iGpu;
+	_nGpu = nGpu;
+	setAllWavefields(par->getInt("saveWavefield", 0));
+
+	// Initialize GPU
+	initTomoExtGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _fdParam->_nExt, _leg1, _leg2, _nGpu, _iGpu);
+
+}
+
+bool tomoExtGpu::checkParfileConsistency(const std::shared_ptr<SEP::double2DReg> model, const std::shared_ptr<SEP::double2DReg> data) const {
+	if (_fdParam->checkParfileConsistencyTime(_sourcesSignals, 1, "Seismic source file") != true) {return false;}; // Check wavelet time axis
+	if (_fdParam->checkParfileConsistencyTime(data, 1, "Data file") != true) {return false;} // Check data time axis
+	if (_fdParam->checkParfileConsistencySpace(model, "Model file") != true) {return false;}; // Check model space axes
+	if (_fdParam->checkParfileConsistencySpace(_reflectivityExt, "Reflectivity file") != true) {return false;}; // Check extended reflectivity axes
+	return true;
+}
+
+void tomoExtGpu::setAllWavefields(int wavefieldFlag){
+	// -> The allocations are done here
+	_srcWavefield = setWavefield(wavefieldFlag);
+	_secWavefield1 = setWavefield(wavefieldFlag);
+	_secWavefield2 = setWavefield(wavefieldFlag);
+}
+
+void tomoExtGpu::forward(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double2DReg> data) const {
+
+	if (!add) data->scale(0.0);
+	std::shared_ptr<double2DReg> dataRegDts(new double2DReg(_fdParam->_nts, _nReceiversReg));
+
+	/* Tomo extended forward */
+	tomoExtShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtw->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield, _fdParam->_extension);
+
+	/* Interpolate data to irregular grid */
+	_receivers->forward(true, dataRegDts, data);
+}
+
+void tomoExtGpu::adjoint(const bool add, std::shared_ptr<double2DReg> model, const std::shared_ptr<double2DReg> data) const {
+
+	if (!add) model->scale(0.0);
+	std::shared_ptr<double2DReg> dataRegDts(new double2DReg(_fdParam->_nts, _nReceiversReg));
+	std::shared_ptr<double2DReg> modelTemp = model->clone(); // We need to create a temporary model for "add"
+	modelTemp->scale(0.0);
+
+	/* Interpolate data to regular grid */
+	_receivers->adjoint(false, dataRegDts, data);
+
+	/* Tomo extended adjoint */
+	tomoExtShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtw->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield, _fdParam->_extension);
+
+	/* Update model */
+	model->scaleAdd(modelTemp, 1.0, 1.0);
+}
