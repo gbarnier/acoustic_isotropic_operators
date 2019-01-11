@@ -401,14 +401,14 @@ def BornExtOpInitDouble(args):
 
 	# Time extension
 	if (extension == "time"):
-		dExt=parObject.getInt("dts")
+		dExt=parObject.getFloat("dts",-1.0)
 		nExt=parObject.getInt("nExt")
 		hExt=(nExt-1)/2
 		oExt=-dExt*hExt
 
 	# Horizontal subsurface offset extension
 	if (extension == "offset"):
-		dExt=parObject.getInt("dx")
+		dExt=parObject.getFloat("dx",-1.0)
 		nExt=parObject.getInt("nExt")
 		hExt=(nExt-1)/2
 		oExt=-dExt*hExt
