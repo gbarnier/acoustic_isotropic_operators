@@ -22,17 +22,23 @@ if (pybind11_FOUND)
   set(LIBS genericCpp buffers jsonCpp hypercube  ${OpenMP_EXE_LINKER_FLAGS} ${TBB_LIBRARIES} ${GENERIC_EXPORT_LIBS})
 
   #Compiling and adding module to library
-  pybind11_add_module(pyAcoustic_iso_double1 MODULE pyAcoustic_iso_double1.cpp)
-  target_link_libraries(pyAcoustic_iso_double1 PRIVATE ACOUSTIC_ISO_DOUBLE_NL ${LIBS})
-  pybind11_add_module(pyAcoustic_iso_double2 MODULE pyAcoustic_iso_double2.cpp)
-  target_link_libraries(pyAcoustic_iso_double2 PRIVATE ACOUSTIC_ISO_DOUBLE_BORN ${LIBS})
-  pybind11_add_module(pyAcoustic_iso_double3 MODULE pyAcoustic_iso_double3.cpp)
-  target_link_libraries(pyAcoustic_iso_double3 PRIVATE ACOUSTIC_ISO_DOUBLE_BORN_EXT ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_double_nl MODULE pyAcoustic_iso_double_nl.cpp)
+  target_link_libraries(pyAcoustic_iso_double_nl PRIVATE ACOUSTIC_ISO_DOUBLE_NL ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_double_born MODULE pyAcoustic_iso_double_born.cpp)
+  target_link_libraries(pyAcoustic_iso_double_born PRIVATE ACOUSTIC_ISO_DOUBLE_BORN ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_double_born_ext MODULE pyAcoustic_iso_double_born_ext.cpp)
+  target_link_libraries(pyAcoustic_iso_double_born_ext PRIVATE ACOUSTIC_ISO_DOUBLE_BORN_EXT ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_double_tomo MODULE pyAcoustic_iso_double_tomo.cpp)
+  target_link_libraries(pyAcoustic_iso_double_tomo PRIVATE ACOUSTIC_ISO_DOUBLE_TOMO_EXT ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_double_wemva MODULE pyAcoustic_iso_double_wemva.cpp)
+  target_link_libraries(pyAcoustic_iso_double_wemva PRIVATE ACOUSTIC_ISO_DOUBLE_WEMVA_EXT ${LIBS})
 
   #Installing library
-  install( TARGETS pyAcoustic_iso_double1 DESTINATION lib/python) #Module for non-linear operator
-  install( TARGETS pyAcoustic_iso_double2 DESTINATION lib/python) #Module for Born operator
-  install( TARGETS pyAcoustic_iso_double3 DESTINATION lib/python) #Module for Extended Born operator
+  install( TARGETS pyAcoustic_iso_double_nl DESTINATION lib/python) #Module for non-linear operator
+  install( TARGETS pyAcoustic_iso_double_born DESTINATION lib/python) #Module for Born operator
+  install( TARGETS pyAcoustic_iso_double_born_ext DESTINATION lib/python) #Module for Extended Born operator
+  install( TARGETS pyAcoustic_iso_double_tomo DESTINATION lib/python) #Module for Extended Tomo operator
+  install( TARGETS pyAcoustic_iso_double_wemva DESTINATION lib/python) #Module for Extended Wemva operator
   install( FILES Acoustic_iso_double.py DESTINATION lib/python)
   #Installing Python executables
   install( FILES nonlinearPythonDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)

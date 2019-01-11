@@ -11,7 +11,7 @@ namespace py = pybind11;
 using namespace SEP;
 
 //Definition of Born operator
-PYBIND11_MODULE(pyAcoustic_iso_double3, clsGeneric) {
+PYBIND11_MODULE(pyAcoustic_iso_double_born_ext, clsGeneric) {
 
   py::add_ostream_redirect(clsGeneric, "ostream_redirect");
 
@@ -26,7 +26,8 @@ PYBIND11_MODULE(pyAcoustic_iso_double3, clsGeneric) {
 
       .def("adjointWavefield",(void (BornExtShotsGpu::*)(const bool, const std::shared_ptr<double3DReg>, std::shared_ptr<double3DReg>)) &BornExtShotsGpu::adjointWavefield, "Adjoint wavefield")
 
-      .def("dotTest",(bool (BornExtShotsGpu::*)(const bool, const float)) &BornExtShotsGpu::dotTest,"Dot-Product Test")
+      .def("setVel",(void (BornExtShotsGpu::*)(std::shared_ptr<double2DReg>)) &BornExtShotsGpu::setVel,"Function to set background velocity")
 
+      .def("dotTest",(bool (BornExtShotsGpu::*)(const bool, const float)) &BornExtShotsGpu::dotTest,"Dot-Product Test")
   ;
 }

@@ -1,8 +1,9 @@
 #Python module encapsulating PYBIND11 module
 #It seems necessary to allow std::cout redirection to screen
-import pyAcoustic_iso_double1
-import pyAcoustic_iso_double2
-import pyAcoustic_iso_double3
+import pyAcoustic_iso_double_nl
+import pyAcoustic_iso_double_born
+import pyAcoustic_iso_double_born_ext
+import pyAcoustic_iso_double_tomo
 import pyOperator as Op
 #Other necessary modules
 import genericIO
@@ -10,7 +11,7 @@ import SepVector
 import Hypercube
 import numpy as np
 
-from pyAcoustic_iso_double1 import deviceGpu
+from pyAcoustic_iso_double_nl import deviceGpu
 
 def nonlinearOpInitDouble(args):
 	"""Function to correctly initialize nonlinear operator
@@ -25,8 +26,8 @@ def nonlinearOpInitDouble(args):
 	# Velocity (and convert to double precision)
 	velFloat=genericIO.defaultIO.getVector(velFile) # Allocates memory for velocity model float
 	velDouble=SepVector.getSepVector(velFloat.getHyper(), storage="dataDouble") # Allocates memory for velocity model double (filled with zeros)
-	velDoubleNp=np.array(velDouble.getCpp(), copy=False) # Convert sep vector to numpy array (no mem allocation)
-	velFloatNp=np.array(velFloat.getCpp(), copy=False)
+	velDoubleNp=velDouble.getNdArray() # Convert sep vector to numpy array (no mem allocation)
+	velFloatNp=velFloat.getNdArray()
 	velDoubleNp[:]=velFloatNp
 
 	# Sources geometry
@@ -131,7 +132,7 @@ class nonlinearPropShotsGpu(Op.Operator):
 			velocity = velocity.getCpp()
 		if("getCpp" in dir(paramP)):
 			paramP = paramP.getCpp()
-		self.pyOp = pyAcoustic_iso_double1.nonlinearPropShotsGpu(velocity,paramP,sourceVector,receiversVector)
+		self.pyOp = pyAcoustic_iso_double_nl.nonlinearPropShotsGpu(velocity,paramP,sourceVector,receiversVector)
 		return
 
 	def forward(self,add,model,data):
@@ -140,7 +141,7 @@ class nonlinearPropShotsGpu(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pyAcoustic_iso_double1.ostream_redirect():
+		with pyAcoustic_iso_double_nl.ostream_redirect():
 			self.pyOp.forward(add,model,data)
 		return
 
@@ -150,13 +151,41 @@ class nonlinearPropShotsGpu(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pyAcoustic_iso_double1.ostream_redirect():
+		with pyAcoustic_iso_double_nl.ostream_redirect():
 			self.pyOp.adjoint(add,model,data)
+		return
+
+	def forwardWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_nl.ostream_redirect():
+			self.pyOp.forwardWavefield(add,model,data)
+		return
+
+	def adjointWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_nl.ostream_redirect():
+			self.pyOp.adjointWavefield(add,model,data)
+		return
+
+	def setVel(self,vel):
+		#Checking if getCpp is present
+		if("getCpp" in dir(vel)):
+			vel = vel.getCpp()
+		with pyAcoustic_iso_double_nl.ostream_redirect():
+			self.pyOp.setVel(vel)
 		return
 
 	def dotTestCpp(self,verb=False,maxError=.00001):
 		"""Method to call the Cpp class dot-product test"""
-		with pyAcoustic_iso_double1.ostream_redirect():
+		with pyAcoustic_iso_double_nl.ostream_redirect():
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
@@ -174,8 +203,8 @@ def BornOpInitDouble(args):
 	# Velocity model
 	velFloat=genericIO.defaultIO.getVector(velFile)
 	velDouble=SepVector.getSepVector(velFloat.getHyper(), storage="dataDouble")
-	velDoubleNp=np.array(velDouble.getCpp(), copy=False)
-	velFloatNp=np.array(velFloat.getCpp(), copy=False)
+	velDoubleNp=velDouble.getNdArray()
+	velFloatNp=velFloat.getNdArray()
 	velDoubleNp[:]=velFloatNp
 
 	# Sources signals (we assume one unique point source signature for all shots)
@@ -184,8 +213,8 @@ def BornOpInitDouble(args):
 	dummyAxis=Hypercube.axis(n=1)
 	sourcesSignalsHyper=Hypercube.hypercube(axes=[timeAxis, dummyAxis]) # Make the wavelet a float2DReg/double2DReg
 	sourcesSignalsDouble=SepVector.getSepVector(sourcesSignalsHyper, storage="dataDouble") # Allocates memory for velocity model double (filled with zeros)
-	sourcesSignalsDoubleNp=np.array(sourcesSignalsDouble.getCpp(), copy=False) # Convert sep vector to numpy array (no mem allocation)
-	sourcesSignalsFloatNp=np.array(sourcesSignalsFloat.getCpp(), copy=False)
+	sourcesSignalsDoubleNp=sourcesSignalsDouble.getNdArray()
+	sourcesSignalsFloatNp=sourcesSignalsFloat.getNdArray()
 	for its in range(timeAxis.n):
 		sourcesSignalsDoubleNp[0][its]=sourcesSignalsFloatNp[its]
 	sourcesSignalsVector=[]
@@ -224,8 +253,8 @@ def BornOpInitDouble(args):
 		# Read model (i.e., the reflectivity) as a float vector
 		modelFloat=genericIO.defaultIO.getVector(parObject.getString("model"))
 		modelDouble=SepVector.getSepVector(modelFloat.getHyper(), storage="dataDouble")
-		modelDoubleNp=np.array(modelDouble.getCpp(), copy=False)
-		modelFloatNp=np.array(modelFloat.getCpp(), copy=False)
+		modelDoubleNp=modelDouble.getNdArray()
+		modelFloatNp=modelFloat.getNdArray()
 		modelDoubleNp[:]=modelFloatNp
 
 		# Allocate dataDouble and fill with zeros
@@ -288,7 +317,7 @@ class BornShotsGpu(Op.Operator):
 		for idx,sourceSignal in enumerate(sourcesSignalsVector):
 			if("getCpp" in dir(sourceSignal)):
 				sourcesSignalsVector[idx] = sourceSignal.getCpp()
-		self.pyOp = pyAcoustic_iso_double2.BornShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector)
+		self.pyOp = pyAcoustic_iso_double_born.BornShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector)
 		return
 
 	def forward(self,add,model,data):
@@ -297,7 +326,7 @@ class BornShotsGpu(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pyAcoustic_iso_double2.ostream_redirect():
+		with pyAcoustic_iso_double_born.ostream_redirect():
 			self.pyOp.forward(add,model,data)
 		return
 
@@ -307,13 +336,41 @@ class BornShotsGpu(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pyAcoustic_iso_double2.ostream_redirect():
+		with pyAcoustic_iso_double_born.ostream_redirect():
 			self.pyOp.adjoint(add,model,data)
+		return
+
+	def forwardWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_born.ostream_redirect():
+			self.pyOp.forwardWavefield(add,model,data)
+		return
+
+	def adjointWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_born.ostream_redirect():
+			self.pyOp.adjointWavefield(add,model,data)
+		return
+
+	def setVel(self,vel):
+		#Checking if getCpp is present
+		if("getCpp" in dir(vel)):
+			vel = vel.getCpp()
+		with pyAcoustic_iso_double_born.ostream_redirect():
+			self.pyOp.setVel(vel)
 		return
 
 	def dotTestCpp(self,verb=False,maxError=.00001):
 		"""Method to call the Cpp class dot-product test"""
-		with pyAcoustic_iso_double2.ostream_redirect():
+		with pyAcoustic_iso_double_born.ostream_redirect():
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
@@ -329,8 +386,8 @@ def BornExtOpInitDouble(args):
 	# Velocity model
 	velFloat=genericIO.defaultIO.getVector(velFile)
 	velDouble=SepVector.getSepVector(velFloat.getHyper(), storage="dataDouble")
-	velDoubleNp=np.array(velDouble.getCpp(), copy=False)
-	velFloatNp=np.array(velFloat.getCpp(), copy=False)
+	velDoubleNp=velDouble.getNdArray()
+	velFloatNp=velFloat.getNdArray()
 	velDoubleNp[:]=velFloatNp
 	zAxis=velDouble.getHyper().axes[0]
 	xAxis=velDouble.getHyper().axes[1]
@@ -364,8 +421,8 @@ def BornExtOpInitDouble(args):
 	dummyAxis=Hypercube.axis(n=1)
 	sourcesSignalsHyper=Hypercube.hypercube(axes=[timeAxis, dummyAxis])
 	sourcesSignalsDouble=SepVector.getSepVector(sourcesSignalsHyper, storage="dataDouble")
-	sourcesSignalsDoubleNp=np.array(sourcesSignalsDouble.getCpp(), copy=False)
-	sourcesSignalsFloatNp=np.array(sourcesSignalsFloat.getCpp(), copy=False)
+	sourcesSignalsDoubleNp=sourcesSignalsDouble.getNdArray()
+	sourcesSignalsFloatNp=sourcesSignalsFloat.getNdArray()
 	for its in range(timeAxis.n):
 		sourcesSignalsDoubleNp[0][its]=sourcesSignalsFloatNp[its]
 	sourcesSignalsVector=[]
@@ -473,7 +530,7 @@ class BornExtShotsGpu(Op.Operator):
 		for idx,sourceSignal in enumerate(sourcesSignalsVector):
 			if("getCpp" in dir(sourceSignal)):
 				sourcesSignalsVector[idx] = sourceSignal.getCpp()
-		self.pyOp = pyAcoustic_iso_double3.BornExtShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector)
+		self.pyOp = pyAcoustic_iso_double_born_ext.BornExtShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector)
 		return
 
 	def forward(self,add,model,data):
@@ -482,7 +539,7 @@ class BornExtShotsGpu(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pyAcoustic_iso_double3.ostream_redirect():
+		with pyAcoustic_iso_double_born_ext.ostream_redirect():
 			self.pyOp.forward(add,model,data)
 		return
 
@@ -492,12 +549,189 @@ class BornExtShotsGpu(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pyAcoustic_iso_double3.ostream_redirect():
+		with pyAcoustic_iso_double_born_ext.ostream_redirect():
 			self.pyOp.adjoint(add,model,data)
+		return
+
+	def forwardWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_born_ext.ostream_redirect():
+			self.pyOp.forwardWavefield(add,model,data)
+		return
+
+	def adjointWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_born_ext.ostream_redirect():
+			self.pyOp.adjointWavefield(add,model,data)
+		return
+
+	def setVel(self,vel):
+		#Checking if getCpp is present
+		if("getCpp" in dir(vel)):
+			vel = vel.getCpp()
+		with pyAcoustic_iso_double_born_ext.ostream_redirect():
+			self.pyOp.setVel(vel)
 		return
 
 	def dotTestCpp(self,verb=False,maxError=.00001):
 		"""Method to call the Cpp class dot-product test"""
-		with pyAcoustic_iso_double3.ostream_redirect():
+		with pyAcoustic_iso_double_born_ext.ostream_redirect():
+			result=self.pyOp.dotTest(verb,maxError)
+		return result
+
+class tomoExtShotsGpu(Op.Operator):
+	"""Wrapper encapsulating PYBIND11 module for Born operator"""
+
+	def __init__(self,domain,range,velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector,reflectivityExt):
+		#Domain = source wavelet
+		#Range = recorded data space
+		self.setDomainRange(domain,range)
+		#Checking if getCpp is present
+		if("getCpp" in dir(velocity)):
+			velocity = velocity.getCpp()
+		if("getCpp" in dir(paramP)):
+			paramP = paramP.getCpp()
+		for idx,sourceSignal in enumerate(sourcesSignalsVector):
+			if("getCpp" in dir(sourceSignal)):
+				sourcesSignalsVector[idx] = sourceSignal.getCpp()
+		if("getCpp" in dir(reflectivityExt)):
+			reflectivityExt = reflectivityExt.getCpp()
+		self.pyOp = pyAcoustic_iso_double_tomo.tomoExtShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector,reflectivityExt)
+		return
+
+	def forward(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_tomo.ostream_redirect():
+			self.pyOp.forward(add,model,data)
+		return
+
+	def adjoint(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_tomo.ostream_redirect():
+			self.pyOp.adjoint(add,model,data)
+		return
+
+	def forwardWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_tomo.ostream_redirect():
+			self.pyOp.forwardWavefield(add,model,data)
+		return
+
+	def adjointWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_tomo.ostream_redirect():
+			self.pyOp.adjointWavefield(add,model,data)
+		return
+
+	def setVel(self,vel):
+		#Checking if getCpp is present
+		if("getCpp" in dir(vel)):
+			vel = vel.getCpp()
+		with pyAcoustic_iso_double_tomo.ostream_redirect():
+			self.pyOp.setVel(vel)
+		return
+
+	def dotTestCpp(self,verb=False,maxError=.00001):
+		"""Method to call the Cpp class dot-product test"""
+		with pyAcoustic_iso_double_tomo.ostream_redirect():
+			result=self.pyOp.dotTest(verb,maxError)
+		return result
+
+class wemvaExtShotsGpu(Op.Operator):
+	"""Wrapper encapsulating PYBIND11 module for Born operator"""
+
+	def __init__(self,domain,range,velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector,receiversSignalsVector):
+		#Domain = source wavelet
+		#Range = recorded data space
+		self.setDomainRange(domain,range)
+		#Checking if getCpp is present
+		if("getCpp" in dir(velocity)):
+			velocity = velocity.getCpp()
+		if("getCpp" in dir(paramP)):
+			paramP = paramP.getCpp()
+		for idx,sourceSignal in enumerate(sourcesSignalsVector):
+			if("getCpp" in dir(sourceSignal)):
+				sourcesSignalsVector[idx] = sourceSignal.getCpp()
+		for idx,receiversSignal in enumerate(receiversSignalsVector):
+			if("getCpp" in dir(receiversSignal)):
+				receiversSignalsVector[idx] = receiversSignal.getCpp()
+		self.pyOp = pyAcoustic_iso_double_wemva.wemvaExtShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector,receiversSignalsVector)
+		return
+
+	def forward(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_wemva.ostream_redirect():
+			self.pyOp.forward(add,model,data)
+		return
+
+	def adjoint(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_wemva.ostream_redirect():
+			self.pyOp.adjoint(add,model,data)
+		return
+
+	def forwardWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_wemva.ostream_redirect():
+			self.pyOp.forwardWavefield(add,model,data)
+		return
+
+	def adjointWavefield(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyAcoustic_iso_double_wemva.ostream_redirect():
+			self.pyOp.adjointWavefield(add,model,data)
+		return
+
+	def setVel(self,vel):
+		#Checking if getCpp is present
+		if("getCpp" in dir(vel)):
+			vel = vel.getCpp()
+		with pyAcoustic_iso_double_wemva.ostream_redirect():
+			self.pyOp.setVel(vel)
+		return
+
+	def dotTestCpp(self,verb=False,maxError=.00001):
+		"""Method to call the Cpp class dot-product test"""
+		with pyAcoustic_iso_double_wemva.ostream_redirect():
 			result=self.pyOp.dotTest(verb,maxError)
 		return result

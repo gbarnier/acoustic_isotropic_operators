@@ -11,7 +11,7 @@ namespace py = pybind11;
 using namespace SEP;
 
 //Definition of Device object and non-linear propagator
-PYBIND11_MODULE(pyAcoustic_iso_double1, clsGeneric) {
+PYBIND11_MODULE(pyAcoustic_iso_double_nl, clsGeneric) {
 
   py::add_ostream_redirect(clsGeneric, "ostream_redirect");
 
@@ -35,8 +35,9 @@ PYBIND11_MODULE(pyAcoustic_iso_double1, clsGeneric) {
 
       .def("adjointWavefield",(void (nonlinearPropShotsGpu::*)(const bool, const std::shared_ptr<double3DReg>, std::shared_ptr<double3DReg>)) &nonlinearPropShotsGpu::adjointWavefield, "Adjoint wavefield")
 
-      .def("dotTest",(bool (nonlinearPropShotsGpu::*)(const bool, const float)) &nonlinearPropShotsGpu::dotTest,"Dot-Product Test")
+      .def("setVel",(void (nonlinearPropShotsGpu::*)(std::shared_ptr<double2DReg>)) &nonlinearPropShotsGpu::setVel,"Function to set background velocity")
 
+      .def("dotTest",(bool (nonlinearPropShotsGpu::*)(const bool, const float)) &nonlinearPropShotsGpu::dotTest,"Dot-Product Test")
   ;
 
 }
