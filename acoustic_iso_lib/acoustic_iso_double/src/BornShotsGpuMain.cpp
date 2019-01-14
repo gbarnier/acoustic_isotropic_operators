@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 
 	/* General parameters */
 	int adj = par->getInt("adj", 0);
-	int saveWavefield = par->getInt("saveWavefield");
+	int saveWavefield = par->getInt("saveWavefield", 0);
 	int dotProd = par->getInt("dotProd", 0);
 	int nShot = par->getInt("nShot");
 	axis shotAxis = axis(nShot, 1.0, 1.0);

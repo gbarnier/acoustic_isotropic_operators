@@ -17,18 +17,15 @@
 
 // Source wavefield
 void computeWemvaSrcWfldDt2(double *dev_sourcesIn, double *dev_wavefieldOut, int *dev_sourcesPositionsRegIn, int nSourcesRegIn, dim3 dimGridIn, dim3 dimBlockIn, int iGpu);
-
 // Receiver wavefield
 void computeWemvaRecWfld(double *dev_dataIn, double *dev_wavefieldOut, int *dev_receiversPositionsRegIn, dim3 dimGridIn, dim3 dimBlockIn, int nBlockDataIn, int iGpu);
 
 // Forward time
 void computeWemvaLeg1TimeFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWavefieldDt2In, double *dev_wemvaRecWavefieldIn, double *dev_wemvaExtImageOut, double *dev_wavefield1Out, dim3 dimGridIn, dim3 dimBlockIn, dim3 dimGridInExtIn, dim3 dimBlockInExtIn, int iGpu, int saveWavefield);
-
 void computeWemvaLeg2TimeFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWavefieldDt2In, double *dev_wemvaRecWavefieldIn, double *dev_wemvaExtImageOut, double *dev_wavefield1Out, dim3 dimGridIn, dim3 dimBlockIn, dim3 dimGridInExtIn, dim3 dimBlockInExtIn, int iGpu, int saveWavefield);
 
 // Forward offset
 void computeWemvaLeg1OffsetFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWavefieldDt2In, double *dev_wemvaRecWavefieldIn, double *dev_wemvaExtImageOut, double *dev_wavefield1Out, dim3 dimGridIn, dim3 dimBlockIn, dim3 dimGridExtIn, dim3 dimBlockExtIn, int iGpu, int saveWavefield);
-
 void computeWemvaLeg2OffsetFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWavefieldDt2In, double *dev_wemvaRecWavefieldIn, double *dev_wemvaExtImageOut, double *dev_wavefield1Out, dim3 dimGridIn, dim3 dimBlockIn, dim3 dimGridExtIn, dim3 dimBlockExtIn, int iGpu, int saveWavefield);
 
 // Adjoint time
@@ -114,10 +111,10 @@ void initWemvaExtGpu(double dz, double dx, int nz, int nx, int nts, double dts, 
 	host_leg2 = leg2;
 
 	// Coefficients for second-order time derivative
-	// host_cSide = 1.0 / (host_dts*host_dts);
-	// host_cCenter = -2.0 / (host_dts*host_dts);
-	host_cSide = 0.0;
-	host_cCenter = 1.0;
+	host_cSide = 1.0 / (host_dts*host_dts);
+	host_cCenter = -2.0 / (host_dts*host_dts);
+	// host_cSide = 0.0;
+	// host_cCenter = 1.0;
 
 	/**************************** ALLOCATE ARRAYS OF ARRAYS *****************************/
 	// Only one GPU will perform the following
@@ -326,7 +323,7 @@ void deallocateWemvaExtShotsGpu(int iGpu){
 /****************************************************************************************/
 /************************************** Wemva forward ************************************/
 /****************************************************************************************/
-void wemvaExtShotsFwdGpu(double *model, double *wemvaExtImage, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, double *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, double *wemvaSrcWavefieldDt2, double *wemvaSecWavefield1, double *wemvaSecWavefield2, int iGpu, int saveWavefield, std::string extension){
+void wemvaTimeShotsFwdGpu(double *model, double *wemvaExtImage, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, double *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, double *wemvaSrcWavefieldDt2, double *wemvaSecWavefield1, double *wemvaSecWavefield2, int iGpu, int saveWavefield){
 
     // We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
@@ -400,14 +397,7 @@ void wemvaExtShotsFwdGpu(double *model, double *wemvaExtImage, double *sourcesSi
 	/************************************************************************************/
 	if (host_leg1 == 1){
 
-		if (extension == "time") {
-
-            computeWemvaLeg1TimeFwd(dev_modelWemva[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_wemvaExtImage[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, dimGridExt, dimBlockExt, iGpu, saveWavefield);
-
-		} else {
-
-			computeWemvaLeg1OffsetFwd(dev_modelWemva[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_wemvaExtImage[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, dimGridExt, dimBlockExt, iGpu, saveWavefield);
-		}
+        computeWemvaLeg1TimeFwd(dev_modelWemva[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_wemvaExtImage[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, dimGridExt, dimBlockExt, iGpu, saveWavefield);
 
 		// Copy both scattered wavefields from leg #1 to host
 		if (saveWavefield == 1) {
@@ -420,13 +410,7 @@ void wemvaExtShotsFwdGpu(double *model, double *wemvaExtImage, double *sourcesSi
 	/************************************************************************************/
 	if (host_leg2 == 1){
 
-        if (extension == "time") {
-
-            computeWemvaLeg2TimeFwd(dev_modelWemva[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_wemvaExtImage[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, dimGridExt, dimBlockExt, iGpu, saveWavefield);
-
-		} else {
-            computeWemvaLeg2OffsetFwd(dev_modelWemva[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_wemvaExtImage[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, dimGridExt, dimBlockExt, iGpu, saveWavefield);
-		}
+    	computeWemvaLeg2TimeFwd(dev_modelWemva[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_wemvaExtImage[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, dimGridExt, dimBlockExt, iGpu, saveWavefield);
 
 		// Copy both scattered wavefields from leg #2 to host
 		if (saveWavefield == 1) {
@@ -453,10 +437,124 @@ void wemvaExtShotsFwdGpu(double *model, double *wemvaExtImage, double *sourcesSi
 
 }
 
+void wemvaOffsetShotsFwdGpu(double *model, double *wemvaExtImage, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, double *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, double *wemvaSrcWavefieldDt2, double *wemvaSecWavefield1, double *wemvaSecWavefield2, int iGpu, int saveWavefield){
+
+    // We assume the source wavelet/signals already contain(s) the second time derivative
+	// Set device number
+	cudaSetDevice(iGpu);
+
+	// Sources geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_sourcesPositionReg[iGpu], nSourcesReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_sourcesPositionReg[iGpu], sourcesPositionReg, nSourcesReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Sources signals
+  	cuda_call(cudaMalloc((void**) &dev_sourcesSignals[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_sourcesSignals[iGpu], sourcesSignals, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Receivers geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nReceiversReg, &nReceiversReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_receiversPositionReg[iGpu], nReceiversReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Receivers signals
+  	cuda_call(cudaMalloc((void**) &dev_wemvaDataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_wemvaDataRegDts[iGpu], wemvaDataRegDts, nReceiversReg*host_nts*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Non-extended blocks/threads
+	int nBlockZ = (host_nz-2*FAT) / BLOCK_SIZE; // Number of blocks for the z-axis
+	int nBlockX = (host_nx-2*FAT) / BLOCK_SIZE; // Number of blocks for the x-axis
+	int nBlockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA; // Number of blocks for the data extraction/injection
+	dim3 dimGrid(nBlockZ, nBlockX);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+
+   	// Extended blocks/threads
+	int nBlockZExt = (host_nz-2*FAT) / BLOCK_SIZE_EXT; // Number of blocks for the z-axis when using a time-extension
+	int nBlockXExt = (host_nx-2*FAT) / BLOCK_SIZE_EXT; // Number of blocks for the x-axis when using a time-extension
+	int nBlockExt = (host_nExt+BLOCK_SIZE_EXT-1) / BLOCK_SIZE_EXT;
+	dim3 dimGridExt(nBlockZExt, nBlockXExt, nBlockExt);
+	dim3 dimBlockExt(BLOCK_SIZE_EXT, BLOCK_SIZE_EXT, BLOCK_SIZE_EXT);
+
+	/************************************************************************************/
+	/*************************************** Source *************************************/
+	/************************************************************************************/
+	// Compute source wavefield with second-order time derivative
+	computeWemvaSrcWfldDt2(dev_sourcesSignals[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_sourcesPositionReg[iGpu], nSourcesReg, dimGrid, dimBlock, iGpu);
+
+	// Copy source wavefield back to host
+	if (saveWavefield == 1) {cuda_call(cudaMemcpy(wemvaSrcWavefieldDt2, dev_wemvaSrcWavefieldDt2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
+
+    /************************************************************************************/
+	/********************************** Receiver ****************************************/
+	/************************************************************************************/
+	// Compute receiver wavefield (includes no time derivative)
+	computeWemvaRecWfld(dev_wemvaDataRegDts[iGpu], dev_wemvaSecWavefield1[iGpu], dev_receiversPositionReg[iGpu], dimGrid, dimBlock, nBlockData, iGpu);
+
+	// Copy receiver wavefield back to host
+	if (saveWavefield == 1) {cuda_call(cudaMemcpy(wemvaSecWavefield1, dev_wemvaSecWavefield1[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
+
+	/************************************************************************************/
+	/***************************** Preliminary steps ************************************/
+	/************************************************************************************/
+	// Copy + scale model (background perturbation)
+	cuda_call(cudaMemcpy(dev_modelWemva[iGpu], model, host_nz*host_nx*sizeof(double), cudaMemcpyHostToDevice));
+	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelWemva[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+	// Allocate secondary wavefields if requested
+	if (saveWavefield == 1) {cuda_call(cudaMalloc((void**) &dev_wemvaSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double)));}
+
+    // Initialize extended image ("data") to zero
+	cuda_call(cudaMemset(dev_wemvaExtImage[iGpu], 0, host_nz*host_nx*host_nExt*sizeof(double)));
+
+	/************************************************************************************/
+	/************************************ Leg #1 ****************************************/
+	/************************************************************************************/
+	if (host_leg1 == 1){
+
+		computeWemvaLeg1OffsetFwd(dev_modelWemva[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_wemvaExtImage[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, dimGridExt, dimBlockExt, iGpu, saveWavefield);
+
+		// Copy both scattered wavefields from leg #1 to host
+		if (saveWavefield == 1) {
+			cuda_call(cudaMemcpy(wemvaSecWavefield2, dev_wemvaSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+		}
+	}
+
+	/************************************************************************************/
+	/************************************ Leg #2 ****************************************/
+	/************************************************************************************/
+	if (host_leg2 == 1){
+
+        computeWemvaLeg2OffsetFwd(dev_modelWemva[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_wemvaExtImage[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, dimGridExt, dimBlockExt, iGpu, saveWavefield);
+
+		// Copy both scattered wavefields from leg #2 to host
+		if (saveWavefield == 1) {
+			cuda_call(cudaMemcpy(wemvaSecWavefield2, dev_wemvaSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+		}
+	}
+
+	/************************************************************************************/
+	/************************************ Output ****************************************/
+	/************************************************************************************/
+  	// Scale extended image for linearization: 2 / ^3
+	kernel_exec(scaleReflectivityLinExt<<<dimGridExt, dimBlockExt>>>(dev_wemvaExtImage[iGpu], dev_reflectivityScale[iGpu]));
+
+	// Copy data to host
+	cuda_call(cudaMemcpy(wemvaExtImage, dev_wemvaExtImage[iGpu], host_nz*host_nx*host_nExt*sizeof(double), cudaMemcpyDeviceToHost));
+
+	/******************************* Deallocation ***************************************/
+	// Deallocate all slices
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_sourcesSignals[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_wemvaDataRegDts[iGpu]));
+	if (saveWavefield == 1){ cuda_call(cudaFree(dev_wemvaSecWavefield2[iGpu]));}
+
+}
+
 /****************************************************************************************/
 /************************************** Wemva adjoint ************************************/
 /****************************************************************************************/
-void wemvaExtShotsAdjGpu(double *model, double *wemvaExtImage, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, double *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, double *wemvaSrcWavefieldDt2, double *wemvaSecWavefield1, double *wemvaSecWavefield2, int iGpu, int saveWavefield, std::string extension){
+void wemvaTimeShotsAdjGpu(double *model, double *wemvaExtImage, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, double *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, double *wemvaSrcWavefieldDt2, double *wemvaSecWavefield1, double *wemvaSecWavefield2, int iGpu, int saveWavefield){
 
     // We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
@@ -530,19 +628,7 @@ void wemvaExtShotsAdjGpu(double *model, double *wemvaExtImage, double *sourcesSi
 	/************************************************************************************/
 	if (host_leg1 == 1){
 
-		if (extension == "time") {
-            computeWemvaLeg1TimeAdj(dev_wemvaExtImage[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_modelWemva[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
-
-			double dummy1[host_nz*host_nx];
-			cuda_call(cudaMemcpy(dummy1, dev_modelWemva[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToHost));
-
-		} else {
-			computeWemvaLeg1OffsetAdj(dev_wemvaExtImage[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_modelWemva[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
-
-			double dummy1[host_nz*host_nx];
-			cuda_call(cudaMemcpy(dummy1, dev_modelWemva[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToHost));
-
-		}
+        computeWemvaLeg1TimeAdj(dev_wemvaExtImage[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_modelWemva[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
 
 		// Copy both scattered wavefields from leg #1 to host
 		if (saveWavefield == 1) {
@@ -555,19 +641,123 @@ void wemvaExtShotsAdjGpu(double *model, double *wemvaExtImage, double *sourcesSi
 	/************************************************************************************/
 	if (host_leg2 == 1){
 
-        if (extension == "time") {
-			computeWemvaLeg2TimeAdj(dev_wemvaExtImage[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_modelWemva[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
+		computeWemvaLeg2TimeAdj(dev_wemvaExtImage[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_modelWemva[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
 
-			double dummy2[host_nz*host_nx];
-			cuda_call(cudaMemcpy(dummy2, dev_modelWemva[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToHost));
-
-		} else {
-			computeWemvaLeg2OffsetAdj(dev_wemvaExtImage[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_modelWemva[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
-
-			double dummy2[host_nz*host_nx];
-			cuda_call(cudaMemcpy(dummy2, dev_modelWemva[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToHost));
-
+		// Copy both scattered wavefields from leg #2 to host
+		if (saveWavefield == 1) {
+			cuda_call(cudaMemcpy(wemvaSecWavefield2, dev_wemvaSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 		}
+	}
+
+	/************************************************************************************/
+	/************************************ Model *****************************************/
+	/************************************************************************************/
+    // Scale data (extended image)
+	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelWemva[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+	// Copy data to host
+	cuda_call(cudaMemcpy(model, dev_modelWemva[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToHost));
+
+	/******************************* Deallocation ***************************************/
+	// Deallocate all slices
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_sourcesSignals[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_wemvaDataRegDts[iGpu]));
+	if (saveWavefield == 1){ cuda_call(cudaFree(dev_wemvaSecWavefield2[iGpu]));}
+
+}
+
+void wemvaOffsetShotsAdjGpu(double *model, double *wemvaExtImage, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, double *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, double *wemvaSrcWavefieldDt2, double *wemvaSecWavefield1, double *wemvaSecWavefield2, int iGpu, int saveWavefield){
+
+    // We assume the source wavelet/signals already contain(s) the second time derivative
+	// Set device number
+	cudaSetDevice(iGpu);
+
+	// Sources geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_sourcesPositionReg[iGpu], nSourcesReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_sourcesPositionReg[iGpu], sourcesPositionReg, nSourcesReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Sources signals
+  	cuda_call(cudaMalloc((void**) &dev_sourcesSignals[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_sourcesSignals[iGpu], sourcesSignals, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Receivers geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nReceiversReg, &nReceiversReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_receiversPositionReg[iGpu], nReceiversReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Receivers signals
+  	cuda_call(cudaMalloc((void**) &dev_wemvaDataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_wemvaDataRegDts[iGpu], wemvaDataRegDts, nReceiversReg*host_nts*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Non-extended blocks/threads
+	int nBlockZ = (host_nz-2*FAT) / BLOCK_SIZE; // Number of blocks for the z-axis
+	int nBlockX = (host_nx-2*FAT) / BLOCK_SIZE; // Number of blocks for the x-axis
+	int nBlockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA; // Number of blocks for the data extraction/injection
+	dim3 dimGrid(nBlockZ, nBlockX);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+
+   	// Extended blocks/threads
+	int nBlockZExt = (host_nz-2*FAT) / BLOCK_SIZE_EXT; // Number of blocks for the z-axis when using a time-extension
+	int nBlockXExt = (host_nx-2*FAT) / BLOCK_SIZE_EXT; // Number of blocks for the x-axis when using a time-extension
+	int nBlockExt = (host_nExt+BLOCK_SIZE_EXT-1) / BLOCK_SIZE_EXT;
+	dim3 dimGridExt(nBlockZExt, nBlockXExt, nBlockExt);
+	dim3 dimBlockExt(BLOCK_SIZE_EXT, BLOCK_SIZE_EXT, BLOCK_SIZE_EXT);
+
+	/************************************************************************************/
+	/*************************************** Source *************************************/
+	/************************************************************************************/
+	// Compute source wavefield with second-order time derivative
+	computeWemvaSrcWfldDt2(dev_sourcesSignals[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_sourcesPositionReg[iGpu], nSourcesReg, dimGrid, dimBlock, iGpu);
+
+	// Copy source wavefield back to host
+	if (saveWavefield == 1) {cuda_call(cudaMemcpy(wemvaSrcWavefieldDt2, dev_wemvaSrcWavefieldDt2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
+
+    /************************************************************************************/
+	/********************************** Receiver ****************************************/
+	/************************************************************************************/
+	// Compute receiver wavefield (includes no time derivative)
+	computeWemvaRecWfld(dev_wemvaDataRegDts[iGpu], dev_wemvaSecWavefield1[iGpu], dev_receiversPositionReg[iGpu], dimGrid, dimBlock, nBlockData, iGpu);
+
+	// Copy receiver wavefield back to host
+	if (saveWavefield == 1) {cuda_call(cudaMemcpy(wemvaSecWavefield1, dev_wemvaSecWavefield1[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
+
+	/************************************************************************************/
+	/***************************** Preliminary steps ************************************/
+	/************************************************************************************/
+	// Copy extended image
+	cuda_call(cudaMemcpy(dev_wemvaExtImage[iGpu], wemvaExtImage, host_nz*host_nx*host_nExt*sizeof(double), cudaMemcpyHostToDevice));
+
+	// Scale extended image with linearization coefficients: 2/v^3
+	kernel_exec(scaleReflectivityLinExt<<<dimGridExt, dimBlockExt>>>(dev_wemvaExtImage[iGpu], dev_reflectivityScale[iGpu]));
+
+	// Allocate secondary wavefields if requested
+	if (saveWavefield == 1) {cuda_call(cudaMalloc((void**) &dev_wemvaSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double)));}
+
+    // Initialize model to zero
+	cuda_call(cudaMemset(dev_modelWemva[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+	/************************************************************************************/
+	/************************************ Leg #1 ****************************************/
+	/************************************************************************************/
+	if (host_leg1 == 1){
+
+		computeWemvaLeg1OffsetAdj(dev_wemvaExtImage[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_modelWemva[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
+
+		// Copy both scattered wavefields from leg #1 to host
+		if (saveWavefield == 1) {
+			cuda_call(cudaMemcpy(wemvaSecWavefield2, dev_wemvaSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+		}
+	}
+
+	/************************************************************************************/
+	/************************************ Leg #2 ****************************************/
+	/************************************************************************************/
+	if (host_leg2 == 1){
+
+		computeWemvaLeg2OffsetAdj(dev_wemvaExtImage[iGpu], dev_wemvaSrcWavefieldDt2[iGpu], dev_wemvaSecWavefield1[iGpu], dev_modelWemva[iGpu], dev_wemvaSecWavefield2[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
 
 		// Copy both scattered wavefields from leg #2 to host
 		if (saveWavefield == 1) {
@@ -599,8 +789,7 @@ void wemvaExtShotsAdjGpu(double *model, double *wemvaExtImage, double *sourcesSi
 /****************************************************************************************/
 
 /************************************* Common parts *************************************/
-
-/* Source wavefield */
+// Source wavefield
 void computeWemvaSrcWfldDt2(double *dev_sourcesIn, double *dev_wavefieldOut, int *dev_sourcesPositionsRegIn, int nSourcesRegIn, dim3 dimGridIn, dim3 dimBlockIn, int iGpu){
 
     // Initialize wavefield on device
@@ -712,7 +901,7 @@ void computeWemvaSrcWfldDt2(double *dev_sourcesIn, double *dev_wavefieldOut, int
 
 }
 
-/* Receiver wavefield */
+// Receiver wavefield
 void computeWemvaRecWfld(double *dev_dataIn, double *dev_wavefieldOut, int *dev_receiversPositionsRegIn, dim3 dimGridIn, dim3 dimBlockIn, int nBlockDataIn, int iGpu){
 
 	// Initialize wavefield on device
@@ -749,8 +938,7 @@ void computeWemvaRecWfld(double *dev_dataIn, double *dev_wavefieldOut, int *dev_
 	}
 }
 
-/*************************************** Forward ****************************************/
-
+/***************************** Forward time-lags *******************************/
 // Leg 1 forward [time]: s -> m -> i <- d
 void computeWemvaLeg1TimeFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWavefieldDt2In, double *dev_wemvaRecWavefieldIn, double *dev_wemvaExtImageOut, double *dev_wavefield1Out, dim3 dimGridIn, dim3 dimBlockIn, dim3 dimGridExtIn, dim3 dimBlockExtIn, int iGpu, int saveWavefield){
 
@@ -912,6 +1100,7 @@ void computeWemvaLeg2TimeFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWavef
 
 }
 
+/*************************** Forward subsurface offsets ***********************/
 // Leg 1 forward [offset]: s -> m -> i <- d
 void computeWemvaLeg1OffsetFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWavefieldDt2In, double *dev_wemvaRecWavefieldIn, double *dev_wemvaExtImageOut, double *dev_wavefield1Out, dim3 dimGridIn, dim3 dimBlockIn, dim3 dimGridExtIn, dim3 dimBlockExtIn, int iGpu, int saveWavefield){
 
@@ -951,7 +1140,7 @@ void computeWemvaLeg1OffsetFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWav
         }
 
 		// Apply extended adjoint imaging condition for horizontal subsurface offsets
-		kernel_exec(imagingOffsetWemvaFwdGpu<<<dimGridExtIn, dimBlockExtIn>>>(dev_wemvaExtImageOut, dev_scatLeft[iGpu], dev_wemvaRecWavefieldIn, its));
+		kernel_exec(imagingOffsetWemvaScaleFwdGpu<<<dimGridExtIn, dimBlockExtIn>>>(dev_wemvaExtImageOut, dev_scatLeft[iGpu], dev_wemvaRecWavefieldIn, dev_vel2Dtw2[iGpu], its));
 
 		// Copy slice at its to scattered wavefield
 		if (saveWavefield == 1) {cuda_call(cudaMemcpy(dev_wavefield1Out+its*host_nz*host_nx, dev_scatLeft[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToDevice));}
@@ -972,7 +1161,7 @@ void computeWemvaLeg1OffsetFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWav
 
 	// Apply extended adjoint imaging condition for horizontal subsurface offsets
 	int its = host_nts-1;
-	kernel_exec(imagingOffsetWemvaFwdGpu<<<dimGridExtIn, dimBlockExtIn>>>(dev_wemvaExtImageOut, dev_scatLeft[iGpu], dev_wemvaRecWavefieldIn, its));
+	kernel_exec(imagingOffsetWemvaScaleFwdGpu<<<dimGridExtIn, dimBlockExtIn>>>(dev_wemvaExtImageOut, dev_scatLeft[iGpu], dev_wemvaRecWavefieldIn, dev_vel2Dtw2[iGpu], its));
 
 	// Copy slice at nts-1 to scattered wavefield
 	if (saveWavefield == 1) {cuda_call(cudaMemcpy(dev_wavefield1Out+(host_nts-1)*host_nz*host_nx, dev_scatLeft[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToDevice));}
@@ -994,7 +1183,7 @@ void computeWemvaLeg2OffsetFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWav
 	int its = host_nts-1;
     kernel_exec(imagingFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_modelWemvaIn, dev_ssRight[iGpu], its, dev_wemvaRecWavefieldIn)); // Apply fwd imaging condition
 
-	// Start propagating scattered wavefield
+	// Start propagating adjoint scattered wavefield
 	for (int its = host_nts-2; its > -1; its--){
 
 		// Compute secondary source for its
@@ -1022,6 +1211,9 @@ void computeWemvaLeg2OffsetFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWav
 
 		}
 
+		// Apply scaling coming from finite difference: v^2 * dtw^2
+		kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_scatRight[iGpu], dev_vel2Dtw2[iGpu]));
+
 		// Apply imaging condition at its+1
 		kernel_exec(imagingOffsetAdjGpu<<<dimGridExtIn, dimBlockExtIn>>>(dev_wemvaExtImageOut, dev_scatRight[iGpu], dev_wemvaSrcWavefieldDt2In, its+1));
 
@@ -1043,6 +1235,9 @@ void computeWemvaLeg2OffsetFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWav
 
 	}
 
+	// Apply scaling coming from finite difference: v^2 * dtw^2
+	kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_scatRight[iGpu], dev_vel2Dtw2[iGpu]));
+
 	// Compute imaging condition at first sample its=0
 	its = 0;
 	kernel_exec(imagingOffsetAdjGpu<<<dimGridExtIn, dimBlockExtIn>>>(dev_wemvaExtImageOut, dev_scatRight[iGpu], dev_wemvaSrcWavefieldDt2In, its));
@@ -1052,8 +1247,7 @@ void computeWemvaLeg2OffsetFwd(double *dev_modelWemvaIn, double *dev_wemvaSrcWav
 
 }
 
-/*************************************** Adjoint ****************************************/
-
+/***************************** Adjoint time-lags *******************************/
 // Leg 1 adjoint [time]: s -> m <- i <- d
 void computeWemvaLeg1TimeAdj(double *dev_wemvaExtImageIn, double *dev_wemvaSrcWavefieldDt2In, double *dev_wemvaRecWavefieldIn, double *dev_modelWemvaOut, double *dev_wavefield1Out, dim3 dimGridIn, dim3 dimBlockIn, int iGpu, int saveWavefield){
 
@@ -1211,6 +1405,7 @@ void computeWemvaLeg2TimeAdj(double *dev_wemvaExtImageIn, double *dev_wemvaSrcWa
 
 }
 
+/*************************** Adjoint subsurface offsets ***********************/
 // Leg 1 adjoint [offset]: s -> m <- i <- d
 void computeWemvaLeg1OffsetAdj(double *dev_wemvaExtImageIn, double *dev_wemvaSrcWavefieldDt2In, double *dev_wemvaRecWavefieldIn, double *dev_modelWemvaOut, double *dev_wavefield1Out, dim3 dimGridIn, dim3 dimBlockIn, int iGpu, int saveWavefield){
 
@@ -1224,13 +1419,14 @@ void computeWemvaLeg1OffsetAdj(double *dev_wemvaExtImageIn, double *dev_wemvaSrc
 
 	// Compute secondary source for its=nts-1
 	int its = host_nts-1;
-	kernel_exec(imagingOffsetTomoAdjGpu<<<dimGridIn, dimBlockIn>>>(dev_wemvaRecWavefieldIn, dev_ssRight[iGpu], dev_wemvaExtImageIn, its));
+	// kernel_exec(imagingOffsetTomoAdjNoFdScaleGpu<<<dimGridIn, dimBlockIn>>>(dev_wemvaRecWavefieldIn, dev_ssRight[iGpu], dev_wemvaExtImageIn, its));
+	kernel_exec(imagingOffsetTomoAdjGpu<<<dimGridIn, dimBlockIn>>>(dev_wemvaRecWavefieldIn, dev_ssRight[iGpu], dev_wemvaExtImageIn, dev_vel2Dtw2[iGpu], its));
 
 	// Start propagating scattered wavefield
 	for (int its = host_nts-2; its > -1; its--){
 
 		// Compute secondary source for its
-	    kernel_exec(imagingOffsetTomoAdjGpu<<<dimGridIn, dimBlockIn>>>(dev_wemvaRecWavefieldIn, dev_ssLeft[iGpu], dev_wemvaExtImageIn, its));
+	    kernel_exec(imagingOffsetTomoAdjGpu<<<dimGridIn, dimBlockIn>>>(dev_wemvaRecWavefieldIn, dev_ssLeft[iGpu], dev_wemvaExtImageIn, dev_vel2Dtw2[iGpu], its));
 
 		for (int it2 = host_sub-1; it2 > -1; it2--){
 
@@ -1297,22 +1493,19 @@ void computeWemvaLeg2OffsetAdj(double *dev_wemvaExtImageIn, double *dev_wemvaSrc
 
 	// Compute secondary source from extended scattering condition for first coarse time index (its = 0)
     int its = 0;
-	// int iExtMin, iExtMax;
-    // iExtMin = (its+1-host_nts)/2;
-    // iExtMin = std::max(iExtMin, -host_hExt) + host_hExt;
-    // iExtMax = its/2;
-    // iExtMax = std::min(iExtMax, host_hExt) + host_hExt + 1; // Add 1 for the strict inequality in the "for loop"
     kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_wemvaExtImageIn, dev_ssLeft[iGpu], dev_wemvaSrcWavefieldDt2In, its)); // Apply extended FWD imaging condition
+
+	// Apply second scaling to secondary source: v^2 * dtw^2 coming from the finite difference scheme
+	kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_ssLeft[iGpu], dev_vel2Dtw2[iGpu]));
 
     // Start propagating scattered wavefield
     for (int its = 0; its < host_nts-1; its++){
 
         // Compute secondary source for first coarse time index (its+1)
-        // iExtMin = (its+2-host_nts)/2;
-        // iExtMin = std::max(iExtMin, -host_hExt) + host_hExt; // Lower bound for extended index
-        // iExtMax = (its+1)/2;
-        // iExtMax = std::min(iExtMax, host_hExt) + host_hExt + 1; // Upper bound for extended index
         kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_wemvaExtImageIn, dev_ssRight[iGpu], dev_wemvaSrcWavefieldDt2In, its+1)); // Apply time-extended FWD imaging condition
+
+		// Apply second scaling to secondary source: v^2 * dtw^2 coming from the finite difference scheme
+		kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_ssRight[iGpu], dev_vel2Dtw2[iGpu]));
 
         for (int it2 = 1; it2 < host_sub+1; it2++){
 

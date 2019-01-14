@@ -109,7 +109,7 @@ __global__ void injectSecondarySource(double *dev_ssLeft, double *dev_ssRight, d
 /****************************************************************************************/
 /*************************************** Extraction *************************************/
 /****************************************************************************************/
-/* Extract source */
+/* Extract source for "nonlinear adjoint" */
 __global__ void recordSource(double *dev_wavefield, double *dev_signalOut, int itw, int *dev_sourcesPositionReg) {
 	int iThread = blockIdx.x * blockDim.x + threadIdx.x;
 	dev_signalOut[dev_ntw*iThread + itw] += dev_wavefield[dev_sourcesPositionReg[iThread]];
@@ -140,6 +140,8 @@ __global__ void interpWavefield(double *dev_wavefield, double *dev_timeSlice, in
 
 }
 
+// Extract and scale receiver wavefield.
+// Both scalings are done simultaneously: it works for time-lags extension, but not for subsurface offsets extension
 __global__ void recordScaleWavefield(double *dev_wavefield, double *dev_timeSlice, int its, double *dev_reflectivityScale, double *dev_vel2Dtw2) {
 
 	int izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
@@ -148,6 +150,17 @@ __global__ void recordScaleWavefield(double *dev_wavefield, double *dev_timeSlic
 	long long iGlobalWavefield = its * dev_nz * dev_nx + iGlobal;
 
 	dev_wavefield[iGlobalWavefield] += dev_timeSlice[iGlobal] * dev_reflectivityScale[iGlobal] * dev_vel2Dtw2[iGlobal];
+}
+
+// Simply records the receiver wavefield without applying any scaling (this is used for the subsurface offsets extension)
+__global__ void recordWavefield(double *dev_wavefield, double *dev_timeSlice, int its) {
+
+	int izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+	int ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+	int iGlobal = dev_nz * ixGlobal + izGlobal; // 1D array index for the model on the global memory
+	long long iGlobalWavefield = its * dev_nz * dev_nx + iGlobal;
+
+	dev_wavefield[iGlobalWavefield] += dev_timeSlice[iGlobal];
 }
 
 __global__ void extractInterpAdjointWavefield(double *dev_timeSliceLeft, double *dev_timeSliceRight, double *dev_timeSliceFine, int it2) {
@@ -208,6 +221,8 @@ __global__ void dampCosineEdge(double *dev_p1, double *dev_p2) {
 /****************************************************************************************/
 /************************************** Scaling *****************************************/
 /****************************************************************************************/
+// Applying scaling to reflectivity for non extended imaging
+// In that case, we can apply both scaling simultaneously
 __global__ void scaleReflectivity(double *dev_model, double *dev_reflectivityScaleIn, double *dev_vel2Dtw2In){
 
 	int izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
@@ -216,7 +231,9 @@ __global__ void scaleReflectivity(double *dev_model, double *dev_reflectivitySca
 	dev_model[iGlobal] *= dev_vel2Dtw2In[iGlobal] * dev_reflectivityScaleIn[iGlobal];
 }
 
-__global__ void scaleReflectivityExt(double *dev_model, double *dev_reflectivityScale, double *dev_vel2Dtw2){
+// Scale the model perturbation by 2/v^3
+// This is used for subsurface offset extension, where we can not apply both scaling simultaneously
+__global__ void scaleReflectivityLinExt(double *dev_model, double *dev_reflectivityScaleIn){
 
 	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate
 	int ix = FAT + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate
@@ -225,14 +242,35 @@ __global__ void scaleReflectivityExt(double *dev_model, double *dev_reflectivity
 	int iModel = iExt * dev_nz * dev_nx + iSpace; // 1D array index for the model on the global memory
 
 	if (iExt < dev_nExt){
-		dev_model[iModel] *= dev_reflectivityScale[iSpace] * dev_vel2Dtw2[iSpace];
+		dev_model[iModel] *= dev_reflectivityScaleIn[iSpace];
+	}
+}
+
+// Scale the secondary source by dtw^2 * v^2
+__global__ void scaleSecondarySourceFd(double *dev_timeSlice, double *dev_vel2Dtw2In){
+	int iz = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // z-coordinate
+	int ix = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // x-coordinate
+	int iSpace = dev_nz * ix + iz;
+	dev_timeSlice[iSpace] *= dev_vel2Dtw2In[iSpace];
+}
+
+// Apply both scalings (linearization + finite difference) to the extended reflectivity (only works for time-lags extension)
+__global__ void scaleReflectivityExt(double *dev_model, double *dev_reflectivityScaleIn, double *dev_vel2Dtw2In){
+
+	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate
+	int ix = FAT + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate
+	int iSpace = dev_nz * ix + iz;
+	int iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // Extended axis coordinate
+	int iModel = iExt * dev_nz * dev_nx + iSpace; // 1D array index for the model on the global memory
+
+	if (iExt < dev_nExt){
+		dev_model[iModel] *= dev_reflectivityScaleIn[iSpace] * dev_vel2Dtw2In[iSpace];
 	}
 }
 
 /****************************************************************************************/
 /************************************** Imaging *****************************************/
 /****************************************************************************************/
-
 // Non-extended
 __global__ void imagingFwdGpu(double *dev_model, double *dev_timeSlice, int its, double *dev_sourceWavefieldDts) {
 
@@ -339,23 +377,6 @@ __global__ void imagingOffsetAdjGpu(double *dev_model, double *dev_timeSlice, do
 	}
 }
 
-// Imaging condition like the one in the Fortran code
-__global__ void imagingOffsetAdjGpuFortran(double *dev_model, double *dev_timeSlice, double *dev_srcWavefieldDts, int its){
-
-	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate on main grid
-	int ix = FAT + dev_hExt + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate on main grid for the model where we evaluate the image
-	int iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // offset coordinate (iOffset = 0, ..., dev_nOffset-1)
-
-	if ( (ix < dev_nx-FAT-dev_hExt) && (iExt < dev_nExt) ){
-		int iExtShift=iExt-dev_hExt;
-		int iModel = dev_nz * dev_nx * iExt + dev_nz * ix + iz; // Model index
-		int iSrcWavefield = dev_nz * dev_nx * its + dev_nz * (ix-iExtShift) + iz; // Source wavefield index
-		int iRecWavefield = dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
-		dev_model[iModel] += dev_timeSlice[iRecWavefield] * dev_srcWavefieldDts[iSrcWavefield];
-
-	}
-}
-
 // Extended imaging condition for Wemva fwd
 __global__ void imagingOffsetWemvaFwdGpu(double *dev_model, double *dev_timeSlice, double *dev_recWavefield, int its){
 
@@ -369,6 +390,22 @@ __global__ void imagingOffsetWemvaFwdGpu(double *dev_model, double *dev_timeSlic
 		int iRecWavefield = dev_nz * dev_nx * its + dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
 		int iScatWavefield = dev_nz * (ix-iExtShift) + iz; // Scattered wavefield index
 		dev_model[iModel] += dev_timeSlice[iScatWavefield] * dev_recWavefield[iRecWavefield];
+	}
+}
+
+__global__ void imagingOffsetWemvaScaleFwdGpu(double *dev_model, double *dev_timeSlice, double *dev_recWavefield, double *dev_vel2Dtw2In, int its){
+
+	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate on main grid
+	int ix = FAT + dev_hExt + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate on main grid for the model where we evaluate the image
+	int iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // offset coordinate (iOffset = 0, ..., dev_nOffset-1)
+
+	if ( (ix < dev_nx-FAT-dev_hExt) && (iExt < dev_nExt) ){
+		int iExtShift=iExt-dev_hExt;
+		int iModel = dev_nz * dev_nx * iExt + dev_nz * ix + iz; // Model index for extended image
+		int iRecWavefieldScale = (ix+iExtShift) * dev_nz + iz; // Index for vel2dtw2(iz, ix + ihx)
+		int iRecWavefield = dev_nz * dev_nx * its + iRecWavefieldScale; // Receiver wavefield index
+		int iScatWavefield = dev_nz * (ix-iExtShift) + iz; // Scattered wavefield index
+		dev_model[iModel] += dev_timeSlice[iScatWavefield] * dev_recWavefield[iRecWavefield] * dev_vel2Dtw2In[iRecWavefieldScale];
 	}
 }
 
@@ -387,7 +424,7 @@ __global__ void imagingTimeTomoAdjGpu(double *dev_wavefieldIn, double *dev_timeS
 	}
 }
 
-__global__ void imagingOffsetTomoAdjGpu(double *dev_wavefieldIn, double *dev_timeSliceOut, double *dev_extReflectivityIn, int its) {
+__global__ void imagingOffsetTomoAdjGpu(double *dev_wavefieldIn, double *dev_timeSliceOut, double *dev_extReflectivityIn, double *dev_vel2Dtw2In, int its) {
 
 	int iz = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // z-coordinate on main grid
 	int ix = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // x-coordinate on main grid
@@ -398,7 +435,24 @@ __global__ void imagingOffsetTomoAdjGpu(double *dev_wavefieldIn, double *dev_tim
 
 	for (int iExt=iExtMin; iExt<iExtMax; iExt++){
 		int iModel = dev_nz * dev_nx * (iExt+dev_hExt) + dev_nz * (ix+iExt) + iz; // model(iz, ix-iOffset, iOffset+hOffset)
-		int iRecWavefield = dev_nz * dev_nx * its + (ix+2*iExt) * dev_nz + iz; // src(iz, ix-2*iOffset, its)
+		int iRecWavefieldScale = (ix+2*iExt) * dev_nz + iz; //Index for vel2dtw2(iz, ix + 2*iOffset)
+		int iRecWavefield = dev_nz * dev_nx * its + iRecWavefieldScale; // rec(iz, ix + 2*iOffset, its)
+		dev_timeSliceOut[iSpace] += dev_extReflectivityIn[iModel] * dev_wavefieldIn[iRecWavefield] * dev_vel2Dtw2In[iRecWavefieldScale];
+	}
+}
+
+__global__ void imagingOffsetTomoAdjNoFdScaleGpu(double *dev_wavefieldIn, double *dev_timeSliceOut, double *dev_extReflectivityIn, int its) {
+
+	int iz = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // z-coordinate on main grid
+	int ix = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // x-coordinate on main grid
+	int iSpace = dev_nz * ix + iz; // 1D array index for the model on the global memory
+
+	int iExtMin=max2(-dev_hExt, FAT+dev_hExt-ix);
+	int iExtMax=min2(dev_nx-1-FAT-ix-dev_hExt, dev_hExt)+1;
+
+	for (int iExt=iExtMin; iExt<iExtMax; iExt++){
+		int iModel = dev_nz * dev_nx * (iExt+dev_hExt) + dev_nz * (ix+iExt) + iz; // model(iz, ix-iOffset, iOffset+hOffset)
+		int iRecWavefield = dev_nz * dev_nx * its + (ix+2*iExt) * dev_nz + iz; // rec(iz, ix + 2*iOffset, its)
 		dev_timeSliceOut[iSpace] += dev_extReflectivityIn[iModel] * dev_wavefieldIn[iRecWavefield];
 	}
 }

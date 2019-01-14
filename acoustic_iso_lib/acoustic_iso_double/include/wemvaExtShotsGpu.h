@@ -49,7 +49,8 @@ class wemvaExtShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 		std::shared_ptr<double3DReg> getSecWavefield2() { return _secWavefield2; }
 
 		/* Mutators */
-		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; }	
+		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; }
+		void setReceiversSignalsVector(std::vector<std::shared_ptr<SEP::double2DReg>> receiversSignalsVector){ _receiversSignalsVector = receiversSignalsVector; }	
 
 };
 

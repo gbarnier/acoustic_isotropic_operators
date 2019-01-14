@@ -44,8 +44,7 @@ void BornExtGpu::forward(const bool add, const std::shared_ptr<double3DReg> mode
 		if (_saveWavefield == 0){
 			BornOffsetShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _iGpu);
 		} else {
-			std::cout << "WARNING: Wavefield option not yet available for subsurface extension" << std::endl;
-			assert (1 == 0);
+			BornOffsetShotsFwdGpuWavefield(model->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _iGpu);
 		}
 	}
 
@@ -79,8 +78,7 @@ void BornExtGpu::adjoint(const bool add, std::shared_ptr<double3DReg> model, con
 			BornOffsetShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _iGpu);
 		}
 		else {
-			std::cout << "WARNING: Wavefield option not yet available for subsurface extension" << std::endl;
-			assert (1 == 0);
+			BornOffsetShotsAdjGpuWavefield(modelTemp->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _iGpu);
 		}
 	}
 

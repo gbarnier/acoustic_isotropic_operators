@@ -126,7 +126,12 @@ void wemvaExtGpu::forward(const bool add, const std::shared_ptr<double2DReg> mod
 	std::shared_ptr<double3DReg> dataTemp = data->clone();
 
 	// Wemva forward
-	wemvaExtShotsFwdGpu(model->getVals(), dataTemp->getVals(), _sourcesSignalsRegDtw->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield, _fdParam->_extension);
+	if(_fdParam->_extension == "time"){
+		wemvaTimeShotsFwdGpu(model->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+	}
+	if(_fdParam->_extension == "offset"){
+		wemvaOffsetShotsFwdGpu(model->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+	}
 
 	/* Update data (extended image) */
 	data->scaleAdd(dataTemp, 1.0, 1.0);
@@ -140,7 +145,12 @@ void wemvaExtGpu::adjoint(const bool add, std::shared_ptr<double2DReg> model, co
 	modelTemp->scale(0.0);
 
 	// Wemva adjoint
-	wemvaExtShotsAdjGpu(modelTemp->getVals(), data->getVals(), _sourcesSignalsRegDtw->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield, _fdParam->_extension);
+	if(_fdParam->_extension == "time"){
+		wemvaTimeShotsAdjGpu(modelTemp->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+	}
+	if(_fdParam->_extension == "offset"){
+		wemvaOffsetShotsAdjGpu(modelTemp->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+	}
 
 	// Update model
 	model->scaleAdd(modelTemp, 1.0, 1.0);

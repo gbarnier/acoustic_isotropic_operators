@@ -14,7 +14,6 @@
 /************************ Declaration of auxiliary functions ****************************/
 /****************************************************************************************/
 // Note: The implementations of these auxiliary functions are done at the bottom of the file
-
 void computeTomoSrcWfldDt2(double *dev_sourcesIn, double *dev_wavefieldOut, int *dev_sourcesPositionsRegIn, int nSourcesRegIn, dim3 dimGridIn, dim3 dimBlockIn, int iGpu);
 void computeTomoRecWfld(double *dev_dataIn, double *dev_wavefieldOut, int *dev_receiversPositionsRegIn, dim3 dimGridIn, dim3 dimBlockIn, int nBlockDataIn, int iGpu);
 
@@ -84,7 +83,6 @@ bool getGpuInfo(int nGpu, int info, int deviceNumberInfo){
   	if (nGpu<nDevice+1) {return true;}
   	else {std::cout << "Number of requested GPU greater than available GPUs" << std::endl; return false;}
 }
-
 // Initialize GPU
 void initTomoExtGpu(double dz, double dx, int nz, int nx, int nts, double dts, int sub, int minPad, int blockSize, double alphaCos, int nExt, int leg1, int leg2, int nGpu, int iGpu){
 
@@ -107,6 +105,7 @@ void initTomoExtGpu(double dz, double dx, int nz, int nx, int nts, double dts, i
 	// Coefficients for second-order time derivative
 	host_cSide = 1.0 / (host_dts*host_dts);
 	host_cCenter = -2.0 / (host_dts*host_dts);
+
 	// host_cSide = 0.0;
 	// host_cCenter = 1.0;
 
@@ -252,7 +251,6 @@ void initTomoExtGpu(double dz, double dx, int nz, int nx, int nts, double dts, i
 	cuda_call(cudaMemcpyToSymbol(dev_cSide, &host_cSide, sizeof(double), 0, cudaMemcpyHostToDevice));
 
 }
-
 // Allocate on device
 void allocateTomoExtShotsGpu(double *vel2Dtw2, double *reflectivityScale, double *extReflectivity, int iGpu){
 
@@ -289,21 +287,12 @@ void allocateTomoExtShotsGpu(double *vel2Dtw2, double *reflectivityScale, double
 	cuda_call(cudaMalloc((void**) &dev_extReflectivity[iGpu], host_nz*host_nx*host_nExt*sizeof(double)));
 	cuda_call(cudaMemcpy(dev_extReflectivity[iGpu], extReflectivity, host_nz*host_nx*host_nExt*sizeof(double), cudaMemcpyHostToDevice));
 
-	// Scale reflectivity
-	int nBlockZExt = (host_nz-2*FAT) / BLOCK_SIZE_EXT; // Number of blocks for the z-axis when using a time-extension
-	int nBlockXExt = (host_nx-2*FAT) / BLOCK_SIZE_EXT; // Number of blocks for the x-axis when using a time-extension
-	int nBlockExt = (host_nExt+BLOCK_SIZE_EXT-1) / BLOCK_SIZE_EXT;
-	dim3 dimGridExt(nBlockZExt, nBlockXExt, nBlockExt);
-	dim3 dimBlockExt(BLOCK_SIZE_EXT, BLOCK_SIZE_EXT, BLOCK_SIZE_EXT);
-	kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
-
 	// Allocate source wavefield - The allocation of secondary sources are done inside the function implementation
 	cuda_call(cudaMalloc((void**) &dev_tomoSrcWavefieldDt2[iGpu], host_nz*host_nx*host_nts*sizeof(double))); // We store the source wavefield
 
 	// Allocate the auxiliary wavefield (either scattered for the fwd, or receiver for the adjoint)
 	cuda_call(cudaMalloc((void**) &dev_tomoSecWavefield1[iGpu], host_nz*host_nx*host_nts*sizeof(double))); // We store the source wavefield
 }
-
 // Deallocate from device
 void deallocateTomoExtShotsGpu(int iGpu){
 
@@ -329,7 +318,8 @@ void deallocateTomoExtShotsGpu(int iGpu){
 /****************************************************************************************/
 /************************************** Tomo forward ************************************/
 /****************************************************************************************/
-void tomoExtShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int saveWavefield, std::string extension){
+// Time-lag extension
+void tomoTimeShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int saveWavefield){
 
 	// We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
@@ -356,6 +346,13 @@ void tomoExtShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignal
 	dim3 dimGrid(nBlockZ, nBlockX);
 	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 
+	// Extended block/threads
+	int nBlockZExt = (host_nz-2*FAT) / BLOCK_SIZE_EXT;
+	int nBlockXExt = (host_nx-2*FAT) / BLOCK_SIZE_EXT;
+	int nBlockExt = (host_nExt+BLOCK_SIZE_EXT-1) / BLOCK_SIZE_EXT;
+	dim3 dimGridExt(nBlockZExt, nBlockXExt, nBlockExt);
+	dim3 dimBlockExt(BLOCK_SIZE_EXT, BLOCK_SIZE_EXT, BLOCK_SIZE_EXT);
+
 	/************************************************************************************/
 	/*************************************** Source *************************************/
 	/************************************************************************************/
@@ -372,6 +369,9 @@ void tomoExtShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignal
 	cuda_call(cudaMemcpy(dev_modelTomo[iGpu], model, host_nz*host_nx*sizeof(double), cudaMemcpyHostToDevice));
 	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelTomo[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
 
+	// Scale reflectivity (both scaling at the same time)
+	kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
 	// Allocate data and initialize to zero
 	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double)));
 	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double)));
@@ -385,15 +385,7 @@ void tomoExtShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignal
 	if (host_leg1 == 1){
 
 		// source->reflectivity->model->data
-		if (extension == "time") {
-
-			computeTomoLeg1TimeFwd(dev_modelTomo[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_dataRegDts[iGpu], dev_tomoSecWavefield1[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dev_receiversPositionReg[iGpu], nReceiversReg, dimGrid, dimBlock, nBlockData, iGpu, saveWavefield);
-
-		} else {
-
-			computeTomoLeg1OffsetFwd(dev_modelTomo[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_dataRegDts[iGpu], dev_tomoSecWavefield1[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dev_receiversPositionReg[iGpu], nReceiversReg, dimGrid, dimBlock, nBlockData, iGpu, saveWavefield);
-
-		}
+		computeTomoLeg1TimeFwd(dev_modelTomo[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_dataRegDts[iGpu], dev_tomoSecWavefield1[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dev_receiversPositionReg[iGpu], nReceiversReg, dimGrid, dimBlock, nBlockData, iGpu, saveWavefield);
 
 		// Copy both scattered wavefields from leg #1 to host
 		if (saveWavefield == 1) {
@@ -408,15 +400,114 @@ void tomoExtShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignal
 	if (host_leg2 == 1){
 
 		// source->model->reflectivity->data
-		if (extension == "time"){
+		computeTomoLeg2TimeFwd(dev_modelTomo[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_dataRegDts[iGpu], dev_tomoSecWavefield1[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dev_receiversPositionReg[iGpu], nReceiversReg, dimGrid, dimBlock, nBlockData, iGpu, saveWavefield);
 
-			computeTomoLeg2TimeFwd(dev_modelTomo[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_dataRegDts[iGpu], dev_tomoSecWavefield1[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dev_receiversPositionReg[iGpu], nReceiversReg, dimGrid, dimBlock, nBlockData, iGpu, saveWavefield);
-
-		} else {
-
-			computeTomoLeg2OffsetFwd(dev_modelTomo[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_dataRegDts[iGpu], dev_tomoSecWavefield1[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dev_receiversPositionReg[iGpu], nReceiversReg, dimGrid, dimBlock, nBlockData, iGpu, saveWavefield);
-
+		// Copy scattered wavefields from leg #2 to host
+		if (saveWavefield == 1) {
+			cuda_call(cudaMemcpy(tomoSecWavefield1, dev_tomoSecWavefield1[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+			cuda_call(cudaMemcpy(tomoSecWavefield2, dev_tomoSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 		}
+	}
+
+	/************************************************************************************/
+	/************************************ Data ******************************************/
+	/************************************************************************************/
+	// Copy data to host
+	cuda_call(cudaMemcpy(dataRegDts, dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+
+	/******************************* Deallocation ***************************************/
+	// Deallocate all slices
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_sourcesSignals[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+	if (saveWavefield == 1){ cuda_call(cudaFree(dev_tomoSecWavefield2[iGpu]));}
+
+}
+
+// Subsurface offset extension
+void tomoOffsetShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int saveWavefield){
+
+	// We assume the source wavelet/signals already contain(s) the second time derivative
+	// Set device number
+	cudaSetDevice(iGpu);
+
+	// Sources geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_sourcesPositionReg[iGpu], nSourcesReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_sourcesPositionReg[iGpu], sourcesPositionReg, nSourcesReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Sources signals
+  	cuda_call(cudaMalloc((void**) &dev_sourcesSignals[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_sourcesSignals[iGpu], sourcesSignals, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Receivers geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nReceiversReg, &nReceiversReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_receiversPositionReg[iGpu], nReceiversReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Non-extended blocks/threads
+	int nBlockZ = (host_nz-2*FAT) / BLOCK_SIZE; // Number of blocks for the z-axis
+	int nBlockX = (host_nx-2*FAT) / BLOCK_SIZE; // Number of blocks for the x-axis
+	int nBlockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA; // Number of blocks for the data extraction/injection
+	dim3 dimGrid(nBlockZ, nBlockX);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+
+	// Extended block/threads
+	int nBlockZExt = (host_nz-2*FAT) / BLOCK_SIZE_EXT;
+	int nBlockXExt = (host_nx-2*FAT) / BLOCK_SIZE_EXT;
+	int nBlockExt = (host_nExt+BLOCK_SIZE_EXT-1) / BLOCK_SIZE_EXT;
+	dim3 dimGridExt(nBlockZExt, nBlockXExt, nBlockExt);
+	dim3 dimBlockExt(BLOCK_SIZE_EXT, BLOCK_SIZE_EXT, BLOCK_SIZE_EXT);
+
+	/************************************************************************************/
+	/*************************************** Source *************************************/
+	/************************************************************************************/
+	// Compute source wavefield with second-order time derivative
+	computeTomoSrcWfldDt2(dev_sourcesSignals[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_sourcesPositionReg[iGpu], nSourcesReg, dimGrid, dimBlock, iGpu);
+
+	// Copy source wavefield back to host
+	if (saveWavefield == 1) {cuda_call(cudaMemcpy(tomoSrcWavefieldDt2, dev_tomoSrcWavefieldDt2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
+
+	/************************************************************************************/
+	/***************************** Preliminary steps ************************************/
+	/************************************************************************************/
+	// Copy + scale model (background perturbation)
+	cuda_call(cudaMemcpy(dev_modelTomo[iGpu], model, host_nz*host_nx*sizeof(double), cudaMemcpyHostToDevice));
+	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelTomo[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+	// Apply linearization scaling to extended reflectivity (2/v^3)
+	kernel_exec(scaleReflectivityLinExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_reflectivityScale[iGpu]));
+
+	// Allocate data and initialize to zero
+	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double)));
+	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double)));
+
+	// Allocate secondary wavefields
+	if (saveWavefield == 1) {cuda_call(cudaMalloc((void**) &dev_tomoSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double)));}
+
+	/************************************************************************************/
+	/************************************ Leg #1 ****************************************/
+	/************************************************************************************/
+	if (host_leg1 == 1){
+
+		// source->reflectivity->model->data
+		computeTomoLeg1OffsetFwd(dev_modelTomo[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_dataRegDts[iGpu], dev_tomoSecWavefield1[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dev_receiversPositionReg[iGpu], nReceiversReg, dimGrid, dimBlock, nBlockData, iGpu, saveWavefield);
+
+		// Copy both scattered wavefields from leg #1 to host
+		if (saveWavefield == 1) {
+			cuda_call(cudaMemcpy(tomoSecWavefield1, dev_tomoSecWavefield1[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+			cuda_call(cudaMemcpy(tomoSecWavefield2, dev_tomoSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+		}
+	}
+
+	/************************************************************************************/
+	/************************************ Leg #2 ****************************************/
+	/************************************************************************************/
+	if (host_leg2 == 1){
+
+		// source->model->reflectivity->data
+		computeTomoLeg2OffsetFwd(dev_modelTomo[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_dataRegDts[iGpu], dev_tomoSecWavefield1[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dev_receiversPositionReg[iGpu], nReceiversReg, dimGrid, dimBlock, nBlockData, iGpu, saveWavefield);
 
 		// Copy scattered wavefields from leg #2 to host
 		if (saveWavefield == 1) {
@@ -444,7 +535,8 @@ void tomoExtShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignal
 /****************************************************************************************/
 /************************************** Tomo adjoint ************************************/
 /****************************************************************************************/
-void tomoExtShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int saveWavefield, std::string extension){
+// Time-lag extension
+void tomoTimeShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int saveWavefield){
 
 	// We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
@@ -505,6 +597,9 @@ void tomoExtShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignal
 	// Allocate second secondary wavefield
 	if (saveWavefield == 1) {cuda_call(cudaMalloc((void**) &dev_tomoSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double)));}
 
+	// Scale reflectivity (both scalings at the same time)
+	kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
 	// Initialize model for both legs
     cuda_call(cudaMemset(dev_modelTomo[iGpu], 0, host_nz*host_nx*sizeof(double)));
 
@@ -513,11 +608,7 @@ void tomoExtShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignal
 	/************************************************************************************/
 	if (host_leg1 == 1){
 
-		if (extension == "time"){
-			computeTomoLeg1TimeAdj(dev_tomoSrcWavefieldDt2[iGpu], dev_tomoSecWavefield1[iGpu], dev_modelTomo[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
-		} else {
-			computeTomoLeg1OffsetAdj(dev_tomoSrcWavefieldDt2[iGpu], dev_tomoSecWavefield1[iGpu], dev_modelTomo[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
-		}
+		computeTomoLeg1TimeAdj(dev_tomoSrcWavefieldDt2[iGpu], dev_tomoSecWavefield1[iGpu], dev_modelTomo[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
 
 		// Copy scattered wavefield from leg #1 to host
 		if (saveWavefield == 1) {cuda_call(cudaMemcpy(tomoSecWavefield2, dev_tomoSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
@@ -529,11 +620,7 @@ void tomoExtShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignal
 	/************************************************************************************/
 	if (host_leg2 == 1){
 
-		if (extension == "time"){
-			computeTomoLeg2TimeAdj(dev_tomoSrcWavefieldDt2[iGpu], dev_tomoSecWavefield1[iGpu], dev_modelTomo[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
-		} else {
-			computeTomoLeg2OffsetAdj(dev_tomoSrcWavefieldDt2[iGpu], dev_tomoSecWavefield1[iGpu], dev_modelTomo[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
-		}
+		computeTomoLeg2TimeAdj(dev_tomoSrcWavefieldDt2[iGpu], dev_tomoSecWavefield1[iGpu], dev_modelTomo[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
 
 		// Copy scattered wavefield from leg #2 to host
 		if (saveWavefield == 1) {cuda_call(cudaMemcpy(tomoSecWavefield2, dev_tomoSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
@@ -558,12 +645,121 @@ void tomoExtShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignal
 	if (saveWavefield == 1) {cuda_call(cudaFree(dev_tomoSecWavefield2[iGpu]));}
 }
 
-/****************************************************************************************/
-/********************************** Auxiliary functions *********************************/
-/****************************************************************************************/
+// Subsurface offset extension
+void tomoOffsetShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int saveWavefield){
 
-/************************************* Common parts *************************************/
+	// We assume the source wavelet/signals already contain(s) the second time derivative
+	// Set device number
+	cudaSetDevice(iGpu);
 
+	// Sources geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_sourcesPositionReg[iGpu], nSourcesReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_sourcesPositionReg[iGpu], sourcesPositionReg, nSourcesReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Sources signals
+  	cuda_call(cudaMalloc((void**) &dev_sourcesSignals[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_sourcesSignals[iGpu], sourcesSignals, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Receivers geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nReceiversReg, &nReceiversReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_receiversPositionReg[iGpu], nReceiversReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Data
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double)));
+	cuda_call(cudaMemcpy(dev_dataRegDts[iGpu], dataRegDts, nReceiversReg*host_nts*sizeof(double), cudaMemcpyHostToDevice));
+
+	// Initialize models
+	cuda_call(cudaMemset(dev_modelTomo[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+	// Non-extended blocks/threads
+	int nBlockZ = (host_nz-2*FAT) / BLOCK_SIZE; // Number of blocks for the z-axis
+	int nBlockX = (host_nx-2*FAT) / BLOCK_SIZE; // Number of blocks for the x-axis
+	int nBlockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA; // Number of blocks for the data extraction/injection
+	dim3 dimGrid(nBlockZ, nBlockX);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+
+	// Extended block/threads
+	int nBlockZExt = (host_nz-2*FAT) / BLOCK_SIZE_EXT;
+	int nBlockXExt = (host_nx-2*FAT) / BLOCK_SIZE_EXT;
+	int nBlockExt = (host_nExt+BLOCK_SIZE_EXT-1) / BLOCK_SIZE_EXT;
+	dim3 dimGridExt(nBlockZExt, nBlockXExt, nBlockExt);
+	dim3 dimBlockExt(BLOCK_SIZE_EXT, BLOCK_SIZE_EXT, BLOCK_SIZE_EXT);
+
+	/************************************************************************************/
+	/*************************************** Source *************************************/
+	/************************************************************************************/
+	// Compute source wavefield with second-order time derivative
+	computeTomoSrcWfldDt2(dev_sourcesSignals[iGpu], dev_tomoSrcWavefieldDt2[iGpu], dev_sourcesPositionReg[iGpu], nSourcesReg, dimGrid, dimBlock, iGpu);
+	if (saveWavefield == 1) {cuda_call(cudaMemcpy(tomoSrcWavefieldDt2, dev_tomoSrcWavefieldDt2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
+
+	/************************************************************************************/
+	/********************************** Receiver ****************************************/
+	/************************************************************************************/
+	// Compute receiver wavefield (include no time derivative)
+	computeTomoRecWfld(dev_dataRegDts[iGpu], dev_tomoSecWavefield1[iGpu], dev_receiversPositionReg[iGpu], dimGrid, dimBlock, nBlockData, iGpu);
+	if (saveWavefield == 1) {cuda_call(cudaMemcpy(tomoSecWavefield1, dev_tomoSecWavefield1[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
+
+	/************************************************************************************/
+	/***************************** Preliminary steps ************************************/
+	/************************************************************************************/
+	// Allocate second secondary wavefield
+	if (saveWavefield == 1) {cuda_call(cudaMalloc((void**) &dev_tomoSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double)));}
+
+	// Scale reflectivity (both scalings at the same time)
+	kernel_exec(scaleReflectivityLinExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_reflectivityScale[iGpu]));
+
+	// Initialize model for both legs
+    cuda_call(cudaMemset(dev_modelTomo[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+	/************************************************************************************/
+	/************************************ Leg #1 ****************************************/
+	/************************************************************************************/
+	if (host_leg1 == 1){
+
+		computeTomoLeg1OffsetAdj(dev_tomoSrcWavefieldDt2[iGpu], dev_tomoSecWavefield1[iGpu], dev_modelTomo[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
+
+		// Copy scattered wavefield from leg #1 to host
+		if (saveWavefield == 1) {cuda_call(cudaMemcpy(tomoSecWavefield2, dev_tomoSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
+
+	}
+
+	/************************************************************************************/
+	/************************************ Leg #2 ****************************************/
+	/************************************************************************************/
+	if (host_leg2 == 1){
+
+		computeTomoLeg2OffsetAdj(dev_tomoSrcWavefieldDt2[iGpu], dev_tomoSecWavefield1[iGpu], dev_modelTomo[iGpu], dev_tomoSecWavefield2[iGpu], dev_extReflectivity[iGpu], dimGrid, dimBlock, iGpu, saveWavefield);
+
+		// Copy scattered wavefield from leg #2 to host
+		if (saveWavefield == 1) {cuda_call(cudaMemcpy(tomoSecWavefield2, dev_tomoSecWavefield2[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));}
+
+	}
+
+	/************************************************************************************/
+	/************************************ Model *****************************************/
+	/************************************************************************************/
+	// Scale model
+	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelTomo[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+	// Copy data to host
+	cuda_call(cudaMemcpy(model, dev_modelTomo[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToHost));
+
+	/******************************* Deallocation ***************************************/
+	// Deallocate model, data and wavefields
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_sourcesSignals[iGpu]));
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+	if (saveWavefield == 1) {cuda_call(cudaFree(dev_tomoSecWavefield2[iGpu]));}
+}
+
+/******************************************************************************/
+/************************** Auxiliary functions *******************************/
+/******************************************************************************/
+
+/****************************** Common parts **********************************/
 // Source wavefield
 void computeTomoSrcWfldDt2(double *dev_sourcesIn, double *dev_wavefieldOut, int *dev_sourcesPositionsRegIn, int nSourcesRegIn, dim3 dimGridIn, dim3 dimBlockIn, int iGpu){
 
@@ -712,8 +908,7 @@ void computeTomoRecWfld(double *dev_dataIn, double *dev_wavefieldOut, int *dev_r
 	}
 }
 
-/*************************************** Forward ****************************************/
-
+/***************************** Forward time-lags *******************************/
 // Leg 1 forward [time]: s -> i -> m -> d
 void computeTomoLeg1TimeFwd(double *dev_modelIn, double *dev_tomoSrcWavefieldDt2In, double *dev_dataOut, double *dev_wavefield1Out, double *dev_wavefield2Out, double *dev_extReflectivityIn, int *dev_receiversPositionRegIn, int nReceiversRegIn, dim3 dimGridIn, dim3 dimBlockIn, int nBlockDataIn, int iGpu, int saveWavefield){
 
@@ -919,6 +1114,7 @@ void computeTomoLeg2TimeFwd(double *dev_modelIn, double *dev_tomoSrcWavefieldDt2
 
 }
 
+/*************************** Forward subsurface offsets ***********************/
 // Leg 1 forward [offset]: s -> i -> m -> d
 void computeTomoLeg1OffsetFwd(double *dev_modelIn, double *dev_tomoSrcWavefieldDt2In, double *dev_dataOut, double *dev_wavefield1Out, double *dev_wavefield2Out, double *dev_extReflectivityIn, int *dev_receiversPositionRegIn, int nReceiversRegIn, dim3 dimGridIn, dim3 dimBlockIn, int nBlockDataIn, int iGpu, int saveWavefield){
 
@@ -937,11 +1133,17 @@ void computeTomoLeg1OffsetFwd(double *dev_modelIn, double *dev_tomoSrcWavefieldD
     int its = 0;
 	kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssLeft[iGpu], dev_tomoSrcWavefieldDt2In, its)); // Apply extended FWD imaging condition
 
+	// Apply second scaling to secondary source: v^2 * dtw^2 coming from the finite difference scheme
+	kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_ssLeft[iGpu], dev_vel2Dtw2[iGpu]));
+
     // Start propagating scattered wavefield
     for (int its = 0; its < host_nts-1; its++){
 
         // Compute secondary source for first coarse time index (its+1)
-        kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssRight[iGpu], dev_tomoSrcWavefieldDt2In, its+1)); // Apply time-extended FWD imaging condition
+        kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssRight[iGpu], dev_tomoSrcWavefieldDt2In, its+1));
+
+		// Apply second scaling to secondary source: v^2 * dtw^2 coming from the finite difference scheme
+		kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_ssRight[iGpu], dev_vel2Dtw2[iGpu]));
 
         for (int it2 = 1; it2 < host_sub+1; it2++){
 
@@ -1070,13 +1272,19 @@ void computeTomoLeg2OffsetFwd(double *dev_modelIn, double *dev_tomoSrcWavefieldD
 
     // Compute secondary source from extended scattering condition for first coarse time index (its=0)
     int its = 0;
-    kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssLeft[iGpu], dev_wavefield1Out, its)); // Apply extended FWD imaging condition
+    kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssLeft[iGpu], dev_wavefield1Out, its));
+
+	// Apply second scaling to secondary source: v^2 * dtw^2 coming from the finite difference scheme
+	kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_ssLeft[iGpu], dev_vel2Dtw2[iGpu]));
 
     // Start propagating scattered wavefield
     for (int its = 0; its < host_nts-1; its++){
 
         // Compute secondary source for first coarse time index (its+1)
-        kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssRight[iGpu], dev_wavefield1Out, its+1)); // Apply time-extended FWD imaging condition
+        kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssRight[iGpu], dev_wavefield1Out, its+1));
+
+		// Apply second scaling to secondary source: v^2 * dtw^2 coming from the finite difference scheme
+		kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_ssRight[iGpu], dev_vel2Dtw2[iGpu]));
 
         for (int it2 = 1; it2 < host_sub+1; it2++){
 
@@ -1105,6 +1313,7 @@ void computeTomoLeg2OffsetFwd(double *dev_modelIn, double *dev_tomoSrcWavefieldD
 
 }
 
+/***************************** Adjoint time-lags *******************************/
 // Leg 1 adjoint [time]: s -> i -> m <- d
 void computeTomoLeg1TimeAdj(double *dev_tomoSrcWavefieldDt2In, double *dev_tomoRecWavefieldIn, double *dev_modelTomoOut, double *dev_wavefield1Out, double *dev_extReflectivityIn, dim3 dimGridIn, dim3 dimBlockIn, int iGpu, int saveWavefield){
 
@@ -1276,6 +1485,7 @@ void computeTomoLeg2TimeAdj(double *dev_tomoSrcWavefieldDt2In, double *dev_tomoR
 
 }
 
+/*************************** Adjoint subsurface offsets ***********************/
 // Leg 1 adjoint [offset]: s -> i -> m <- d
 void computeTomoLeg1OffsetAdj(double *dev_tomoSrcWavefieldDt2In, double *dev_tomoRecWavefieldIn, double *dev_modelTomoOut, double *dev_wavefield1Out, double *dev_extReflectivityIn, dim3 dimGridIn, dim3 dimBlockIn, int iGpu, int saveWavefield){
 
@@ -1287,15 +1497,21 @@ void computeTomoLeg1OffsetAdj(double *dev_tomoSrcWavefieldDt2In, double *dev_tom
 	cuda_call(cudaMemset(dev_scatLeft[iGpu], 0, host_nz*host_nx*sizeof(double)));
   	cuda_call(cudaMemset(dev_scatRight[iGpu], 0, host_nz*host_nx*sizeof(double)));
 
-	// Compute secondary source for first coarse time index (its = 0)
-	int its = 0;
-	kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssLeft[iGpu], dev_tomoSrcWavefieldDt2In, its)); // Apply extended FWD imaging condition
+	// Compute secondary source from extended scattering condition for first coarse time index (its = 0)
+    int its = 0;
+	kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssLeft[iGpu], dev_tomoSrcWavefieldDt2In, its));
+
+	// Apply second scaling to secondary source: v^2 * dtw^2 coming from the finite difference scheme
+	kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_ssLeft[iGpu], dev_vel2Dtw2[iGpu]));
 
 	// Start propagating scattered wavefield
 	for (int its = 0; its < host_nts-1; its++){
 
 		// Compute secondary source for first coarse time index (its+1)
-		kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssRight[iGpu], dev_tomoSrcWavefieldDt2In, its+1)); // Apply time-extended FWD imaging condition
+        kernel_exec(imagingOffsetFwdGpu<<<dimGridIn, dimBlockIn>>>(dev_extReflectivityIn, dev_ssRight[iGpu], dev_tomoSrcWavefieldDt2In, its+1));
+
+		// Apply second scaling to secondary source: v^2 * dtw^2 coming from the finite difference scheme
+		kernel_exec(scaleSecondarySourceFd<<<dimGridIn, dimBlockIn>>>(dev_ssRight[iGpu], dev_vel2Dtw2[iGpu]));
 
 		for (int it2 = 1; it2 < host_sub+1; it2++){
 
@@ -1362,13 +1578,13 @@ void computeTomoLeg2OffsetAdj(double *dev_tomoSrcWavefieldDt2In, double *dev_tom
 
 	// Compute secondary source for its=nts-1
 	int its = host_nts-1;
-    kernel_exec(imagingOffsetTomoAdjGpu<<<dimGridIn, dimBlockIn>>>(dev_tomoRecWavefieldIn, dev_ssRight[iGpu], dev_extReflectivityIn, its));
+    kernel_exec(imagingOffsetTomoAdjGpu<<<dimGridIn, dimBlockIn>>>(dev_tomoRecWavefieldIn, dev_ssRight[iGpu], dev_extReflectivityIn, dev_vel2Dtw2[iGpu], its));
 
 	// Start propagating scattered wavefield
 	for (int its = host_nts-2; its > -1; its--){
 
 		// Compute secondary source for its
-	    kernel_exec(imagingOffsetTomoAdjGpu<<<dimGridIn, dimBlockIn>>>(dev_tomoRecWavefieldIn, dev_ssLeft[iGpu], dev_extReflectivityIn, its));
+	    kernel_exec(imagingOffsetTomoAdjGpu<<<dimGridIn, dimBlockIn>>>(dev_tomoRecWavefieldIn, dev_ssLeft[iGpu], dev_extReflectivityIn, dev_vel2Dtw2[iGpu], its));
 
 		for (int it2 = host_sub-1; it2 > -1; it2--){
 

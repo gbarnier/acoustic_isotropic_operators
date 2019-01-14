@@ -14,6 +14,7 @@ void BornTimeShotsFwdGpuWavefield(double *model, double *dataRegDts, double *sou
 
 // Subsurface offsets
 void BornOffsetShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *scatWavefieldDts, int iGpu);
+void BornOffsetShotsFwdGpuWavefield(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *scatWavefieldDts, int iGpu);
 
 /************************************** Born ADJ ****************************************/
 // Time-lags
@@ -22,5 +23,6 @@ void BornTimeShotsAdjGpuWavefield(double *model, double *dataRegDtw, double *sou
 
 // Subsurface offsets
 void BornOffsetShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *scatWavefieldDts, int iGpu);
+void BornOffsetShotsAdjGpuWavefield(double *model, double *dataRegDtw, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefield, double *recWavefield, int iGpu);
 
 #endif

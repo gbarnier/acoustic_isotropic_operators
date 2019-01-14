@@ -13,6 +13,7 @@ import numpy as np
 
 from pyAcoustic_iso_double_nl import deviceGpu
 
+# Nonlinear
 def nonlinearOpInitDouble(args):
 	"""Function to correctly initialize nonlinear operator
 	   The function will return the necessary variables for operator construction
@@ -119,7 +120,6 @@ def nonlinearOpInitDouble(args):
 
 	# Output: model and data SepVectors
 	return modelDouble, dataDouble, velDouble, parObject, sourcesVector, receiversVector
-
 class nonlinearPropShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for non-linear propagator"""
 
@@ -189,6 +189,7 @@ class nonlinearPropShotsGpu(Op.Operator):
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
+# Born
 def BornOpInitDouble(args):
 	"""Function to correctly initialize Born operator
 	   The function will return the necessary variables for operator construction
@@ -301,7 +302,6 @@ def BornOpInitDouble(args):
 		modelDouble=SepVector.getSepVector(velDouble.getHyper(), storage="dataDouble")
 
 	return modelDouble, dataDouble, velDouble, parObject, sourcesVector, sourcesSignalsVector, receiversVector
-
 class BornShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for Born operator"""
 
@@ -374,6 +374,7 @@ class BornShotsGpu(Op.Operator):
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
+# Born extended
 def BornExtOpInitDouble(args):
 
 	# Preliminary steps
@@ -402,14 +403,12 @@ def BornExtOpInitDouble(args):
 	# Time extension
 	if (extension == "time"):
 		dExt=parObject.getFloat("dts",-1.0)
-		nExt=parObject.getInt("nExt")
 		hExt=(nExt-1)/2
 		oExt=-dExt*hExt
 
 	# Horizontal subsurface offset extension
 	if (extension == "offset"):
 		dExt=parObject.getFloat("dx",-1.0)
-		nExt=parObject.getInt("nExt")
 		hExt=(nExt-1)/2
 		oExt=-dExt*hExt
 
@@ -514,7 +513,6 @@ def BornExtOpInitDouble(args):
 		modelDouble=SepVector.getSepVector(modelHyper, storage="dataDouble")
 
 	return modelDouble, dataDouble, velDouble, parObject, sourcesVector, sourcesSignalsVector, receiversVector
-
 class BornExtShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for Extended Born operator"""
 
@@ -587,12 +585,153 @@ class BornExtShotsGpu(Op.Operator):
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
+# Tomo
+def tomoExtOpInitDouble(args):
+
+	# Preliminary steps
+	io=genericIO.pyGenericIO.ioModes(args)
+	ioDef=io.getDefaultIO()
+	parObject=ioDef.getParamObj()
+	velFile=parObject.getString("vel")
+	sourcesFile=parObject.getString("sources")
+
+	# Velocity model
+	velFloat=genericIO.defaultIO.getVector(velFile)
+	velDouble=SepVector.getSepVector(velFloat.getHyper(), storage="dataDouble")
+	velDoubleNp=velDouble.getNdArray()
+	velFloatNp=velFloat.getNdArray()
+	velDoubleNp[:]=velFloatNp
+	zAxis=velDouble.getHyper().axes[0]
+	xAxis=velDouble.getHyper().axes[1]
+
+	# Extension axis
+	extension=parObject.getString("extension")
+	nExt=parObject.getInt("nExt")
+	if (nExt%2 == 0):
+		print("Length of extension axis must be an uneven number")
+		quit()
+
+	# Time extension
+	if (extension == "time"):
+		dExt=parObject.getFloat("dts",-1.0)
+		hExt=(nExt-1)/2
+		oExt=-dExt*hExt
+
+	# Horizontal subsurface offset extension
+	if (extension == "offset"):
+		dExt=parObject.getFloat("dx",-1.0)
+		hExt=(nExt-1)/2
+		oExt=-dExt*hExt
+
+	extAxis=Hypercube.axis(n=nExt, o=oExt, d=dExt)
+
+	# Extended reflectivity
+	reflectivityFloat=genericIO.defaultIO.getVector(parObject.getString("reflectivity"))
+	reflectivityDouble=SepVector.getSepVector(reflectivityFloat.getHyper(), storage="dataDouble")
+	reflectivityDouble=np.array(reflectivityDouble.getCpp(), copy=False)
+	reflectivityFloat=np.array(reflectivityFloat.getCpp(), copy=False)
+	reflectivityDouble[:]=reflectivityFloat
+
+	# Sources signals (we assume one unique point source signature for all shots)
+	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile)
+	timeAxis=sourcesSignalsFloat.getHyper().axes[0]
+	dummyAxis=Hypercube.axis(n=1)
+	sourcesSignalsHyper=Hypercube.hypercube(axes=[timeAxis, dummyAxis])
+	sourcesSignalsDouble=SepVector.getSepVector(sourcesSignalsHyper, storage="dataDouble")
+	sourcesSignalsDoubleNp=sourcesSignalsDouble.getNdArray()
+	sourcesSignalsFloatNp=sourcesSignalsFloat.getNdArray()
+	for its in range(timeAxis.n):
+		sourcesSignalsDoubleNp[0][its]=sourcesSignalsFloatNp[its]
+	sourcesSignalsVector=[]
+	sourcesSignalsVector.append(sourcesSignalsDouble)
+
+	# Sources geometry
+	nzSource=1
+	ozSource=parObject.getInt("zSource") - 1 + parObject.getInt("zPadMinus") + parObject.getInt("fat")
+	dzSource=1
+	nxSource=1
+	oxSource=parObject.getInt("xSource") - 1 + parObject.getInt("xPadMinus") + parObject.getInt("fat")
+	dxSource=1
+	spacingShots=parObject.getInt("spacingShots")
+	sourceAxis=Hypercube.axis(n=parObject.getInt("nShot"), o=oxSource, d=dxSource)
+	sourcesVector=[]
+	for ishot in range(parObject.getInt("nShot")):
+		sourcesVector.append(deviceGpu(nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, velDouble.getCpp(), parObject.getInt("nts")))
+		oxSource=oxSource + spacingShots
+
+	# Receivers geometry
+	nzReceiver = 1
+	ozReceiver = parObject.getInt("depthReceiver") - 1 + parObject.getInt("zPadMinus") + parObject.getInt("fat")
+	dzReceiver = 1
+	nxReceiver = parObject.getInt("nReceiver")
+	oxReceiver = parObject.getInt("oReceiver") - 1 + parObject.getInt("xPadMinus") + parObject.getInt("fat")
+	dxReceiver = parObject.getInt("dReceiver")
+	receiverAxis=Hypercube.axis(n=nxReceiver, o=oxReceiver, d=dxReceiver)
+	receiversVector=[]
+	nRecGeom = 1; # Constant receivers' geometry
+	for iRec in range(nRecGeom):
+		receiversVector.append(deviceGpu(nzReceiver, ozReceiver, dzReceiver, nxReceiver, oxReceiver, dxReceiver, velDouble.getCpp(), parObject.getInt("nts")))
+
+	# Forward: read wavelet and allocate data (filled with zeros)
+	if (parObject.getInt("adj", 0) == 0):
+
+	    # Read model (background perturbation)
+	    modelFloat=genericIO.defaultIO.getVector(parObject.getString("model"))
+	    modelDouble=SepVector.getSepVector(modelFloat.getHyper(), storage="dataDouble")
+	    modelDoubleNp=np.array(modelDouble.getCpp(), copy=False)
+	    modelFloatNp=np.array(modelFloat.getCpp(), copy=False)
+	    modelDoubleNp[:]=modelFloatNp
+
+		# Allocate dataDouble and fill with zeros
+		dataDouble=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis, receiverAxis, sourceAxis]), storage="dataDouble")
+
+	# Adjoint: read data and allocate model (filled with zeros)
+	else:
+
+		# Read data as a float vector
+		dataFloat=genericIO.defaultIO.getVector(parObject.getString("data"))
+
+		# Create data vector in double precision
+		dataHyper=Hypercube.hypercube(axes=[timeAxis, receiverAxis, sourceAxis])
+		dataDouble=SepVector.getSepVector(dataHyper, storage="dataDouble")
+		dataDMat=dataDouble.getNdArray()
+		dataSMat=dataFloat.getNdArray()
+
+		# Case where there is only one source, one receiver
+		if (sourceAxis.n == 1 and receiverAxis.n == 1):
+			for its in range(timeAxis.n):
+				dataDMat[0][0][its] = dataSMat[its]
+
+		# Case where there is only one source, multiple receivers
+		if (sourceAxis.n == 1 and receiverAxis.n > 1):
+			for iReceiver in range(receiverAxis.n):
+				for its in range(timeAxis.n):
+					dataDMat[0][iReceiver][its] = dataSMat[iReceiver][its]
+
+		# Case where there is only multiple sources, one receiver
+		if (sourceAxis.n > 1 and receiverAxis.n == 1):
+			for iSource in range(sourceAxis.n):
+				for its in range(timeAxis.n):
+					dataDMat[iSource][0][its] = dataSMat[iSource][its]
+
+		# Case where there is multiple sources, multiple receivers
+		if (sourceAxis.n > 1 and receiverAxis.n > 1):
+			for iSource in range(sourceAxis.n):
+				for iReceiver in range(receiverAxis.n):
+					for its in range(timeAxis.n):
+						dataDMat[iSource][iReceiver][its] = dataSMat[iSource][iReceiver][its]
+
+
+	    # Allocate modelDouble and fill with zeros
+	    modelDouble=SepVector.getSepVector(velFloat.getHyper(), storage="dataDouble")
+
+	return modelDouble, dataDouble, velDouble, parObject, sourcesVector, sourcesSignalsVector, receiversVector, reflectivityDouble
 class tomoExtShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for Born operator"""
 
 	def __init__(self,domain,range,velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector,reflectivityExt):
-		#Domain = source wavelet
-		#Range = recorded data space
+		# Domain = Background perturbation
+		# Range = Born data
 		self.setDomainRange(domain,range)
 		#Checking if getCpp is present
 		if("getCpp" in dir(velocity)):
@@ -661,6 +800,145 @@ class tomoExtShotsGpu(Op.Operator):
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
+# Wemva
+def wemvaExtOpInitDouble(args):
+
+	# Preliminary steps
+	io=genericIO.pyGenericIO.ioModes(args)
+	ioDef=io.getDefaultIO()
+	parObject=ioDef.getParamObj()
+	velFile=parObject.getString("vel")
+	sourcesFile=parObject.getString("sources")
+
+	# Velocity model
+	velFloat=genericIO.defaultIO.getVector(velFile)
+	velDouble=SepVector.getSepVector(velFloat.getHyper(), storage="dataDouble")
+	velDoubleNp=velDouble.getNdArray()
+	velFloatNp=velFloat.getNdArray()
+	velDoubleNp[:]=velFloatNp
+	zAxis=velDouble.getHyper().axes[0]
+	xAxis=velDouble.getHyper().axes[1]
+
+	# Extension axis
+	extension=parObject.getString("extension")
+	nExt=parObject.getInt("nExt")
+	if (nExt%2 ==0):
+		print("ERROR: Length of extension axis must be an uneven number")
+		quit()
+
+	# Time extension
+	if (extension == "time"):
+		dExt=parObject.getFloat("dts",-1.0)
+		nExt=parObject.getInt("nExt")
+		hExt=(nExt-1)/2
+		oExt=-dExt*hExt
+
+	# Horizontal subsurface offset extension
+	if (extension == "offset"):
+		dExt=parObject.getFloat("dx",-1.0)
+		nExt=parObject.getInt("nExt")
+		hExt=(nExt-1)/2
+		oExt=-dExt*hExt
+
+	extAxis=Hypercube.axis(n=nExt, o=oExt, d=dExt) # Create extended axis
+
+	# Sources signals (we assume one unique point source signature for all shots)
+	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile)
+	timeAxis=sourcesSignalsFloat.getHyper().axes[0]
+	dummyAxis=Hypercube.axis(n=1)
+	sourcesSignalsHyper=Hypercube.hypercube(axes=[timeAxis, dummyAxis])
+	sourcesSignalsDouble=SepVector.getSepVector(sourcesSignalsHyper, storage="dataDouble")
+	sourcesSignalsDoubleNp=sourcesSignalsDouble.getNdArray()
+	sourcesSignalsFloatNp=sourcesSignalsFloat.getNdArray()
+	for its in range(timeAxis.n):
+		sourcesSignalsDoubleNp[0][its]=sourcesSignalsFloatNp[its]
+	sourcesSignalsVector=[]
+	sourcesSignalsVector.append(sourcesSignalsDouble)
+
+	# Sources geometry
+	nzSource=1
+	ozSource=parObject.getInt("zSource") - 1 + parObject.getInt("zPadMinus") + parObject.getInt("fat")
+	dzSource=1
+	nxSource=1
+	oxSource=parObject.getInt("xSource") - 1 + parObject.getInt("xPadMinus") + parObject.getInt("fat")
+	dxSource=1
+	spacingShots=parObject.getInt("spacingShots")
+	sourceAxis=Hypercube.axis(n=parObject.getInt("nShot"), o=oxSource, d=dxSource)
+	sourcesVector=[]
+	for ishot in range(parObject.getInt("nShot")):
+		sourcesVector.append(deviceGpu(nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, velDouble.getCpp(), parObject.getInt("nts")))
+		oxSource=oxSource + spacingShots
+
+	# Receivers geometry
+	nzReceiver = 1
+	ozReceiver = parObject.getInt("depthReceiver") - 1 + parObject.getInt("zPadMinus") + parObject.getInt("fat")
+	dzReceiver = 1
+	nxReceiver = parObject.getInt("nReceiver")
+	oxReceiver = parObject.getInt("oReceiver") - 1 + parObject.getInt("xPadMinus") + parObject.getInt("fat")
+	dxReceiver = parObject.getInt("dReceiver")
+	receiverAxis=Hypercube.axis(n=nxReceiver, o=oxReceiver, d=dxReceiver)
+	receiversVector=[]
+	nRecGeom = 1; # Constant receivers' geometry
+	for iRec in range(nRecGeom):
+		receiversVector.append(deviceGpu(nzReceiver, ozReceiver, dzReceiver, nxReceiver, oxReceiver, dxReceiver, velDouble.getCpp(), parObject.getInt("nts")))
+
+	# Wemva seismic data
+	wemvaDataFloat=genericIO.defaultIO.getVector(parObject.getString("wemvaData"))
+	wemvaDataHyper=Hypercube.hypercube(axes=[timeAxis, receiverAxis, sourceAxis])
+	wemvaDataDouble=SepVector.getSepVector(dataHyper, storage="dataDouble")
+	wemvaDataDMat=wemvaDataDouble.getNdArray()
+	wemvaDataSMat=wemvaDataFloat.getNdArray()
+	# Case where there is only one source, one receiver
+	if (sourceAxis.n == 1 and receiverAxis.n == 1):
+		for its in range(timeAxis.n):
+			dataDMat[0][0][its] = dataSMat[its]
+
+	# Case where there is only one source, multiple receivers
+	if (sourceAxis.n == 1 and receiverAxis.n > 1):
+		for iReceiver in range(receiverAxis.n):
+			for its in range(timeAxis.n):
+				wemvaDataDMat[0][iReceiver][its] = wemvaDataSMat[iReceiver][its]
+
+	# Case where there is only multiple sources, one receiver
+	if (sourceAxis.n > 1 and receiverAxis.n == 1):
+		for iSource in range(sourceAxis.n):
+			for its in range(timeAxis.n):
+				wemvaDataDMat[iSource][0][its] = wemvaDataSMat[iSource][its]
+
+	# Case where there is multiple sources, multiple receivers
+	if (sourceAxis.n > 1 and receiverAxis.n > 1):
+		for iSource in range(sourceAxis.n):
+			for iReceiver in range(receiverAxis.n):
+				for its in range(timeAxis.n):
+					wemvaDataDMat[iSource][iReceiver][its] = wemvaDataSMat[iSource][iReceiver][its]
+
+	# Forward
+	if (parObject.getInt("adj", 0) == 0):
+
+		# Read model (background perturbation)
+		modelFloat=genericIO.defaultIO.getVector(parObject.getString("model"))
+		modelDouble=SepVector.getSepVector(modelFloat.getHyper(), storage="dataDouble")
+		modelDoubleNp=np.array(modelDouble.getCpp(), copy=False)
+		modelFloatNp=np.array(modelFloat.getCpp(), copy=False)
+		modelDoubleNp[:]=modelFloatNp
+
+		# Allocate dataDouble (extended image) and fill with zeros
+		dataDouble=SepVector.getSepVector(Hypercube.hypercube(axes=[zAxis, xAxis, extAxis]), storage="dataDouble")
+
+	# Adjoint
+	else:
+
+	    # Read data (extended image)
+	    dataFloat=genericIO.defaultIO.getVector(parObject.getString("data"))
+	    dataDouble=SepVector.getSepVector(dataFloat.getHyper(), storage="dataDouble")
+	    dataDoubleNp=np.array(dataDouble.getCpp(), copy=False)
+	    dataFloatNp=np.array(dataFloat.getCpp(), copy=False)
+	    dataDoubleNp[:]=dataFloatNp
+
+	    # Allocate modelDouble and fill with zeros
+	    modelDouble=SepVector.getSepVector(velFloat.getHyper(), storage="dataDouble")
+
+	return modelDouble, dataDouble, velDouble, parObject, sourcesVector, sourcesSignalsVector, receiversVector, wemvaDataDouble
 class wemvaExtShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for Born operator"""
 

@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 	std::shared_ptr <SEP::genericIO> io = modes.getDefaultIO();
 	std::shared_ptr <paramObj> par = io->getParamObj();
 	int adj = par->getInt("adj", 0);
-	int saveWavefield = par->getInt("saveWavefield");
+	int saveWavefield = par->getInt("saveWavefield", 0);
 	int dotProd = par->getInt("dotProd", 0);
 
 	if (adj == 0 && dotProd == 0){

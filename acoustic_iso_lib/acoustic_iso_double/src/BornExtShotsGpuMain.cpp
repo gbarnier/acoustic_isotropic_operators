@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 	std::shared_ptr <SEP::genericIO> io = modes.getDefaultIO();
 	std::shared_ptr <paramObj> par = io->getParamObj();
 	int adj = par->getInt("adj", 0);
-	int saveWavefield = par->getInt("saveWavefield");
+	int saveWavefield = par->getInt("saveWavefield", 0);
 	int dotProd = par->getInt("dotProd", 0);
 
 	if (adj == 0 && dotProd == 0){
@@ -239,6 +239,13 @@ int main(int argc, char **argv) {
 		model1File->setHyper(model1Hyper);
 		model1File->writeDescription();
 
+		/* Allocate and read model 2 for debugging the adjoint imaging condition with subsurface offset extension */
+		model2Float = std::make_shared<float3DReg>(model1Hyper);
+		model2Double = std::make_shared<double3DReg>(model1Hyper);
+		model2File = io->getRegFile(std::string("model2"),usageOut);
+		model2File->setHyper(model1Hyper);
+		model2File->writeDescription();
+
 	}
 
 	/* Wavefields */
@@ -342,8 +349,8 @@ int main(int argc, char **argv) {
 			secWavefield1File->setHyper(wavefield1Hyper);
 			secWavefield1File->writeDescription();
 			secWavefield1File->writeFloatStream(secWavefield1Float);
-		}
 
+		}
 	}
 
 	/* Dot product test */
