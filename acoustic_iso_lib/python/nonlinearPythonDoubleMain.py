@@ -10,39 +10,82 @@ import sys
 if __name__ == '__main__':
 
     # Initialize operator
-    modelDouble, dataDouble, velDouble, parObject, sourcesVector, receiversVector = Acoustic_iso_double.nonlinearOpInitDouble(sys.argv)
+    modelDouble,dataDouble,velDouble,parObject,sourcesVector,receiversVector=Acoustic_iso_double.nonlinearOpInitDouble(sys.argv)
 
     # Construct nonlinear operator object
-    nonlinearOp = Acoustic_iso_double.nonlinearPropShotsGpu(modelDouble, dataDouble, velDouble, parObject, sourcesVector, receiversVector)
+    nonlinearOp=Acoustic_iso_double.nonlinearPropShotsGpu(modelDouble,dataDouble,velDouble,parObject,sourcesVector,receiversVector)
 
-    # Launch forward modeling
-    if (parObject.getInt("adj", 0) == 0):
+    # Forward
+    if (parObject.getInt("adj",0) == 0):
 
         print("-------------------------------------------------------------------")
-        print("----------------------- Running nonlinear forward -----------------")
-        print("-------------------------------------------------------------------")
-        nonlinearOp.forward(False, modelDouble, dataDouble) # Run forward
+        print("------------------ Running Python nonlinear forward ---------------")
+        print("-------------------------------------------------------------------\n")
+
+        # Check that model was provided
+        modelFile=parObject.getString("model","noModelFile")
+        if (modelFile == "noModelFile"):
+            print("**** ERROR: User did not provide model file ****\n")
+            quit()
+
+        # Read model
+        modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
+        modelDMat=modelDouble.getNdArray()
+        modelSMat=modelFloat.getNdArray()
+        modelDMat[:]=modelSMat
+
+        # Apply forward
+        nonlinearOp.forward(False,modelDouble,dataDouble)
 
         # Write data
-        data=SepVector.getSepVector(dataDouble.getHyper(), storage="dataFloat")
-        dataNp=data.getNdArray()
+        dataFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
+        dataFloatNp=dataFloat.getNdArray()
         dataDoubleNp=dataDouble.getNdArray()
-        dataNp[:]=dataDoubleNp
-        dataFile=parObject.getString("data")
-        genericIO.defaultIO.writeVector(dataFile, data)
+        dataFloatNp[:]=dataDoubleNp
+        dataFile=parObject.getString("data","noDataFile")
+        if (dataFile == "noDataFile"):
+            print("**** ERROR: User did not provide data file name ****\n")
+            quit()
+        genericIO.defaultIO.writeVector(dataFile,dataFloat)
 
-    # Launch adjoint modeling
+        print("-------------------------------------------------------------------")
+        print("--------------------------- All done ------------------------------")
+        print("-------------------------------------------------------------------\n")
+
+    # Adjoint
     else:
 
         print("-------------------------------------------------------------------")
-        print("----------------------- Running nonlinear adjoint -----------------")
-        print("-------------------------------------------------------------------")
-        nonlinearOp.adjoint(False, modelDouble, dataDouble) # Run adjoint
+        print("----------------- Running Python nonlinear adjoint ----------------")
+        print("-------------------------------------------------------------------\n")
+
+        # Check that data was provided
+        dataFile=parObject.getString("data","noDataFile")
+        if (dataFile == "noDataFile"):
+            print("**** ERROR: User did not provide data file ****\n")
+            quit()
+
+        # Read data
+        dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
+        dataFloatNp=dataFloat.getNdArray()
+        dataDoubleNp=dataDouble.getNdArray()
+        dataDoubleNp[:]=dataFloatNp
+        genericIO.defaultIO.writeVector(dataFile,dataFloat)
+
+        # Apply adjoint
+        nonlinearOp.adjoint(False,modelDouble,dataDouble)
 
         # Write model
-        model=SepVector.getSepVector(modelDouble.getHyper(), storage="dataFloat")
-        modelNp=model.getNdArray()
+        modelFloat=SepVector.getSepVector(modelDouble.getHyper(),storage="dataFloat")
+        modelFloatNp=modelFloat.getNdArray()
         modelDoubleNp=modelDouble.getNdArray()
-        modelNp[:]=modelDoubleNp
-        modelFile = parObject.getString("model")
-        genericIO.defaultIO.writeVector(modelFile, model)
+        modelFloatNp[:]=modelDoubleNp
+        modelFile=parObject.getString("model","noModelFile")
+        if (modelFile == "noModelFile"):
+            print("**** ERROR: User did not provide model file name ****\n")
+            quit()
+        genericIO.defaultIO.writeVector(modelFile,modelFloat)
+
+        print("-------------------------------------------------------------------")
+        print("--------------------------- All done ------------------------------")
+        print("-------------------------------------------------------------------\n")

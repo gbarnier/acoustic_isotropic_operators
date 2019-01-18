@@ -55,6 +55,8 @@ add_subdirectory(python)
 # include folder for pySolver module
 execute_process(COMMAND git submodule update --init --remote external/pySolver WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(external/pySolver/GenericSolver)
+# include folder for Seismic utilities
+add_subdirectory(seis_utils)
 
 include(InstallRequiredSystemLibraries)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
