@@ -169,8 +169,8 @@ int main(int argc, char **argv) {
 	sourcesSignalsFile->readFloatStream(sourcesSignalTempFloat);
 	for (int its=0; its<nts; its++){
 		(*sourcesSignalTempDouble->_mat)[0][its] = (*sourcesSignalTempFloat->_mat)[0][its];
-		sourcesSignalsVector.push_back(sourcesSignalTempDouble);
 	}
+	sourcesSignalsVector.push_back(sourcesSignalTempDouble);
 
     /***************************** Create receivers signals vector **********************/
 	// Read Wemva data
@@ -199,9 +199,9 @@ int main(int argc, char **argv) {
 		for (int iReceiver=0; iReceiver<receiversSignalsHyper->getAxis(2).n; iReceiver++){
 			for (int its=0; its<nts; its++){
 				(*receiversSignalsSliceDouble->_mat)[iReceiver][its] = (*receiversSignalsTempFloat->_mat)[iShot][iReceiver][its];
-				receiversSignalsVector.push_back(receiversSignalsSliceDouble);
 			}
 		}
+		receiversSignalsVector.push_back(receiversSignalsSliceDouble);
 	}
 
 	/*********************************** Allocation *************************************/

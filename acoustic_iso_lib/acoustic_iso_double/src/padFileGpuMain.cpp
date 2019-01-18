@@ -3,7 +3,6 @@
 #include "float3DReg.h"
 #include "ioModes.h"
 
-
 using namespace SEP;
 
 int main(int argc, char **argv) {

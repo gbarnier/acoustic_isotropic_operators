@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
 
 	/* General parameters */
 	int adj = par->getInt("adj", 0);
-	int saveWavefield = par->getInt("saveWavefield");
+	int saveWavefield = par->getInt("saveWavefield", 0);
 	int dotProd = par->getInt("dotProd", 0);
 	int nShot = par->getInt("nShot");
 	axis shotAxis = axis(nShot, 1.0, 1.0);
@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 	if (adj == 0 && dotProd == 0 ){
 		std::cout << " " << std::endl;
 		std::cout << "-------------------------------------------------------------------" << std::endl;
-		std::cout << "----------------------- Running  forward -----------------" << std::endl;
+		std::cout << "----------------------- Running nonlinear forward -----------------" << std::endl;
 		std::cout << "-------------------------------------------------------------------" << std::endl;
 		std::cout << " " << std::endl;
 	}
@@ -59,13 +59,12 @@ int main(int argc, char **argv) {
 	}
 
 	/* Model and data declaration */
-	std::cout << "Main-3" << std::endl;	
 	std::shared_ptr<double3DReg> model1Double, data1Double;
 	std::shared_ptr<float3DReg> model1Float, data1Float;
 	std::shared_ptr<float3DReg> wavefield1Float;
 	std::shared_ptr<double3DReg> wavefield1Double;
 	std::shared_ptr <genericRegFile> model1File, data1File, wavefield1File, dampFile;
-	std::cout << "Main-2" << std::endl;
+
 	/* Read time parameters */
 	int nts = par->getInt("nts");
 	double dts = par->getFloat("dts", 0.0);
@@ -74,14 +73,14 @@ int main(int argc, char **argv) {
 	int ntw = (nts - 1) * sub + 1;
 	double dtw = dts / double(sub);
 	axis timeAxisFine = axis(ntw, 0.0, dtw);
-	std::cout << "Main-1" << std::endl;
+
 	/* Read padding parameters */
 	int zPadMinus = par->getInt("zPadMinus");
 	int zPadPlus = par->getInt("zPadPlus");
 	int xPadMinus = par->getInt("xPadMinus");
 	int xPadPlus = par->getInt("xPadPlus");
 	int fat = par->getInt("fat");
-	std::cout << "Main0" << std::endl;
+
 	/************************************** Velocity model ******************************/
 	/* Read velocity (includes the padding + FAT) */
 	std::shared_ptr<SEP::genericRegFile> velFile = io->getRegFile("vel",usageIn);
@@ -90,13 +89,18 @@ int main(int argc, char **argv) {
 	std::shared_ptr<SEP::double2DReg> velDouble(new SEP::double2DReg(velHyper));
 	velFile->readFloatStream(velFloat);
 	int nz = velFloat->getHyper()->getAxis(1).n;
+	double oz = velFloat->getHyper()->getAxis(1).o;
+	double dz = velFloat->getHyper()->getAxis(1).d;
 	int nx = velFloat->getHyper()->getAxis(2).n;
+	double ox = velFloat->getHyper()->getAxis(2).o;
+	double dx = velFloat->getHyper()->getAxis(2).d;
+
 	for (int ix = 0; ix < nx; ix++) {
 		for (int iz = 0; iz < nz; iz++) {
 			(*velDouble->_mat)[ix][iz] = (*velFloat->_mat)[ix][iz];
 		}
 	}
-	std::cout << "Main1" << std::endl;
+
 	/********************************* Create sources vector ****************************/
 	// Create source device vector
 	int nzSource = 1;
@@ -106,14 +110,14 @@ int main(int argc, char **argv) {
 	int oxSource = par->getInt("xSource") - 1 + xPadMinus + fat;
 	int dxSource = 1;
 	int spacingShots = par->getInt("spacingShots", spacingShots);
-	axis sourceAxis(nxSource, oxSource, dxSource);
+	axis sourceAxis(nShot, ox+oxSource*dx, spacingShots*dx);
 	std::vector<std::shared_ptr<deviceGpu>> sourcesVector;
 	for (int iShot; iShot<nShot; iShot++){
 		std::shared_ptr<deviceGpu> sourceDevice(new deviceGpu(nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, velDouble, nts));
 		sourcesVector.push_back(sourceDevice);
 		oxSource = oxSource + spacingShots;
 	}
-	std::cout << "Main2" << std::endl;
+
 	/********************************* Create receivers vector **************************/
 	int nzReceiver = 1;
 	int ozReceiver = par->getInt("depthReceiver") - 1 + zPadMinus + fat;
@@ -121,14 +125,14 @@ int main(int argc, char **argv) {
 	int nxReceiver = par->getInt("nReceiver");
 	int oxReceiver = par->getInt("oReceiver") - 1 + xPadMinus + fat;
 	int dxReceiver = par->getInt("dReceiver");
-	axis receiverAxis(nxReceiver, oxReceiver, dxReceiver);
+	axis receiverAxis(nxReceiver, ox+oxReceiver*dx, dxReceiver*dx);
 	std::vector<std::shared_ptr<deviceGpu>> receiversVector;
 	int nRecGeom = 1; // Constant receivers' geometry
 	for (int iRec; iRec<nRecGeom; iRec++){
 		std::shared_ptr<deviceGpu> recDevice(new deviceGpu(nzReceiver, ozReceiver, dzReceiver, nxReceiver, oxReceiver, dxReceiver, velDouble, nts));
 		receiversVector.push_back(recDevice);
 	}
-	std::cout << "Main3" << std::endl;
+
 	/*********************************** Allocation *************************************/
 	/* Forward propagation */
 	if (adj == 0) {
@@ -154,7 +158,7 @@ int main(int argc, char **argv) {
 		}
 
 		/* Data double allocation */
-		std::shared_ptr<hypercube> data1Hyper(new hypercube(model1Hyper->getAxis(1), receiverAxis, shotAxis));
+		std::shared_ptr<hypercube> data1Hyper(new hypercube(model1Hyper->getAxis(1), receiverAxis, sourceAxis));
 		data1Double = std::make_shared<double3DReg>(data1Hyper);
 		data1Float = std::make_shared<float3DReg>(data1Hyper);
 
@@ -162,7 +166,6 @@ int main(int argc, char **argv) {
 		data1File = io->getRegFile(std::string("data1"), usageOut);
 		data1File->setHyper(data1Hyper);
 		data1File->writeDescription();
-		std::cout << "Main3" << std::endl;
 	}
 
 	if (adj == 1) {

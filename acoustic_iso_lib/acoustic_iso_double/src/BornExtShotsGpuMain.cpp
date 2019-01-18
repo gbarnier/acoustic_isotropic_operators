@@ -30,6 +30,8 @@ int main(int argc, char **argv) {
 	int adj = par->getInt("adj", 0);
 	int saveWavefield = par->getInt("saveWavefield", 0);
 	int dotProd = par->getInt("dotProd", 0);
+	int nShot = par->getInt("nShot");
+	axis shotAxis = axis(nShot, 1.0, 1.0);
 
 	if (adj == 0 && dotProd == 0){
 		std::cout << " " << std::endl;
@@ -105,7 +107,11 @@ int main(int argc, char **argv) {
 	std::shared_ptr<SEP::double2DReg> velDouble(new SEP::double2DReg(velHyper));
 	velFile->readFloatStream(velFloat);
 	int nz = velFloat->getHyper()->getAxis(1).n;
+	double oz = velFloat->getHyper()->getAxis(1).o;
+	double dz = velFloat->getHyper()->getAxis(1).d;
 	int nx = velFloat->getHyper()->getAxis(2).n;
+	double ox = velFloat->getHyper()->getAxis(2).o;
+	double dx = velFloat->getHyper()->getAxis(2).d;
 	for (int ix = 0; ix < nx; ix++) {
 		for (int iz = 0; iz < nz; iz++) {
 			(*velDouble->_mat)[ix][iz] = (*velFloat->_mat)[ix][iz];
@@ -120,15 +126,13 @@ int main(int argc, char **argv) {
 	int oxSource = par->getInt("xSource") - 1 + xPadMinus + fat;
 	int dxSource = 1;
 	int spacingShots = par->getInt("spacingShots", spacingShots);
-	axis sourceAxis(nxSource, oxSource, dxSource);
+	axis sourceAxis(nShot, ox+oxSource*dx, spacingShots*dx);
 	std::vector<std::shared_ptr<deviceGpu>> sourcesVector;
-	int nShot = par->getInt("nShot");
 	for (int iShot; iShot<nShot; iShot++){
 		std::shared_ptr<deviceGpu> sourceDevice(new deviceGpu(nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, velDouble, nts));
 		sourcesVector.push_back(sourceDevice);
 		oxSource = oxSource + spacingShots;
 	}
-	axis shotAxis = axis(nShot, oxSource, dxSource);
 
 	/********************************* Create receivers vector **************************/
 	int nzReceiver = 1;
@@ -137,7 +141,7 @@ int main(int argc, char **argv) {
 	int nxReceiver = par->getInt("nReceiver");
 	int oxReceiver = par->getInt("oReceiver") - 1 + xPadMinus + fat;
 	int dxReceiver = par->getInt("dReceiver");
-	axis receiverAxis(nxReceiver, oxReceiver, dxReceiver);
+	axis receiverAxis(nxReceiver, ox+oxReceiver*dx, dxReceiver*dx);
 	std::vector<std::shared_ptr<deviceGpu>> receiversVector;
 	int nRecGeom = 1; // Constant receivers' geometry
 	for (int iRec; iRec<nRecGeom; iRec++){
@@ -186,7 +190,7 @@ int main(int argc, char **argv) {
 		}
 
 		/* Data allocation */
-		std::shared_ptr<hypercube> data1Hyper(new hypercube(sourcesSignalsHyper->getAxis(1), receiverAxis, shotAxis));
+		std::shared_ptr<hypercube> data1Hyper(new hypercube(sourcesSignalsHyper->getAxis(1), receiverAxis, sourceAxis));
 		data1Double = std::make_shared<double3DReg>(data1Hyper);
 		data1Float = std::make_shared<float3DReg>(data1Hyper);
 
