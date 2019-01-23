@@ -3,10 +3,11 @@ project(seis_utils)
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 
 set(PythonMains
-    waveletMain.py dataTaperMain.py
+    waveletMain.py pyDso.py
 )
 
 install(FILES ${PythonMains} PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+
 
 # This is a CMake example for Python
 find_package(pybind11)
@@ -25,11 +26,8 @@ if (pybind11_FOUND)
   include_directories(${GENERIC_EXPORT_INC_DIRS})
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
-  set(LIBS genericCpp buffers jsonCpp hypercube  ${OpenMP_EXE_LINKER_FLAGS} ${TBB_LIBRARIES} ${GENERIC_EXPORT_LIBS})
-
   #Compiling and adding module to library
   pybind11_add_module(pydataTaper MODULE pydataTaper.cpp)
-  target_link_libraries(pydataTaper PRIVATE ${LIBS})
 
   #Installing library
   install( TARGETS pydataTaper DESTINATION lib/python) #Module for non-linear operator

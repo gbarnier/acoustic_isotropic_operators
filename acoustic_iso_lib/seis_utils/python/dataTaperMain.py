@@ -14,13 +14,13 @@ if __name__ == '__main__':
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
 
-    # Read model (seismic data that you wihs to mute/taper)
-    modelFile=parObject.getString("model")
+	# Read model (seismic data that you wihs to mute/taper)
+	modelFile=parObject.getString("model")
 	modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
 	modelDouble=SepVector.getSepVector(modelFloat.getHyper(),storage="dataDouble")
-    modelFloatNp=modelFloat.getNdArray()
-    modelDoubleNp=modelDouble.getNdArray()
-    modelDoubleNp[:]=modelDoubleNp
+	modelFloatNp=modelFloat.getNdArray()
+	modelDoubleNp=modelDouble.getNdArray()
+	modelDoubleNp[:]=modelDoubleNp
 
 	# Read parameters
 	maxOffset=parObject.getFloat("maxOffset",0) # After that offset, starting tapering and muting [km]
@@ -30,7 +30,7 @@ if __name__ == '__main__':
 	mode=parObject.getInt("maskOnly",0)  # If maskOnly=1, only compute and write the mask
 
 	# Allocate data (tapered seismic data) and tapering mask
-	if (maskOnly == 1) dataDouble=SepVector.getSepVector(modelFloat.getHyper(),storage="dataDouble"))
+	if (maskOnly == 1): dataDouble=SepVector.getSepVector(modelFloat.getHyper(),storage="dataDouble"))
 	taperMask=SepVector.getSepVector(modelFloat.getHyper(),storage="dataDouble"))
 
 	# Instanciate dataTaper object
@@ -44,17 +44,17 @@ if __name__ == '__main__':
 		# Apply taper to data
 		dataTaperOb.forward(False,modelDouble,dataDouble)
 		# Write data
-    	dataFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
-    	dataFloatNp=dataFloat.getNdArray()
-    	dataDoubleNp=dataDouble.getNdArray()
-    	dataFloatNp[:]=dataDoubleNp
-    	dataFile=parObject.getString("data")
-    	genericIO.defaultIO.writeVector(dataFile,dataFloat)
+		dataFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
+		dataFloatNp=dataFloat.getNdArray()
+		dataDoubleNp=dataDouble.getNdArray()
+		dataFloatNp[:]=dataDoubleNp
+		dataFile=parObject.getString("data")
+		genericIO.defaultIO.writeVector(dataFile,dataFloat)
 
 	# Write taper mask
-    taperMaskFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
-    taperMaskFloatNp=taperMaskFloat.getNdArray()
-    taperMaskDoubleNp=taperMaskDouble.getNdArray()
-    taperMaskDoubleNp[:]=taperMaskFloatNp
-    taperMaskFile=parObject.getString("taperMask")
-    genericIO.defaultIO.writeVector(taperMaskFile,taperMaskFloat)
+	taperMaskFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
+	taperMaskFloatNp=taperMaskFloat.getNdArray()
+	taperMaskDoubleNp=taperMaskDouble.getNdArray()
+	taperMaskDoubleNp[:]=taperMaskFloatNp
+	taperMaskFile=parObject.getString("taperMask")
+	genericIO.defaultIO.writeVector(taperMaskFile,taperMaskFloat)

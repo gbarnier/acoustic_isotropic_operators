@@ -4,6 +4,19 @@ project(ACOUSTIC_ISO_DOUBLE-lib)
 #Adding include files
 include_directories(include)
 
+#Header files to include during installation
+set(INC_DIR include)
+set(HEADERS ${INC_DIR}/deviceGpu.h
+			      ${INC_DIR}/fdParam.h
+			      ${INC_DIR}/nonlinearPropGpu.h
+			      ${INC_DIR}/interpTimeLinTbb.h
+			      ${INC_DIR}/nonlinearPropShotsGpu.h
+			      ${INC_DIR}/secondTimeDerivative.h
+						${INC_DIR}/BornExtGpu.h
+						${INC_DIR}/BornExtShotsGpu.h
+						${INC_DIR}/BornExtShotsGpuFunctions.h
+		)
+
 #Files to be compiled
 set(SRC_DIR src)
 #Files for nonLinear operator library

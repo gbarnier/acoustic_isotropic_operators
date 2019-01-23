@@ -24,7 +24,7 @@ link_directories(${Generic-cpp_BINARY_DIR}
 
 #Compiling the project library
 add_library(SEIS_UTILS_LIB ${SOURCE_NL})
-# Compiling the project executables
+# Compiling the project executables (if any)
 
 # Data muting program
 add_executable(dataTaperMain ${SRC_DIR}/dataTaperMain.cpp)
