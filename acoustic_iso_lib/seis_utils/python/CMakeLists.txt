@@ -18,6 +18,8 @@ if (pybind11_FOUND)
 
   find_package(PythonLibs)
   include_directories(${PYTHON_INCLUDE_PATH})
+  #Adding include files
+  include_directories(../include)
 
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   include_directories(${GENERIC_EXPORT_INC_DIRS})

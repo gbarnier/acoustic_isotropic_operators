@@ -11,18 +11,18 @@ class dataTaper : public Operator<SEP::double3DReg, SEP::double3DReg>{
 
 	private:
 
-		double _maxOffset, _exp;
+		double _maxOffset, _exp, _taperWidth;
 		double _xMinRec, _xMaxRec, _dRec;
 		double _xMinShot, _xMaxShot, _dShot;
-		int _taperWidth, _nRec, _nShot;
-		std::string _mute;
+		int _nRec, _nShot;
+		std::string _muteType;
 		std::shared_ptr<double3DReg> _taperMask;
 		std::shared_ptr<SEP::hypercube> _dataHyper;
 
 	public:
 
 		/* Overloaded constructor */
-		dataTaper(double maxOffset, double exp, int taperWidth, std::shared_ptr<SEP::hypercube> dataHyper, std::string mute);
+		dataTaper(double maxOffset, double exp, double taperWidth, std::shared_ptr<SEP::hypercube> dataHyper, std::string muteType);
 
 		/* Destructor */
 		~dataTaper(){};

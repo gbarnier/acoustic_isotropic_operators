@@ -3,6 +3,7 @@ import genericIO
 import SepVector
 import Hypercube
 import numpy as np
+import pydataTapermodule
 import matplotlib.pyplot as plt
 import sys
 
@@ -13,102 +14,47 @@ if __name__ == '__main__':
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
 
-    # Read model (seismic data)
-    modelFile=parObject.getString("model","noModelFile")
-    if (modelFile == "noModelFile"):
-        print("**** ERROR: User did not provide model file ****\n")
-        quit()
-    modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
-    modelSMat=modelFloat.getNdArray()
-    modelDMat=modelDouble.getNdArray()
-    modelDMat[:]=modelSMat
+    # Read model (seismic data that you wihs to mute/taper)
+    modelFile=parObject.getString("model")
+	modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
+	modelDouble=SepVector.getSepVector(modelFloat.getHyper(),storage="dataDouble")
+    modelFloatNp=modelFloat.getNdArray()
+    modelDoubleNp=modelDouble.getNdArray()
+    modelDoubleNp[:]=modelDoubleNp
 
+	# Read parameters
+	maxOffset=parObject.getFloat("maxOffset",0) # After that offset, starting tapering and muting [km]
+	exp=parObject.getFloat("exp",2) # Coeffiecient that control the steepeness of the tapering
+	taperWidth=parObject.getFloat("taperWidth",0) # Tapering width [km]
+	muteType=parObject.getString("muteType","offset") # Type of data muting
+	mode=parObject.getInt("maskOnly",0)  # If maskOnly=1, only compute and write the mask
 
+	# Allocate data (tapered seismic data) and tapering mask
+	if (maskOnly == 1) dataDouble=SepVector.getSepVector(modelFloat.getHyper(),storage="dataDouble"))
+	taperMask=SepVector.getSepVector(modelFloat.getHyper(),storage="dataDouble"))
 
-	# Ali's wavelet
-	if (parObject.getString("type","ali") == "ali"):
+	# Instanciate dataTaper object
+	dataTaperOb=pydataTapermodule.dataTaper(maxOffset,exp,taperWidth,dataHyper,muteType)
 
-		# Time parameters
-		nts=parObject.getInt("nts")
-		dts=parObject.getFloat("dts",-1.0)
-		ots=0.0
-		timeDelay=parObject.getFloat("timeDelay",0.0)
+	# Get tapering mask
+	taperMaskDouble=dataTaperOb.getTaperMask()
 
-		# Time signal
-		timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
-		waveletHyper=Hypercube.hypercube(axes=[timeAxis])
-		wavelet=SepVector.getSepVector(waveletHyper)
-		waveletNd=wavelet.getNdArray();
-		waveletFftNd=np.zeros(waveletNd.shape,dtype=np.complex64)
+	# Apply tapering mask
+	if (maskOnly == 1):
+		# Apply taper to data
+		dataTaperOb.forward(False,modelDouble,dataDouble)
+		# Write data
+    	dataFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
+    	dataFloatNp=dataFloat.getNdArray()
+    	dataDoubleNp=dataDouble.getNdArray()
+    	dataFloatNp[:]=dataDoubleNp
+    	dataFile=parObject.getString("data")
+    	genericIO.defaultIO.writeVector(dataFile,dataFloat)
 
-		# Frequency parameters
-		f1=parObject.getFloat("f1",-1.0)
-		f2=parObject.getFloat("f2",-1.0)
-		f3=parObject.getFloat("f3",-1.0)
-		f4=parObject.getFloat("f4",-1.0)
-
-		if (not (f1 < f2 <= f3 < f4) ):
-			raise ValueError("****ERROR: Corner frequencies values must be increasing****\n")
-
-		# Check if f4 < fNyquist
-		fNyquist=1/(2*dts)
-		if (f4 > fNyquist):
-			raise ValueError("****ERROR: f4 > fNyquist****\n")
-
-		df=1.0/((nts-1)*dts)
-
-		for iFreq in range(nts//2):
-			f=iFreq*df # Loop over frequencies
-			if (f < f1):
-				waveletFftNd[iFreq]=0
-			elif (f1 <= f < f2):
-				waveletFftNd[iFreq]=np.cos(np.pi/2.0*(f2-f)/(f2-f1))*np.cos(np.pi/2.0*(f2-f)/(f2-f1))
-				waveletFftNd[iFreq]=waveletFftNd[iFreq]*np.exp(-1j*2.0*np.pi*f*timeDelay)
-			elif (f2 <= f < f3):
-				waveletFftNd[iFreq]=1.0
-				waveletFftNd[iFreq]=waveletFftNd[iFreq]*np.exp(-1j*2.0*np.pi*f*timeDelay)
-			elif (f3 <= f < f4):
-				waveletFftNd[iFreq]=np.cos(np.pi/2.0*(f-f3)/(f4-f3))*np.cos(np.pi/2.0*(f-f3)/(f4-f3))
-				waveletFftNd[iFreq]=waveletFftNd[iFreq]*np.exp(-1j*2.0*np.pi*f*timeDelay)
-			elif(f >= f4):
-				waveletFftNd[iFreq]=0
-
-		# Duplicate, flip spectrum and take the complex conjugate
-		waveletFftNd[nts//2+1:] = np.flip(waveletFftNd[1:nts//2].conj())
-
-		# Apply inverse FFT
-		waveletNd[:]=np.fft.ifft(waveletFftNd[:]).real #*2.0/np.sqrt(nts)
-
-		# Write wavelet to disk
-		waveletFile=parObject.getString("wavelet")
-		genericIO.defaultIO.writeVector(waveletFile,wavelet)
-
-
-	# Ricker wavelet
-	elif (parObject.getString("type","ali") == "ricker"):
-
-		# Time parameters
-		nts=parObject.getInt("nts")
-		dts=parObject.getFloat("dts",0.0)
-		ots=0.0
-		timeDelay=parObject.getFloat("timeDelay",0.0)
-
-		# Allocate wavelet
-		timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
-		waveletHyper=Hypercube.hypercube(axes=[timeAxis])
-		wavelet=SepVector.getSepVector(waveletHyper)
-		waveletNd=wavelet.getNdArray();
-
-		fDom=parObject.getFloat("fDom",0.0)
-		alpha=(np.pi*fDom)*(np.pi*fDom)
-		for its in range(nts):
-			t=ots+its*dts
-			t=t-timeDelay
-			waveletNd[its]=(1-2.0*alpha*t*t)*np.exp(-1.0*alpha*t*t)
-
-		# Write wavelet to disk
-		waveletFile=parObject.getString("wavelet")
-		genericIO.defaultIO.writeVector(waveletFile,wavelet)
-
-	else:
-		raise ValueError("****ERROR: Wavelet type not supported (iz bazicly minz)****")
+	# Write taper mask
+    taperMaskFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
+    taperMaskFloatNp=taperMaskFloat.getNdArray()
+    taperMaskDoubleNp=taperMaskDouble.getNdArray()
+    taperMaskDoubleNp[:]=taperMaskFloatNp
+    taperMaskFile=parObject.getString("taperMask")
+    genericIO.defaultIO.writeVector(taperMaskFile,taperMaskFloat)

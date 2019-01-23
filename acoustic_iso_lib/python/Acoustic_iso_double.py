@@ -71,8 +71,8 @@ def nonlinearOpInitDouble(args):
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
 
-	# Velocity
-	velFile=parObject.getString("vel", "noVelFile")
+	# Allocate and read velocity
+	velFile=parObject.getString("vel","noVelFile")
 	if (velFile == "noVelFile"):
 		print("**** ERROR: User did not provide velocity file ****\n")
 		quit()
@@ -92,12 +92,12 @@ def nonlinearOpInitDouble(args):
 	dts=parObject.getFloat("dts",-1.0)
 	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
 
-	# Allocate model
+	# Allocate model and fill with zeros
 	dummyAxis=Hypercube.axis(n=1)
 	modelHyper=Hypercube.hypercube(axes=[timeAxis,dummyAxis,dummyAxis])
 	modelDouble=SepVector.getSepVector(modelHyper,storage="dataDouble")
 
-	# Allocate data
+	# Allocate data and fill with zeros
 	dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis])
 	dataDouble=SepVector.getSepVector(dataHyper,storage="dataDouble")
 
@@ -222,7 +222,7 @@ def BornOpInitDouble(args):
 	parObject=ioDef.getParamObj()
 
 	# Velocity model
-	velFile=parObject.getString("vel", "noVelFile")
+	velFile=parObject.getString("vel","noVelFile")
 	if (velFile == "noVelFile"):
 		print("**** ERROR: User did not provide vel file ****\n")
 		quit()

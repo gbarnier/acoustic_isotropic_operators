@@ -3,16 +3,16 @@
 
 using namespace SEP;
 
-dataTaper::dataTaper(double maxOffset, double exp, int taperWidth, std::shared_ptr<SEP::hypercube> dataHyper, std::string mute){
+dataTaper::dataTaper(double maxOffset, double exp, double taperWidth, std::shared_ptr<SEP::hypercube> dataHyper, std::string muteType){
 
-	_maxOffset=maxOffset; // Beyond this offset, you start muting [km]
-	_exp=exp;
-	_taperWidth=taperWidth; // Number of points for tapering [samples]
+	_maxOffset=std::abs(maxOffset); // Beyond this offset, you start muting and tapering [km]
+	_exp=exp; // Exponent on the cosine/sine exponential decay
+	_taperWidth=std::abs(taperWidth); // Tapering width on each side of the shot position [km]
 	_dataHyper=dataHyper;
-	_mute=mute;
+	_muteType=muteType;
 
 	// Shots geometry
-	_nShot=_dataHyper->getAxis(3).n; // Number of shot
+	_nShot=_dataHyper->getAxis(3).n; // Number of shots
 	_xMinShot = _dataHyper->getAxis(3).o; // Minimum horizontal position of shots [km]
 	_dShot = _dataHyper->getAxis(3).d; // Shots spacing [km]
 	_xMaxShot = _xMinShot+(_nShot-1)*_dShot; // Maximum horizontal position of shots [km]
@@ -27,44 +27,58 @@ dataTaper::dataTaper(double maxOffset, double exp, int taperWidth, std::shared_p
 	_taperMask=std::make_shared<double3DReg>(_dataHyper);
 	_taperMask->set(1.0); // Set mask value to 1
 
-	for (int iShot=0; iShot<_nShot; iShot++){
+	// Generate taper mask for offset muting and tapering
+	if (_muteType == "offset"){
 
-		// Compute shot position
-		float s=_xMinShot+iShot*_dShot;
+		for (int iShot=0; iShot<_nShot; iShot++){
 
-		// Compute cutoff position [km] of the receivers from each side of the source
-		float xMinRecMute=std::max(s-_maxOffset, _xMinRec);
-		float xMaxRecMute=std::min(s+_maxOffset, _xMaxRec);
+			// Compute shot position
+			float s=_xMinShot+iShot*_dShot;
 
-		// Convert receiver inner bounds to samples
-		int ixMinRecMuteIn=(xMinRecMute-_xMinRec)/_dRec;
-		int ixMaxRecMuteIn=(xMaxRecMute-_xMinRec)/_dRec;
+			//     |------- 0 ------||------- Taper ------||----------- 1 -----------||------- Taper -------||----- 0 --------|
+			// _xMinRec---------xMinRecMute2--------xMinRecMute1--------s--------xMaxRecMute1--------xMaxRecMute2--------_xMaxRec
 
-		// Compute outer bounds [samples]
-		int ixMinRecMuteOut=ixMinRecMuteIn-_taperWidth;
-		int ixMaxRecMuteOut=ixMaxRecMuteIn+_taperWidth;
+			// Compute cutoff position [km] of the receivers from each side of the source
+			float xMinRecMute1=std::max(s-_maxOffset, _xMinRec);
+			float xMaxRecMute1=std::min(s+_maxOffset, _xMaxRec);
 
-		for (int iRec=0; iRec<_nRec; iRec++){
-			// Outside
-			if( (iRec<ixMinRecMuteOut) || (iRec>ixMaxRecMuteOut) ){
-				for (int its=0; its<_dataHyper->getAxis(1).n; its++){
-					(*_taperMask->_mat)[iShot][iRec][its] = 0.0;
+			// Compute cutoff position [km] of the receivers from each side of the source
+			// Beyond that cutoff, zero out the traces
+			float xMinRecMute2=std::max(s-_maxOffset-_taperWidth, _xMinRec);
+			float xMaxRecMute2=std::min(s+_maxOffset+_taperWidth, _xMaxRec);
+
+			// Compute inner bounds [samples]
+			int ixMinRecMute1=(xMinRecMute1-_xMinRec)/_dRec;
+			int ixMaxRecMute1=(xMaxRecMute1-_xMinRec)/_dRec;
+
+			// Compute outer bounds [samples]
+			int ixMinRecMute2=(xMinRecMute2-_xMinRec)/_dRec;
+			int ixMaxRecMute2=(xMaxRecMute2-_xMinRec)/_dRec;
+
+			#pragma omp parallel for
+			for (int iRec=0; iRec<_nRec; iRec++){
+
+				// Outside
+				if( (iRec<ixMinRecMute2) || (iRec>ixMaxRecMute2) ){
+					for (int its=0; its<_dataHyper->getAxis(1).n; its++){
+						(*_taperMask->_mat)[iShot][iRec][its] = 0.0;
+					}
 				}
-			}
-			// Left tapering zone
-			if((iRec>=ixMinRecMuteOut) && (iRec<ixMinRecMuteIn)){
-				float argument=1.0*(iRec-ixMinRecMuteOut)/(ixMinRecMuteIn-ixMinRecMuteOut);
-				float weight=pow(sin(3.14159/2.0*argument), _exp);
-				for (int its=0; its<_dataHyper->getAxis(1).n; its++){
-					(*_taperMask->_mat)[iShot][iRec][its] = weight;
+				// Left tapering zone
+				if((iRec>=ixMinRecMute2) && (iRec<ixMinRecMute1)){
+					float argument=1.0*(iRec-ixMinRecMute2)/(ixMinRecMute1-ixMinRecMute2);
+					float weight=pow(sin(3.14159/2.0*argument), _exp);
+					for (int its=0; its<_dataHyper->getAxis(1).n; its++){
+						(*_taperMask->_mat)[iShot][iRec][its] = weight;
+					}
 				}
-			}
-			// Right tapering zone
-			if((iRec>ixMaxRecMuteIn) && (iRec<=ixMaxRecMuteOut)){
-				float argument=1.0*(iRec-ixMaxRecMuteIn)/(ixMaxRecMuteOut-ixMaxRecMuteIn);
-				float weight=pow(cos(3.14159/2.0*argument), _exp);
-				for (int its=0; its<_dataHyper->getAxis(1).n; its++){
-					(*_taperMask->_mat)[iShot][iRec][its] = weight;
+				// Right tapering zone
+				if((iRec>ixMaxRecMute1) && (iRec<=ixMaxRecMute2)){
+					float argument=1.0*(iRec-ixMaxRecMute1)/(ixMaxRecMute2-ixMaxRecMute1);
+					float weight=pow(cos(3.14159/2.0*argument), _exp);
+					for (int its=0; its<_dataHyper->getAxis(1).n; its++){
+						(*_taperMask->_mat)[iShot][iRec][its] = weight;
+					}
 				}
 			}
 		}
@@ -76,6 +90,7 @@ void dataTaper::forward(const bool add, const std::shared_ptr<double3DReg> model
 	if (!add) data->scale(0.0);
 
 	// Apply tapering mask to seismic data
+	#pragma omp parallel for collapse(3)
 	for (int iShot=0; iShot<_nShot; iShot++){
 		for (int iRec=0; iRec<_nRec; iRec++){
 			for (int its=0; its<_dataHyper->getAxis(1).n; its++){
@@ -90,6 +105,7 @@ void dataTaper::adjoint(const bool add, std::shared_ptr<double3DReg> model, cons
 	if (!add) model->scale(0.0);
 
 	// Apply tapering mask to seismic data
+	#pragma omp parallel for collapse(3)
 	for (int iShot=0; iShot<_nShot; iShot++){
 		for (int iRec=0; iRec<_nRec; iRec++){
 			for (int its=0; its<_dataHyper->getAxis(1).n; its++){
@@ -97,5 +113,4 @@ void dataTaper::adjoint(const bool add, std::shared_ptr<double3DReg> model, cons
 			}
 		}
 	}
-
 }
