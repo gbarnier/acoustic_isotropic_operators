@@ -9,7 +9,7 @@ if (pybind11_FOUND)
   include_directories(${PYTHON_INCLUDE_DIR})
   include_directories(${pybind11_INCLUDE_DIR})
   include_directories(${PYTHON_INCLUDE_PATH})
-  #DERIVATIVE library headers
+  #library headers
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../acoustic_isotropic_operators")
 
   find_package(PythonLibs)
