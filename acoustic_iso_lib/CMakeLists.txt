@@ -52,9 +52,6 @@ add_subdirectory(acoustic_iso_double)
 include_directories(acoustic_iso_double/include)
 # include folder for pyAcousticIsotropic library
 add_subdirectory(python)
-# include folder for pySolver module
-execute_process(COMMAND git submodule update --init --remote external/pySolver WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-add_subdirectory(external/pySolver/GenericSolver)
 # include folder for Seismic utilities
 add_subdirectory(seis_utils)
 
