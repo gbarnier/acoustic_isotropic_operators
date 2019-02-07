@@ -41,19 +41,22 @@ endif()
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/buffers/lib)
 
 
-#Finding multithread libraries
+# Finding multithread libraries
 find_package(Threads)
 # Adding TBB library
 find_package(TBB REQUIRED)
 
-#Acoustic isotropic operators (Double precision)
+# Acoustic isotropic operators (Double precision)
 add_subdirectory(acoustic_iso_double)
-# include folder for ACOUSTIC_ISO_DOUBLE library
-include_directories(acoustic_iso_double/include)
+add_subdirectory(acoustic_iso_float)
+
 # include folder for pyAcousticIsotropic library
-add_subdirectory(python)
+add_subdirectory(python/python_double)
+add_subdirectory(python/python_float)
+
 # include folder for Seismic utilities
-add_subdirectory(seis_utils)
+add_subdirectory(seis_utils/seis_utils_double/)
+add_subdirectory(seis_utils/seis_utils_float/)
 
 include(InstallRequiredSystemLibraries)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
