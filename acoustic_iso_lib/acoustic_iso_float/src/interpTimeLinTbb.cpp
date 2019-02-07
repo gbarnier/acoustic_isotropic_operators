@@ -1,12 +1,12 @@
 #include <math.h>
-#include "double2DReg.h"
+#include "float2DReg.h"
 #include "interpTimeLinTbb.h"
 
 using namespace SEP;
 
 /****************************** 1D linear interpolation in time *************************/
 
-interpTimeLinTbb::interpTimeLinTbb(int nts, double dts, double ots, int sub) {
+interpTimeLinTbb::interpTimeLinTbb(int nts, float dts, float ots, int sub) {
 
 	/* Get time sampling parameters */
 	_ots = ots;
@@ -16,14 +16,14 @@ interpTimeLinTbb::interpTimeLinTbb(int nts, double dts, double ots, int sub) {
 	_ntw = (_nts-1) * _sub + 1;
 	_dtw = _dts / _sub;
 	_otw = ots;
-	_scale = double(_ntw) / double(_nts);
+	_scale = float(_ntw) / float(_nts);
 	_scale = 1.0 / sqrt(_scale);
 	_timeAxisCoarse = axis(_nts, _ots, _dts);
 	_timeAxisFine = axis(_ntw, _otw, _dtw);
 
 }
 
-void interpTimeLinTbb::forward(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double2DReg> data) const {
+void interpTimeLinTbb::forward(const bool add, const std::shared_ptr<float2DReg> model, std::shared_ptr<float2DReg> data) const {
 
 	/* Forward: from coarse grid to fine grid */
 	/* Model: coarse grid */
@@ -34,8 +34,8 @@ void interpTimeLinTbb::forward(const bool add, const std::shared_ptr<double2DReg
 	/* Declare variables */
 	int nDevice = model->getHyper()->getAxis(2).n;
 
-  	std::shared_ptr<double2D> d = data->_mat;
-    const std::shared_ptr<double2D> m = model->_mat;
+  	std::shared_ptr<float2D> d = data->_mat;
+    const std::shared_ptr<float2D> m = model->_mat;
 
 	tbb::parallel_for(
 
@@ -48,8 +48,8 @@ void interpTimeLinTbb::forward(const bool add, const std::shared_ptr<double2DReg
 			for (int iDevice = r.begin(); iDevice != r.end(); iDevice++) {
 
 				for (int itw = 0; itw < _ntw-1; itw++) {
-					double tw = _otw + itw * _dtw; // Compute time on fine grid
-					double	weight = (tw - _ots) / _dts; // Compute number of coarse time samples
+					float tw = _otw + itw * _dtw; // Compute time on fine grid
+					float	weight = (tw - _ots) / _dts; // Compute number of coarse time samples
 					int	indexInf = weight; // Compute floor of number of coarse time samples
 					weight = weight - indexInf; // Compute weight
 					(*d)[iDevice][itw] += ( (*m)[iDevice][indexInf] * (1.0 - weight) + (*m)[iDevice][indexInf+1] * weight ) * _scale;
@@ -61,7 +61,7 @@ void interpTimeLinTbb::forward(const bool add, const std::shared_ptr<double2DReg
 	);
 }
 
-void interpTimeLinTbb::adjoint(const bool add, std::shared_ptr<double2DReg> model, const std::shared_ptr<double2DReg> data) const {
+void interpTimeLinTbb::adjoint(const bool add, std::shared_ptr<float2DReg> model, const std::shared_ptr<float2DReg> data) const {
 
 	/* Adjoint: from fine grid to coarse grid */
 	/* Model: coarse grid */
@@ -70,12 +70,12 @@ void interpTimeLinTbb::adjoint(const bool add, std::shared_ptr<double2DReg> mode
 	if (!add) model->scale(0.0);
 
 	/* Declare variables */
-	double tw, weight;
+	float tw, weight;
 	int indexInf;
 	int nDevice = model->getHyper()->getAxis(2).n;
 
-  	std::shared_ptr<double2D> d = data->_mat;
-    const std::shared_ptr<double2D> m = model->_mat;
+  	std::shared_ptr<float2D> d = data->_mat;
+    const std::shared_ptr<float2D> m = model->_mat;
 
 	tbb::parallel_for(
 
@@ -87,8 +87,8 @@ void interpTimeLinTbb::adjoint(const bool add, std::shared_ptr<double2DReg> mode
 
 			for (int iDevice = r.begin(); iDevice != r.end(); iDevice++){
 				for (int itw = 0; itw < _ntw-1; itw++){
-					double tw = _otw + itw * _dtw; // Compute time on fine grid
-					double weight = (tw - _ots) / _dts; // Compute number of coarse time samples
+					float tw = _otw + itw * _dtw; // Compute time on fine grid
+					float weight = (tw - _ots) / _dts; // Compute number of coarse time samples
 					int indexInf = weight; // Compute floor of number of coarse time samples
 					weight = weight - indexInf; // Compute weight
 					(*m)[iDevice][indexInf]   += _scale * (*d)[iDevice][itw] * (1.0 - weight);

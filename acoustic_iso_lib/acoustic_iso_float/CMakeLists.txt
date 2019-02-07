@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(ACOUSTIC_ISO_DOUBLE-lib)
+project(ACOUSTIC_ISO_FLOAT-lib)
 
 #Adding include files
 include_directories(include)
@@ -76,46 +76,50 @@ link_directories(${Generic-cpp_BINARY_DIR}
 				 ${SEPlib_LIBDIR}
 )
 
-#Compiling the project library
-add_library(ACOUSTIC_ISO_DOUBLE_NL ${SOURCE_NL})
-add_library(ACOUSTIC_ISO_DOUBLE_BORN ${SOURCE_BORN})
-add_library(ACOUSTIC_ISO_DOUBLE_BORN_EXT ${SOURCE_BORN_EXT})
-add_library(ACOUSTIC_ISO_DOUBLE_TOMO_EXT ${SOURCE_TOMO_EXT})
-add_library(ACOUSTIC_ISO_DOUBLE_WEMVA_EXT ${SOURCE_WEMVA_EXT})
+# Compiling the project library
+add_library(ACOUSTIC_ISO_FLOAT_NL ${SOURCE_NL})
+add_library(ACOUSTIC_ISO_FLOAT_BORN ${SOURCE_BORN})
+add_library(ACOUSTIC_ISO_FLOAT_BORN_EXT ${SOURCE_BORN_EXT})
+add_library(ACOUSTIC_ISO_FLOAT_TOMO_EXT ${SOURCE_TOMO_EXT})
+add_library(ACOUSTIC_ISO_FLOAT_WEMVA_EXT ${SOURCE_WEMVA_EXT})
 
 # Compiling the project executables
 # Non-linear operator
-add_executable(nonlinearPropShotsDoubleGpuMain ${SRC_DIR}/nonlinearPropShotsDoubleGpuMain.cpp)
-target_link_libraries(nonlinearPropShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_NL genericCpp OpenMP::OpenMP_CXX)
+add_executable(nonlinearPropShotsGpuMain ${SRC_DIR}/nonlinearPropShotsGpuMain.cpp)
+target_link_libraries(nonlinearPropShotsGpuMain ACOUSTIC_ISO_FLOAT_NL genericCpp OpenMP::OpenMP_CXX)
 
 # Born operator
-add_executable(BornShotsDoubleGpuMain ${SRC_DIR}/BornShotsDoubleGpuMain.cpp)
-target_link_libraries(BornShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_BORN genericCpp OpenMP::OpenMP_CXX)
+add_executable(BornShotsGpuMain ${SRC_DIR}/BornShotsGpuMain.cpp)
+target_link_libraries(BornShotsGpuMain ACOUSTIC_ISO_FLOAT_BORN genericCpp OpenMP::OpenMP_CXX)
 
 # Extended Born operator
-add_executable(BornExtShotsDoubleGpuMain ${SRC_DIR}/BornExtShotsDoubleGpuMain.cpp)
-target_link_libraries(BornExtShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_BORN_EXT genericCpp OpenMP::OpenMP_CXX)
+add_executable(BornExtShotsGpuMain ${SRC_DIR}/BornExtShotsGpuMain.cpp)
+target_link_libraries(BornExtShotsGpuMain ACOUSTIC_ISO_FLOAT_BORN_EXT genericCpp OpenMP::OpenMP_CXX)
 
-#Extended Tomo operator
-add_executable(tomoExtShotsDoubleGpuMain ${SRC_DIR}/tomoExtShotsDoubleGpuMain.cpp)
-target_link_libraries(tomoExtShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_TOMO_EXT genericCpp OpenMP::OpenMP_CXX)
-#Extended Tomo operator
-add_executable(wemvaExtShotsDoubleGpuMain ${SRC_DIR}/wemvaExtShotsDoubleGpuMain.cpp)
-target_link_libraries(wemvaExtShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_WEMVA_EXT genericCpp OpenMP::OpenMP_CXX)
+# Extended Tomo operator
+add_executable(tomoExtShotsGpuMain ${SRC_DIR}/tomoExtShotsGpuMain.cpp)
+target_link_libraries(tomoExtShotsGpuMain ACOUSTIC_ISO_FLOAT_TOMO_EXT genericCpp OpenMP::OpenMP_CXX)
+
+# Extended Tomo operator
+add_executable(wemvaExtShotsGpuMain ${SRC_DIR}/wemvaExtShotsGpuMain.cpp)
+target_link_libraries(wemvaExtShotsGpuMain ACOUSTIC_ISO_FLOAT_WEMVA_EXT genericCpp OpenMP::OpenMP_CXX)
+
 # Model padding program for GPU
-add_executable(padFileDoubleGpuMain ${SRC_DIR}/padFileDoubleGpuMain.cpp)
-target_link_libraries(padFileDoubleGpuMain genericCpp OpenMP::OpenMP_CXX)
+add_executable(padFileGpuMain ${SRC_DIR}/padFileGpuMain.cpp)
+target_link_libraries(padFileGpuMain genericCpp OpenMP::OpenMP_CXX)
+
+
 
 #Adding libray and header files to install destination
-install(TARGETS ACOUSTIC_ISO_DOUBLE_NL DESTINATION lib)
-install(TARGETS nonlinearPropShotsDoubleGpuMain DESTINATION bin)
-install(TARGETS ACOUSTIC_ISO_DOUBLE_BORN DESTINATION lib)
-install(TARGETS BornShotsDoubleGpuMain DESTINATION bin)
-install(TARGETS ACOUSTIC_ISO_DOUBLE_BORN_EXT DESTINATION lib)
-install(TARGETS BornExtShotsDoubleGpuMain DESTINATION bin)
-install(TARGETS ACOUSTIC_ISO_DOUBLE_TOMO_EXT DESTINATION lib)
-install(TARGETS tomoExtShotsDoubleGpuMain DESTINATION bin)
-install(TARGETS ACOUSTIC_ISO_DOUBLE_WEMVA_EXT DESTINATION lib)
-install(TARGETS wemvaExtShotsDoubleGpuMain DESTINATION bin)
-install(TARGETS padFileDoubleGpuMain DESTINATION bin)
+install(TARGETS ACOUSTIC_ISO_FLOAT_NL DESTINATION lib)
+install(TARGETS nonlinearPropShotsGpuMain DESTINATION bin)
+install(TARGETS ACOUSTIC_ISO_FLOAT_BORN DESTINATION lib)
+install(TARGETS BornShotsGpuMain DESTINATION bin)
+install(TARGETS ACOUSTIC_ISO_FLOAT_BORN_EXT DESTINATION lib)
+install(TARGETS BornExtShotsGpuMain DESTINATION bin)
+install(TARGETS ACOUSTIC_ISO_FLOAT_TOMO_EXT DESTINATION lib)
+install(TARGETS tomoExtShotsGpuMain DESTINATION bin)
+install(TARGETS ACOUSTIC_ISO_FLOAT_WEMVA_EXT DESTINATION lib)
+install(TARGETS wemvaExtShotsGpuMain DESTINATION bin)
+install(TARGETS padFileGpuMain DESTINATION bin)
 install(FILES ${HEADERS} DESTINATION include)

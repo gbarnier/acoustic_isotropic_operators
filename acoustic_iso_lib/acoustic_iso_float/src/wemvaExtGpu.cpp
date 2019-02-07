@@ -1,7 +1,7 @@
 #include "wemvaExtGpu.h"
 
 // Overloaded constructor
-wemvaExtGpu::wemvaExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu) {
+wemvaExtGpu::wemvaExtGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu) {
 
 	// Finite-difference parameters
 	_fdParam = std::make_shared<fdParam>(vel, par);
@@ -21,7 +21,7 @@ wemvaExtGpu::wemvaExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<
 }
 
 // Sources setup
-void wemvaExtGpu::setSources(std::shared_ptr<deviceGpu> sourcesDevices, std::shared_ptr<SEP::double2DReg> sourcesSignals){
+void wemvaExtGpu::setSources(std::shared_ptr<deviceGpu> sourcesDevices, std::shared_ptr<SEP::float2DReg> sourcesSignals){
 
 	// Set source devices
 	_sources = sourcesDevices;
@@ -30,10 +30,10 @@ void wemvaExtGpu::setSources(std::shared_ptr<deviceGpu> sourcesDevices, std::sha
 
 	// Set source signals
 	_sourcesSignals = sourcesSignals;
-	_sourcesSignalsRegDts = std::make_shared<SEP::double2DReg>(_fdParam->_nts, _nSourcesReg);
-	_sourcesSignalsRegDtsDt2 = std::make_shared<SEP::double2DReg>(_fdParam->_nts, _nSourcesReg);
-	_sourcesSignalsRegDtwDt2 = std::make_shared<SEP::double2DReg>(_fdParam->_ntw, _nSourcesReg);
-	_sourcesSignalsRegDtw = std::make_shared<SEP::double2DReg>(_fdParam->_ntw, _nSourcesReg);
+	_sourcesSignalsRegDts = std::make_shared<SEP::float2DReg>(_fdParam->_nts, _nSourcesReg);
+	_sourcesSignalsRegDtsDt2 = std::make_shared<SEP::float2DReg>(_fdParam->_nts, _nSourcesReg);
+	_sourcesSignalsRegDtwDt2 = std::make_shared<SEP::float2DReg>(_fdParam->_ntw, _nSourcesReg);
+	_sourcesSignalsRegDtw = std::make_shared<SEP::float2DReg>(_fdParam->_ntw, _nSourcesReg);
 	_sources->adjoint(false, _sourcesSignalsRegDts, _sourcesSignals);
 	_secTimeDer->forward(false, _sourcesSignalsRegDts, _sourcesSignalsRegDtsDt2);
 	scaleSeismicSource(_sources, _sourcesSignalsRegDtsDt2, _fdParam);
@@ -44,7 +44,7 @@ void wemvaExtGpu::setSources(std::shared_ptr<deviceGpu> sourcesDevices, std::sha
 }
 
 // Receivers setup
-void wemvaExtGpu::setReceivers(std::shared_ptr<deviceGpu> receiversDevices, std::shared_ptr<SEP::double2DReg> receiversSignals){
+void wemvaExtGpu::setReceivers(std::shared_ptr<deviceGpu> receiversDevices, std::shared_ptr<SEP::float2DReg> receiversSignals){
 
 	// Set receiver devices
 	_receivers = receiversDevices;
@@ -53,13 +53,13 @@ void wemvaExtGpu::setReceivers(std::shared_ptr<deviceGpu> receiversDevices, std:
 
 	// Set receiver signals (Born data)
 	_receiversSignals = receiversSignals;
-	_receiversSignalsRegDts = std::make_shared<SEP::double2DReg>(_fdParam->_nts, _nReceiversReg);
+	_receiversSignalsRegDts = std::make_shared<SEP::float2DReg>(_fdParam->_nts, _nReceiversReg);
 	_receivers->adjoint(false, _receiversSignalsRegDts, _receiversSignals);
 
 }
 
 // Acquisition setup + quality check with parfile
-void wemvaExtGpu::setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared_ptr<SEP::double2DReg> sourcesSignals, std::shared_ptr<deviceGpu> receivers, std::shared_ptr<SEP::double2DReg> receiversSignals, const std::shared_ptr<SEP::double2DReg> model, const std::shared_ptr<double3DReg> data){
+void wemvaExtGpu::setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared_ptr<SEP::float2DReg> sourcesSignals, std::shared_ptr<deviceGpu> receivers, std::shared_ptr<SEP::float2DReg> receiversSignals, const std::shared_ptr<SEP::float2DReg> model, const std::shared_ptr<float3DReg> data){
 
 	setSources(sources, sourcesSignals);
 	setReceivers(receivers, receiversSignals);
@@ -69,7 +69,7 @@ void wemvaExtGpu::setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared
 }
 
 // QC with parfile
-bool wemvaExtGpu::checkParfileConsistency(const std::shared_ptr<SEP::double2DReg> model, const std::shared_ptr<SEP::double3DReg> data) const {
+bool wemvaExtGpu::checkParfileConsistency(const std::shared_ptr<SEP::float2DReg> model, const std::shared_ptr<SEP::float3DReg> data) const {
 	if (_fdParam->checkParfileConsistencySpace(data, "Extended image file") != true) {return false;} // Check data time axis
 	if (_fdParam->checkParfileConsistencySpace(model, "Model file") != true) {return false;}; // Check model space axes
 	if (_fdParam->checkParfileConsistencyTime(_sourcesSignals, 1, "Seismic source file") != true) {return false;}; // Check model space axes
@@ -78,36 +78,36 @@ bool wemvaExtGpu::checkParfileConsistency(const std::shared_ptr<SEP::double2DReg
 }
 
 // Scaling before propagation
-void wemvaExtGpu::scaleSeismicSource(const std::shared_ptr<deviceGpu> seismicSource, std::shared_ptr<SEP::double2DReg> signal, const std::shared_ptr<fdParam> parObj){
+void wemvaExtGpu::scaleSeismicSource(const std::shared_ptr<deviceGpu> seismicSource, std::shared_ptr<SEP::float2DReg> signal, const std::shared_ptr<fdParam> parObj){
 
-	std::shared_ptr<double2D> sig = signal->_mat;
-	double *v = _fdParam->_vel->getVals();
+	std::shared_ptr<float2D> sig = signal->_mat;
+	float *v = _fdParam->_vel->getVals();
 	int *pos = seismicSource->getRegPosUnique();
 
 	#pragma omp parallel for
 	for (int iGridPoint = 0; iGridPoint < seismicSource->getNDeviceReg(); iGridPoint++){
-		double scale = _fdParam->_dtw * _fdParam->_dtw * v[pos[iGridPoint]]*v[pos[iGridPoint]];
+		float scale = _fdParam->_dtw * _fdParam->_dtw * v[pos[iGridPoint]]*v[pos[iGridPoint]];
 		for (int it = 0; it < signal->getHyper()->getAxis(1).n; it++){
 			(*sig)[iGridPoint][it] = (*sig)[iGridPoint][it] * scale;
 		}
 	}
 }
 
-std::shared_ptr<SEP::double3DReg> wemvaExtGpu::setWavefield(int wavefieldFlag){
+std::shared_ptr<SEP::float3DReg> wemvaExtGpu::setWavefield(int wavefieldFlag){
 
 	_saveWavefield = wavefieldFlag;
 
-	std::shared_ptr<double3DReg> wavefield;
+	std::shared_ptr<float3DReg> wavefield;
 	if (wavefieldFlag == 1) {
-		wavefield = std::make_shared<double3DReg>(_fdParam->_zAxis, _fdParam->_xAxis, _fdParam->_timeAxisCoarse);
+		wavefield = std::make_shared<float3DReg>(_fdParam->_zAxis, _fdParam->_xAxis, _fdParam->_timeAxisCoarse);
 		unsigned long long int wavefieldSize = _fdParam->_zAxis.n * _fdParam->_xAxis.n;
-		wavefieldSize *= _fdParam->_nts*sizeof(double);
+		wavefieldSize *= _fdParam->_nts*sizeof(float);
 		memset(wavefield->getVals(), 0, wavefieldSize);
 		return wavefield;
 	}
 	else {
-		wavefield = std::make_shared<double3DReg>(1, 1, 1);
-		unsigned long long int wavefieldSize = 1*sizeof(double);
+		wavefield = std::make_shared<float3DReg>(1, 1, 1);
+		unsigned long long int wavefieldSize = 1*sizeof(float);
 		memset(wavefield->getVals(), 0, wavefieldSize);
 		return wavefield;
 	}
@@ -119,22 +119,18 @@ void wemvaExtGpu::setAllWavefields(int wavefieldFlag){
 	_secWavefield2 = setWavefield(wavefieldFlag);
 }
 
-void wemvaExtGpu::forward(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data) const {
+void wemvaExtGpu::forward(const bool add, const std::shared_ptr<float2DReg> model, std::shared_ptr<float3DReg> data) const {
 
 	if (!add) data->scale(0.0);
 
-	std::shared_ptr<double3DReg> dataTemp = data->clone();
+	std::shared_ptr<float3DReg> dataTemp = data->clone();
 
 	// Wemva forward
 	if(_fdParam->_extension == "time"){
 		wemvaTimeShotsFwdGpu(model->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
 	}
 	if(_fdParam->_extension == "offset"){
-		// std::cout << "max model= " << model->max() << std::endl;
-		// std::cout << "min model= " << model->min() << std::endl;
 		wemvaOffsetShotsFwdGpu(model->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
-		// std::cout << "max data= " << model->max() << std::endl;
-		// std::cout << "min data= " << model->min() << std::endl;
 	}
 
 	/* Update data (extended image) */
@@ -142,10 +138,10 @@ void wemvaExtGpu::forward(const bool add, const std::shared_ptr<double2DReg> mod
 
 }
 
-void wemvaExtGpu::adjoint(const bool add, std::shared_ptr<double2DReg> model, const std::shared_ptr<double3DReg> data) const {
+void wemvaExtGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model, const std::shared_ptr<float3DReg> data) const {
 
 	if (!add) model->scale(0.0);
-	std::shared_ptr<double2DReg> modelTemp = model->clone(); // We need to create a temporary model for "add"
+	std::shared_ptr<float2DReg> modelTemp = model->clone(); // We need to create a temporary model for "add"
 	modelTemp->scale(0.0);
 
 	// Wemva adjoint
