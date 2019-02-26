@@ -31,6 +31,15 @@ if (pybind11_FOUND)
   include_directories(${GENERIC_EXPORT_INC_DIRS})
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
+  #SEP LIBRARY DIRECTORIES
+  link_directories(${Generic-cpp_BINARY_DIR}
+                                 ${hypercube_BINARY_DIR}
+                                 ${buffers-lib_BINARY_DIR}
+                                 ${json_BINARY_DIR}
+                                 ${sepVector-lib_BINARY_DIR}
+                                 ${SEPlib_LIBDIR}
+  )
+
   set(LIBS genericCpp sepVector buffers jsonCpp hypercube  ${OpenMP_EXE_LINKER_FLAGS} ${TBB_LIBRARIES} ${GENERIC_EXPORT_LIBS})
 
   # Compiling and adding module to library
