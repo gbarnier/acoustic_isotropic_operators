@@ -25,7 +25,6 @@ if __name__ == '__main__':
 	parObject=ioDef.getParamObj()
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
-	print
 
 	############ Case #1: Conventional linearized Born inversion ###############
 	if (spline==0 and dataTaper==0):

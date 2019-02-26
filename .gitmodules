@@ -1,6 +1,3 @@
 [submodule "acoustic_iso_lib/external/pySolver"]
 	path = acoustic_iso_lib/external/pySolver
 	url = git@zapad.Stanford.EDU:ettore88/python-solver.git
-[submodule "acoustic_iso_lib/external/genericIO"]
-	path = acoustic_iso_lib/external/genericIO
-	url = http://cees-gitlab.Stanford.EDU/bob/genericIO.git

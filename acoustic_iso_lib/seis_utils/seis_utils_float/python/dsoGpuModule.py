@@ -11,8 +11,12 @@ def dsoGpuInit(args):
 	io=genericIO.pyGenericIO.ioModes(args)
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
+	nz=parObject.getInt("nz",0)
+	nx=parObject.getInt("nx",0)
+	nExt=parObject.getInt("nExt",0)
+	fat=parObject.getInt("fat",5)
 	zeroShift=parObject.getFloat("zeroShift",0.0)
-    return zeroShift
+    return nz,nx,nExt,fat,zeroShift
 
 class dsoGpu(Op.Operator):
 

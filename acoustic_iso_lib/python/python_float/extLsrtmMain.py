@@ -4,6 +4,7 @@ import SepVector
 import Hypercube
 import Acoustic_iso_float
 import dataTaperModule
+import dsoGpuModule
 import numpy as np
 import time
 import sys
@@ -15,7 +16,7 @@ import pyProblem as Prblm
 import pyStopperBase as Stopper
 from sys_util import logger
 
-# Template for linearized waveform inversion workflow
+# Template for linearized waveform inversion 
 if __name__ == '__main__':
 
 	# I/O Bullshit stuff
@@ -24,9 +25,13 @@ if __name__ == '__main__':
 	parObject=ioDef.getParamObj()
 	dataTaper=parObject.getInt("dataTaper",0)
 	reg=parObject.getInt("reg",0)
-	# regType=parObject.getString("regType","dso")
+	regType=parObject.getString("regType","dso")
 
-	######## Case #1: Conventional extended linearized Born inversion ##########
+	############################################################################
+	############################# Inversion operators ##########################
+	############################################################################
+
+	######## Conventional ########
 	if (dataTaper==0):
 
 		print("-------------------------------------------------------------------")
@@ -46,23 +51,9 @@ if __name__ == '__main__':
 
 		# Born instanciation
 		BornExtOp=Acoustic_iso_float.BornExtShotsGpu(modelStart,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+		invOp=BornExtOp
 
-		# Regularization
-		if (reg==1):
-			if (regType=="dso"):
-				print("Not ready yet")
-				# # Problem
-				# lsrtmProb=Prblm.ProblemL2LinearReg(modelStart,data,BornExtOp,epsilon,reg_op=dsoOp)
-				# lsrtmProbReg.estimate_epsilon()
-
-		# No regularization
-		else:
-			# Problem
-			lsrtmProb=Prblm.ProblemL2Linear(modelStart,data,BornExtOp)
-
-	############################################################################
-
-	###### Case #2: Extended linearized Born inversion with data tapering ######
+	######## Data tapering ########
 	else:
 
 		print("-------------------------------------------------------------------")
@@ -93,25 +84,38 @@ if __name__ == '__main__':
 		data=dataTapered
 
 		# Operator chain
-		lsrtmOp=pyOp.ChainOperator(BornExtOp,dataTaperOp)
-
-		# Regularization
-		if (reg==1):
-			if (regType=="dso"):
-				print("Not ready yet")
-			   #  # Problem
-			   # lsrtmProb=Prblm.ProblemL2LinearReg(modelStart,data,lsrtmOp,epsilon,reg_op=dsoOp)
-			   # lsrtmProbReg.estimate_epsilon()
-
-		# No regularization
-		else:
-			# Problem
-			lsrtmProb=Prblm.ProblemL2Linear(modelStart,data,lsrtmOp)
-
+		invOp=pyOp.ChainOperator(BornExtOp,dataTaperOp)
 
 	############################################################################
+	################################# Problem ##################################
+	############################################################################
+	# Regularization
+	if (reg==1):
 
+		# DSO regularization
+		if (regType=="dso"):
+			print("DSO regularization")
+			nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
+			dsoOp=dsoGpuModule.dsoGpu(modelStart,data,nz,nx,nExt,fat,zeroShift)
+			invProb=Prblm.ProblemL2LinearReg(modelStart,data,invOp,epsilon,reg_op=dsoOp)
+
+		# Identity regularization
+		if (regType=="id"):
+			print("Identity regularization")
+
+		# Evaluate Epsilon
+		if (epsilonEval==1):
+			print("Epsilon evaluation")
+			invProb.estimate_epsilon()
+
+	# No regularization
+	else:
+		print("No regularization")
+		invProb=Prblm.ProblemL2Linear(modelStart,data,invOp)
+
+	############################################################################
 	################################# Solver ###################################
+	############################################################################
 	# Stopper
 	stop=Stopper.BasicStopper(niter=parObject.getInt("nIter"))
 
@@ -122,7 +126,7 @@ if __name__ == '__main__':
 	LCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_sampling=1)
 
 	# Run solver
-	LCGsolver.run(lsrtmProb,verbose=True)
+	LCGsolver.run(invProb,verbose=True)
 
 	print("-------------------------------------------------------------------")
 	print("--------------------------- All done ------------------------------")
