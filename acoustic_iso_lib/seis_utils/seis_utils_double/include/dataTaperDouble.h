@@ -2,6 +2,7 @@
 #define DATA_TAPER_DOUBLE_H 1
 
 #include "operator.h"
+#include "double1DReg.h"
 #include "double3DReg.h"
 #include <string>
 
@@ -22,6 +23,7 @@ class dataTaperDouble : public Operator<SEP::double3DReg, SEP::double3DReg>{
 	public:
 
 		/* Overloaded constructor */
+		// dataTaperDouble(double maxOffset, double exp, double taperWidth, std::shared_ptr<SEP::hypercube> dataHyper, std::string muteType);
 		dataTaperDouble(double maxOffset, double exp, double taperWidth, std::shared_ptr<SEP::hypercube> dataHyper, std::string muteType);
 
 		/* Destructor */

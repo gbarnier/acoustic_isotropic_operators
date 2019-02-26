@@ -1,19 +1,25 @@
 #Python module encapsulating PYBIND11 module
 import pyOperator as Op
+import pyDsoGpu
 import genericIO
 import SepVector
 import Hypercube
 import numpy as np
 
-class interpSpline1d(Op.Operator):
-	"""
-	   Wrapper encapsulating PYBIND11 module for cubic spline interpolation
-	"""
+def dsoGpuInit(args):
 
-	def __init__(self,domain):
+	io=genericIO.pyGenericIO.ioModes(args)
+	ioDef=io.getDefaultIO()
+	parObject=ioDef.getParamObj()
+	zeroShift=parObject.getFloat("zeroShift",0.0)
+    return zeroShift
 
-		self.pyOp = pyInterpSpline.interpSplineLinear1d()
+class dsoGpu(Op.Operator):
 
+    def __init__(self,domain,range,nz,nx,nExt,fat,zeroShift):
+
+		self.setDomainRange(domain,range)
+		self.pyOp = pyDsoGpu.dsoGpu(nz,nx,nExt,fat,zeroShift)
 		return
 
 	def forward(self,add,model,data):
@@ -21,7 +27,7 @@ class interpSpline1d(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pydataTaperFloat.ostream_redirect():
+		with pyDsoGpu.ostream_redirect():
 			self.pyOp.forward(add,model,data)
 		return
 
@@ -30,10 +36,6 @@ class interpSpline1d(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pydataTaperFloat.ostream_redirect():
+		with pyDsoGpu.ostream_redirect():
 			self.pyOp.adjoint(add,model,data)
 		return
-
-	def getTaperMask(self):
-		taperMask = genericIO.SepVector.floatVector(fromCpp=self.pyOp.getTaperMask())
-		return taperMask

@@ -3,6 +3,7 @@ import genericIO
 import SepVector
 import Hypercube
 import Acoustic_iso_float
+import interpBSpline2dModule
 import numpy as np
 import time
 import sys
@@ -17,87 +18,75 @@ from sys_util import logger
 # Template for FWI workflow
 if __name__ == '__main__':
 
-    print("-------------------------------------------------------------------")
-    print("--------------------------- Running FWI ---------------------------")
-    print("-------------------------------------------------------------------\n")
+	# Bullshit stuff
+	io=genericIO.pyGenericIO.ioModes(args)
+	ioDef=io.getDefaultIO()
+	par=ioDef.getParamObj()
+    spline=par.getString("spline",0)
 
-    ############################# Initialization ###############################
-    # Nonlinear
-    waveletFloat,dataFloat,modelStartFwiFloat,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv)
+	print("-------------------------------------------------------------------")
+	print("---------------------- Running conventional FWI -------------------")
+	print("-------------------------------------------------------------------\n")
 
-    # Born
-    _,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	############################# Initialization ###############################
+	# Nonlinear
+	wavelet,data,modelStartFine,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv)
 
-    ############################# Read files ###################################
-    # Seismic source
-    waveletFile=parObject.getString("sources")
-    waveletFloat=genericIO.defaultIO.getVector(waveletFile,ndims=3)
+	# Born
+	_,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
 
-    # Data
-    dataFile=parObject.getString("data")
-    dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
+    if (spline==1):
+    	modelStartCoarse,_,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSpline2dModule.bSpline2dInit(sys.argv)
 
-    ############################# Instanciation ################################
-    # Nonlinear
-    nonlinearVelocityOp=Acoustic_iso_float.nonlinearVelocityPropShotsGpu(modelStartFwiFloat,dataFloat,waveletFloat,parObject,sourcesVector,receiversVector)
+	############################# Read files ###################################
+	# Seismic source
+	waveletFile=parObject.getString("sources")
+	wavelet=genericIO.defaultIO.getVector(waveletFile,ndims=3)
 
-    # Born
-    BornOp=Acoustic_iso_float.BornShotsGpu(modelStartFwiFloat,dataFloat,modelStartFwiFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	# Data
+	dataFile=parObject.getString("data")
+	data=genericIO.defaultIO.getVector(dataFile,ndims=3)
 
-    # FWI
-    fwiOp=pyOp.NonLinearOperator(nonlinearVelocityOp,BornOp,BornOp.setVel)
+	############################# Instanciation ################################
+	# Nonlinear
+	nonlinearVelocityOp=Acoustic_iso_float.nonlinearVelocityPropShotsGpu(modelStartFine,data,wavelet,parObject,sourcesVector,receiversVector)
 
-    # Case where we apply an additional operator to the residuals
-    # addOperator=parObject.getString("addOperator")
-    # if (addOperator == 1):
-    #
-    #     # Additional operator
-    #     dataTaperOp=dataTaperFloatModule.dataTaper(dataFloat,dataFloat,parObject.getFloat("maxOffset",0),parObject.getFloat("exp",2),parObject.getFloat("taperWidth",0),dataDouble.getHyper(),parObject.getString("muteType","offset"))
-    #
-    #     # Nonlinear operator chain
-    #     chainNonlinear=pyOpterator.ChainOperator(nonlinearVelocityOp,dataTaperOp)
-    #
-    #     # Linear operator chain
-    #     chainLinear=pyOpterator.ChainOperator(BornOp,dataTaperOp)
-    #
-    #     # FWI
-    #     fwiOp=pyOp.NonLinearOperator(chainNonlinear,chainLinear,BornOp.setVel)
-    #
-    # else:
-    #
-    #     # FWI
-    #     fwiOp=pyOp.NonLinearOperator(nonlinearVelocityOp,BornOp,BornOp.setVel)
+	# Born
+	BornOp=Acoustic_iso_float.BornShotsGpu(modelStartFine,data,modelStartFine,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
 
+	# FWI
+	fwiOp=pyOp.NonLinearOperator(nonlinearVelocityOp,BornOp,BornOp.setVel)
+	fwiInvOp=fwiOp
 
-    ############################# Solver #######################################
-    # L2-norm nonlinear problem
-    invertedModel=modelStartFwiFloat.clone()
-    fwiProb=Prblm.ProblemL2NonLinear(invertedModel,dataFloat,fwiOp)
+	# Spline instanciation
+	if (spline==1):
+		splineOp=interpBSpline2dModule.bSpline2d(modelStartCoarse,modelStartFine,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+		splineOp.adjoint(False,modelStartCoarse,modelStartFine)
+		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp,pyOp.dummy_set_background)
+		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiOp)
 
-    # Stopper
-    stop=Stopper.BasicStopper(niter=parObject.getInt("nIter"))
+	############################# Solver #######################################
+	# L2-norm nonlinear problem
+	minVal=parObject.getFloat("minBound",0.0) # Set to 0 [km/s] by default
+	maxVal=parObject.getFloat("maxBound",10.0) # Set to [10km/s] by default
+	minBound=modelStartFwi.clone()
+	maxBound=modelStartFwi.clone()
+	minBound.set(minVal)
+	maxBound.set(maxVal)
+	fwiProb=Prblm.ProblemL2NonLinear(modelStartFwi,data,fwiInvOp,minBound=minBound,maxBound=maxBound)
+	# fwiProb=Prblm.ProblemL2NonLinear(modelStartFwi,data,fwiOp)
+	# Stopper
+	stop=Stopper.BasicStopper(niter=parObject.getInt("nIter"))
 
-    # Solver
-    logFile=parObject.getString("log","logDefault")
-    invPrefix=parObject.getString("prefix","fwiPrefix")
-    NLCGsolver=NLCG.NLCGsolver(stop,logger=logger(logFile))
-    NLCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_sampling=1)
+	# Solver
+	logFile=parObject.getString("logFile")
+	invPrefix=parObject.getString("prefix")
+	NLCGsolver=NLCG.NLCGsolver(stop,logger=logger(logFile))
+	NLCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_sampling=1)
 
-    # Run solver
-    NLCGsolver.run(fwiProb,verbose=True)
+	# Run solver
+	NLCGsolver.run(fwiProb,verbose=True)
 
-    ############################# Results ######################################
-    # Inverted model
-    # fwiModelFloat=NLCGsolver.model[9] # Inverted model
-    #
-    # # Gradient
-    # # fwiGradFloat=SepVector.getSepVector(lsrtmModelDouble.getHyper(),storage="dataFloat")
-    # fwiGradFloat=NLCGsolver.grad[9] # Gradient
-    #
-    # # Write model to disk
-    # fwiModelFile=parObject.getString("invertedModel")
-    # genericIO.defaultIO.writeVector(fwiModelFile,fwiModelFloat)
-
-    print("-------------------------------------------------------------------")
-    print("--------------------------- All done ------------------------------")
-    print("-------------------------------------------------------------------\n")
+	print("-------------------------------------------------------------------")
+	print("--------------------------- All done ------------------------------")
+	print("-------------------------------------------------------------------\n")

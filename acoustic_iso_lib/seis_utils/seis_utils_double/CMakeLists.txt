@@ -14,6 +14,9 @@ include_directories(include)
 set(SRC_DIR src)
 #Files for nonLinear operator library
 set(SOURCE_NL ${SRC_DIR}/dataTaperDouble.cpp
+			  ${SRC_DIR}/interpBSpline1dDouble.cpp
+			  ${SRC_DIR}/interpBSpline2dDouble.cpp
+
 )
 
 #SEP LIBRARY DIRECTORIES

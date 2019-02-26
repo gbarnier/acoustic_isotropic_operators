@@ -31,17 +31,28 @@ if (pybind11_FOUND)
   include_directories(${GENERIC_EXPORT_INC_DIRS})
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
-  set(LIBS genericCpp buffers jsonCpp hypercube  ${OpenMP_EXE_LINKER_FLAGS} ${TBB_LIBRARIES} ${GENERIC_EXPORT_LIBS})
+  set(LIBS genericCpp sepVector buffers jsonCpp hypercube  ${OpenMP_EXE_LINKER_FLAGS} ${TBB_LIBRARIES} ${GENERIC_EXPORT_LIBS})
 
-  #Compiling and adding module to library
+  # Compiling and adding module to library
   pybind11_add_module(pydataTaperDouble MODULE pydataTaperDouble.cpp)
   target_link_libraries(pydataTaperDouble PRIVATE SEIS_UTILS_DOUBLE_LIB ${LIBS})
+  pybind11_add_module(pyInterpBSpline1dDouble MODULE pyInterpBSpline1dDouble.cpp)
+  target_link_libraries(pyInterpBSpline1dDouble PRIVATE SEIS_UTILS_DOUBLE_LIB ${LIBS})
+  pybind11_add_module(pyInterpBSpline2dDouble MODULE pyInterpBSpline2dDouble.cpp)
+  target_link_libraries(pyInterpBSpline2dDouble PRIVATE SEIS_UTILS_DOUBLE_LIB ${LIBS})
 
-  #Installing library
+  # Installing library
   install( TARGETS pydataTaperDouble DESTINATION lib/python)
+  install( TARGETS pyInterpBSpline1dDouble DESTINATION lib/python)
+  install( TARGETS pyInterpBSpline2dDouble DESTINATION lib/python)
   install( FILES dataTaperDoubleModule.py DESTINATION lib/python)
+  install( FILES interpBSpline1dDoubleModule.py DESTINATION lib/python)
+  install( FILES interpBSpline2dDoubleModule.py DESTINATION lib/python)
+
   #Installing Python executables
   install( FILES dataTaperDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES interpBSpline1dDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES interpBSpline2dDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 
 else(pybind11_FOUND)
   MESSAGE("WARNING!Did not find pybid11. Not compiling ${PROJECT-NAME}")

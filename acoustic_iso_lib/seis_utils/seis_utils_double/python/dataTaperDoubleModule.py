@@ -38,7 +38,7 @@ class dataTaperDouble(Op.Operator):
 		return
 
 	def getTaperMask(self):
-		# Checking if getCpp is present
 		with pydataTaperDouble.ostream_redirect():
 			taperMask = self.pyOp.getTaperMask()
+			taperMask = SepVector.doubleVector(fromCpp=taperMask)
 		return taperMask

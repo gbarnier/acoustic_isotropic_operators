@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
         print("-------------------------------------------------------------------")
         print("----------------- Running Python nonlinear adjoint ----------------")
-        print("-------------------- Single precision Python code -----------------")                
+        print("-------------------- Single precision Python code -----------------")
         print("-------------------------------------------------------------------\n")
 
         # Check that data was provided
