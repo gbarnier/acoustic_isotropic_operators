@@ -2,12 +2,17 @@
 import genericIO
 import SepVector
 import Hypercube
-import Acoustic_iso_float
-import dataTaperModule
-import dsoGpuModule
 import numpy as np
 import time
 import sys
+import os
+
+# Modeling operators
+import Acoustic_iso_float
+import interpBSpline2dModule
+import dataTaperModule
+import spatialDerivModule
+import dsoGpuModule
 
 # Solver library
 import pyOperator as pyOp
@@ -16,112 +21,106 @@ import pyProblem as Prblm
 import pyStopperBase as Stopper
 from sys_util import logger
 
-# Template for linearized waveform inversion 
+# Template for linearized waveform inversion workflow
 if __name__ == '__main__':
 
-	# I/O Bullshit stuff
+	# Bullshit stuff
 	io=genericIO.pyGenericIO.ioModes(sys.argv)
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
+	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
-	reg=parObject.getInt("reg",0)
-	regType=parObject.getString("regType","dso")
+	regType=parObject.getString("reg","None")
+	reg=0
+	if (regType != "None"): reg=1
+	epsilonEval=parObject.getInt("epsilonEval",0)
 
-	############################################################################
-	############################# Inversion operators ##########################
-	############################################################################
+	print("-------------------------------------------------------------------")
+	print("-------------------- Extended linearized inversion ----------------")
+	print("-------------------------------------------------------------------\n")
 
-	######## Conventional ########
-	if (dataTaper==0):
-
-		print("-------------------------------------------------------------------")
-		print("------------ Conventional extended linearized inversion -----------")
-		print("-------------------------------------------------------------------\n")
-
-		# Born extended initialization
-		modelStart,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornExtOpInitFloat(sys.argv)
-
-		# Read starting model
-		modelStartFile=parObject.getString("modelStart")
-		modelStart=genericIO.defaultIO.getVector(modelStartFile,ndims=2)
-
-		# Read data
-		dataFile=parObject.getString("data")
-		data=genericIO.defaultIO.getVector(dataFile,ndims=3)
-
-		# Born instanciation
-		BornExtOp=Acoustic_iso_float.BornExtShotsGpu(modelStart,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
-		invOp=BornExtOp
-
-	######## Data tapering ########
-	else:
-
-		print("-------------------------------------------------------------------")
-		print("---------- Extended linearized inversion + data tapering ----------")
-		print("-------------------------------------------------------------------\n")
-
-		# Born extended initialization
-		modelStart,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornExtOpInitFloat(sys.argv)
-
-		# Data taper initialization
+	############################# Initialization ###############################
+	# Data taper
+	if (dataTaper==1):
 		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset=dataTaperModule.dataTaperInit(sys.argv)
 
-		# Read starting model
-		modelStartFile=parObject.getString("modelStart")
-		modelStart=genericIO.defaultIO.getVector(modelStartFile,ndims=2)
+	# Born
+	modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornExtOpInitFloat(sys.argv)
+	print("model n1 = ",modelFineInit.getHyper().axes[0].n)
+	print("model n2 = ",modelFineInit.getHyper().axes[1].n)
+	print("model n3 = ",modelFineInit.getHyper().axes[2].n)
 
-		# Read data
-		dataFile=parObject.getString("data")
-		data=genericIO.defaultIO.getVector(dataFile,ndims=3)
+	############################# Read files ###################################
+	# Read initial model
+	modelInitFile=parObject.getString("modelInit","None")
+	if (modelInitFile=="None"):
+		modelInit=modelFineInit.clone()
+		modelInit.scale(0.0)
 
-		# Born instanciation
-		BornExtOp=Acoustic_iso_float.BornExtShotsGpu(modelStart,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	# Data
+	dataFile=parObject.getString("data")
+	data=genericIO.defaultIO.getVector(dataFile,ndims=3)
 
-		# Data taper instanciation
+	############################# Instanciation ################################
+	# Born
+	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	invOp=BornExtOp
+
+	# Data taper
+	if (dataTaper==1):
+		print("--- Using data tapering ---")
 		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset)
-		dataTapered=dataTaper.clone()
-		dataTaperOp.forward(False,data,dataTapered)
+		dataTapered=data.clone()
+		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
-
-		# Operator chain
 		invOp=pyOp.ChainOperator(BornExtOp,dataTaperOp)
 
-	############################################################################
-	################################# Problem ##################################
-	############################################################################
+	############################# Regularization ###############################
 	# Regularization
 	if (reg==1):
-
-		# DSO regularization
-		if (regType=="dso"):
-			print("DSO regularization")
-			nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
-			dsoOp=dsoGpuModule.dsoGpu(modelStart,data,nz,nx,nExt,fat,zeroShift)
-			invProb=Prblm.ProblemL2LinearReg(modelStart,data,invOp,epsilon,reg_op=dsoOp)
+		# Get epsilon value from user
+		epsilon=parObject.getFloat("epsilon",-1.0)
 
 		# Identity regularization
 		if (regType=="id"):
-			print("Identity regularization")
+			print("--- Identity regularization ---")
+			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
+
+		# Dso
+		elif (regType=="dso"):
+			print("--- DSO regularization ---")
+			nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
+			dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,zeroShift)
+			invProb=Prblm.ProblemL2LinearReg(modelInit,modelInit,invOp,epsilon,reg_op=dsoOp)
+
+		else:
+			print("--- Regularization that you have required is not supported by our code ---")
+			quit()
 
 		# Evaluate Epsilon
 		if (epsilonEval==1):
-			print("Epsilon evaluation")
-			invProb.estimate_epsilon()
+			print("--- Epsilon evaluation ---")
+			epsilonOut=invProb.estimate_epsilon()
+			print("--- Epsilon value: ",epsilonOut," ---")
+			quit()
 
 	# No regularization
 	else:
-		print("No regularization")
-		invProb=Prblm.ProblemL2Linear(modelStart,data,invOp)
+		invProb=Prblm.ProblemL2Linear(modelInit,data,invOp)
 
-	############################################################################
-	################################# Solver ###################################
-	############################################################################
+	############################## Solver ######################################
 	# Stopper
 	stop=Stopper.BasicStopper(niter=parObject.getInt("nIter"))
 
+	# Folder
+	folder=parObject.getString("folder")
+	if (os.path.isdir(folder)==False): os.mkdir(folder)
+	prefix=parObject.getString("prefix","None")
+	if (prefix=="None"): prefix=folder
+	invPrefix=folder+"/"+prefix
+	logFile=folder+"/logFile"
+
 	# Solver
-	logFile=parObject.getString("logFile")
-	invPrefix=parObject.getString("prefix")
 	LCGsolver=LCG.LCGsolver(stop,logger=logger(logFile))
 	LCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_sampling=1)
 

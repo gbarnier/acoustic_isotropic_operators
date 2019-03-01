@@ -15,6 +15,48 @@ import numpy as np
 
 from pyAcoustic_iso_float_nl import deviceGpu
 
+############################ Bounds vectors ####################################
+# Create bound vectors for FWI
+def createBoundVectors(parObject,model):
+
+	# Get model dimensions
+	nz=parObject.getInt("nz")
+	nx=parObject.getInt("nx")
+	fat=parObject.getInt("fat")
+	spline=parObject.getInt("spline",0)
+	if (spline==1): fat=0
+
+	# Min bound
+	minBoundVectorFile=parObject.getString("minBoundVector","noMinBoundVectorFile")
+	if (minBoundVectorFile=="noMinBoundVectorFile"):
+		minBound=parObject.getFloat("minBound")
+		minBoundVector=model.clone()
+		minBoundVector.scale(0.0)
+		minBoundVectorNd=minBoundVector.getNdArray()
+		for ix in range(fat,nx-fat):
+			for iz in range(fat,nz-fat):
+				minBoundVectorNd[ix][iz]=minBound
+
+	else:
+		minBoundVector=genericIO.defaultIO.getVector(minBoundVectorFile)
+
+	# Max bound
+	maxBoundVectorFile=parObject.getString("maxBoundVector","noMaxBoundVectorFile")
+	if (maxBoundVectorFile=="noMaxBoundVectorFile"):
+		maxBound=parObject.getFloat("maxBound")
+		maxBoundVector=model.clone()
+		maxBoundVector.scale(0.0)
+		maxBoundVectorNd=maxBoundVector.getNdArray()
+		for ix in range(fat,nx-fat):
+			for iz in range(fat,nz-fat):
+				maxBoundVectorNd[ix][iz]=maxBound
+
+	else:
+		maxBoundVector=genericIO.defaultIO.getVector(maxBoundVectorFile)
+
+
+	return minBoundVector,maxBoundVector
+
 ############################ Acquisition geometry ##############################
 # Build sources geometry
 def buildSourceGeometry(parObject,vel):
@@ -170,7 +212,42 @@ class nonlinearPropShotsGpu(Op.Operator):
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
-class nonlinearVelocityPropShotsGpu(Op.Operator):
+def nonlinearFwiOpInitFloat(args):
+	"""Function to correctly initialize a nonlinear operator where the model is velocity
+	   The function will return the necessary variables for operator construction
+	"""
+	# Bullshit stuff
+	io=genericIO.pyGenericIO.ioModes(args)
+	ioDef=io.getDefaultIO()
+	parObject=ioDef.getParamObj()
+
+	# Allocate and read starting model
+	modelStartFile=parObject.getString("vel")
+	modelStart=genericIO.defaultIO.getVector(modelStartFile)
+
+	# Build sources/receivers geometry
+	sourcesVector,sourceAxis=buildSourceGeometry(parObject,modelStart)
+	receiversVector,receiverAxis=buildReceiversGeometry(parObject,modelStart)
+
+	# Time Axis
+	nts=parObject.getInt("nts",-1)
+	ots=parObject.getFloat("ots",0.0)
+	dts=parObject.getFloat("dts",-1.0)
+	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+
+	# Allocate wavelet and fill with zeros
+	dummyAxis=Hypercube.axis(n=1)
+	sourcesSignalHyper=Hypercube.hypercube(axes=[timeAxis,dummyAxis,dummyAxis])
+	sourcesSignal=SepVector.getSepVector(sourcesSignalHyper)
+
+	# Allocate data and fill with zeros
+	dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis])
+	dataFloat=SepVector.getSepVector(dataHyper)
+
+	# Outputs
+	return modelStart,dataFloat,sourcesSignal,parObject,sourcesVector,receiversVector
+
+class nonlinearFwiPropShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for non-linear propagator where the model vector is the velocity"""
 
 	def __init__(self,domain,range,sources,paramP,sourceVector,receiversVector):
@@ -218,10 +295,7 @@ def BornOpInitFloat(args):
 	parObject=ioDef.getParamObj()
 
 	# Velocity model
-	velFile=parObject.getString("vel","noVelFile")
-	if (velFile == "noVelFile"):
-		print("**** ERROR: User did not provide vel file ****\n")
-		quit()
+	velFile=parObject.getString("vel")
 	velFloat=genericIO.defaultIO.getVector(velFile)
 
 	# Build sources/receivers geometry

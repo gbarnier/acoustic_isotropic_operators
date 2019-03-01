@@ -3,3 +3,4 @@ obj/*
 build/
 *.H
 .ipynb_checkpoints
+local/

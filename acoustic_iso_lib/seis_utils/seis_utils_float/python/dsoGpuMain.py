@@ -16,7 +16,7 @@ if __name__ == '__main__':
 	parObject=ioDef.getParamObj()
 	adj=parObject.getInt("adj",0)
 
-    nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
+	nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
 
 	# Forward
 	if (adj==0):
@@ -25,10 +25,10 @@ if __name__ == '__main__':
 		modelFile=parObject.getString("model")
 		model=genericIO.defaultIO.getVector(modelFile)
 
-        # Create data
+		# Create data
 		data=model.clone()
 
-        # Create DSO object and run forward
+		# Create DSO object and run forward
 		dsoOp=dsoGpuModule.dsoGpu(model,data,nz,nx,nExt,fat,zeroShift)
 		dsoOp.forward(False,model,data)
 
@@ -44,10 +44,10 @@ if __name__ == '__main__':
 		dataFile=parObject.getString("data")
 		data=genericIO.defaultIO.getVector(dataFile)
 
-        # Create model
+		# Create model
 		model=data.clone()
 
-        # Create DSO object and run forward
+		# Create DSO object and run forward
 		dsoOp=dsoGpuModule.dsoGpu(model,data,nz,nx,nExt,fat,zeroShift)
 		dsoOp.forward(False,model,data)
 

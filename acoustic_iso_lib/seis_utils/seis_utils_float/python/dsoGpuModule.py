@@ -16,11 +16,11 @@ def dsoGpuInit(args):
 	nExt=parObject.getInt("nExt",0)
 	fat=parObject.getInt("fat",5)
 	zeroShift=parObject.getFloat("zeroShift",0.0)
-    return nz,nx,nExt,fat,zeroShift
+	return nz,nx,nExt,fat,zeroShift
 
 class dsoGpu(Op.Operator):
 
-    def __init__(self,domain,range,nz,nx,nExt,fat,zeroShift):
+	def __init__(self,domain,range,nz,nx,nExt,fat,zeroShift):
 
 		self.setDomainRange(domain,range)
 		self.pyOp = pyDsoGpu.dsoGpu(nz,nx,nExt,fat,zeroShift)

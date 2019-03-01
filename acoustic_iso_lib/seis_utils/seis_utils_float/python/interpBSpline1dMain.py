@@ -3,7 +3,7 @@ import genericIO
 import SepVector
 import Hypercube
 import numpy as np
-import interpBSpline2dModule
+import interpBSpline1dModule
 import matplotlib.pyplot as plt
 import sys
 import time
@@ -16,17 +16,17 @@ if __name__ == '__main__':
 	parObject=ioDef.getParamObj()
 
 	# Initialize operator
-	model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSpline2dModule.bSpline2dInit(sys.argv)
+	model,data,zOrder,zSplineMesh,zDataAxis,nzParam,scaling,zTolerance,fat=interpBSpline1dModule.bSpline1dInit(sys.argv)
 
 	# Construct operator
-	splineOp=interpBSpline2dModule.bSpline2d(model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+	splineOp=interpBSpline1dModule.bSpline1d(model,data,zOrder,zSplineMesh,zDataAxis,nzParam,scaling,zTolerance,fat)
 
 	# Forward
 	if (parObject.getInt("adj",0) == 0):
 
 		print("-------------------------------------------------------------------")
 		print("-------------- Running Spline interpolation forward ---------------")
-		print("-------------------- 2D B-Splines functions -----------------------")
+		print("-------------------- 1D B-Splines functions -----------------------")
 		print("-------------------------------------------------------------------\n")
 
 		# Read model (on coarse grid)
@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
 		print("-------------------------------------------------------------------")
 		print("-------------- Running Spline interpolation adjoint ---------------")
-		print("-------------------- 2D B-Splines functions -----------------------")
+		print("-------------------- 1D B-Splines functions -----------------------")
 		print("-------------------------------------------------------------------\n")
 
 		# Read data (fine grid)
@@ -60,31 +60,13 @@ if __name__ == '__main__':
 
 
 	# Write other interpolation parameters
-	zParam=splineOp.getZParamVector()
-	xParam=splineOp.getXParamVector()
 	zMeshVector=splineOp.getZMesh()
-	xMeshVector=splineOp.getXMesh()
-
-	# Write zParam
-	zParamFile=parObject.getString("zParam","junk")
-	genericIO.defaultIO.writeVector(zParamFile,zParam)
-
-	# Write xParam
-	xParamFile=parObject.getString("xParam","junk")
-	genericIO.defaultIO.writeVector(xParamFile,xParam)
+	n=zMeshVector.getHyper().axes[0].n
 
 	# Write zMesh
 	zMeshFileOut=parObject.getString("zMeshOut","junk")
 	genericIO.defaultIO.writeVector(zMeshFileOut,zSplineMesh)
 
-	# Write xMesh
-	xMeshFileOut=parObject.getString("xMeshOut","junk")
-	genericIO.defaultIO.writeVector(xMeshFileOut,xSplineMesh)
-
 	# Write zMeshVector
 	zMeshVectorFile=parObject.getString("zMeshVector","junk")
 	genericIO.defaultIO.writeVector(zMeshVectorFile,zMeshVector)
-
-	# Write xMeshVector
-	xMeshVectorFile=parObject.getString("xMeshVector","junk")
-	genericIO.defaultIO.writeVector(xMeshVectorFile,xMeshVector)	
