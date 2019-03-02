@@ -43,4 +43,14 @@ PYBIND11_MODULE(pySpatialDeriv, clsGeneric) {
       .def("adjoint", (void (zxGrad::*)(const bool, const std::shared_ptr<float2DReg>, std::shared_ptr<float2DReg>)) &zxGrad::adjoint, "Adjoint")
 
   ;
+
+  py::class_<Laplacian, std::shared_ptr<Laplacian>>(clsGeneric,"Laplacian")
+
+      .def(py::init<int>(), "Initialize a Laplacian operator")
+
+      .def("forward", (void (Laplacian::*)(const bool, const std::shared_ptr<float2DReg>, std::shared_ptr<float2DReg>)) &Laplacian::forward, "Forward")
+
+      .def("adjoint", (void (Laplacian::*)(const bool, const std::shared_ptr<float2DReg>, std::shared_ptr<float2DReg>)) &Laplacian::adjoint, "Adjoint")
+
+  ;
 }

@@ -58,4 +58,17 @@ class zxGrad : public Operator<SEP::float2DReg, SEP::float2DReg> {
 		void adjoint(const bool add, std::shared_ptr<float2DReg> model, const std::shared_ptr<float2DReg> data) const;
 };
 
+class Laplacian : public Operator<SEP::float2DReg, SEP::float2DReg> {
+
+	private:
+        int _fat;
+
+	public:
+		/* Overloaded constructors */
+		Laplacian(int fat = 0);
+		/* FWD - ADJ */
+		void forward(const bool add, const std::shared_ptr<float2DReg> model, std::shared_ptr<float2DReg> data) const;
+		void adjoint(const bool add, std::shared_ptr<float2DReg> model, const std::shared_ptr<float2DReg> data) const;
+};
+
 #endif

@@ -110,3 +110,38 @@ class zxGradPython(Op.Operator):
 		with pySpatialDeriv.ostream_redirect():
 			self.pyOp.adjoint(add,model,data)
 		return
+
+# Laplacian operator
+def LaplacianInit(args):
+
+	io=genericIO.pyGenericIO.ioModes(args)
+	ioDef=io.getDefaultIO()
+	parObject=ioDef.getParamObj()
+	fat=parObject.getInt("fat",5)
+	return fat
+
+class LaplacianPython(Op.Operator):
+
+	def __init__(self,domain,range,fat):
+
+		self.setDomainRange(domain,range)
+		self.pyOp = pySpatialDeriv.Laplacian(fat)
+		return
+
+	def forward(self,add,model,data):
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pySpatialDeriv.ostream_redirect():
+			self.pyOp.forward(add,model,data)
+		return
+
+	def adjoint(self,add,model,data):
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pySpatialDeriv.ostream_redirect():
+			self.pyOp.adjoint(add,model,data)
+		return

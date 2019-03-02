@@ -39,6 +39,13 @@ if __name__ == '__main__':
 			gradOp=spatialDerivModule.xGradPython(model,data,fat)
 			gradOp.forward(False,model,data)
 
+		elif (deriv=="Laplacian"):
+
+			print("-------------- Applying forward Laplacian -------------------")
+			fat=spatialDerivModule.LaplacianInit(sys.argv)
+			gradOp=spatialDerivModule.LaplacianPython(model,data,fat)
+			gradOp.forward(False,model,data)
+
 		else:
 
 			print("-------------- Applying forward gradient in zx-direction ------------------")
