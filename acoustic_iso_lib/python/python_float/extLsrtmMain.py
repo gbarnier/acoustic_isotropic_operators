@@ -46,9 +46,6 @@ if __name__ == '__main__':
 
 	# Born
 	modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornExtOpInitFloat(sys.argv)
-	print("model n1 = ",modelFineInit.getHyper().axes[0].n)
-	print("model n2 = ",modelFineInit.getHyper().axes[1].n)
-	print("model n3 = ",modelFineInit.getHyper().axes[2].n)
 
 	############################# Read files ###################################
 	# Read initial model
@@ -118,7 +115,7 @@ if __name__ == '__main__':
 	prefix=parObject.getString("prefix","None")
 	if (prefix=="None"): prefix=folder
 	invPrefix=folder+"/"+prefix
-	logFile=folder+"/logFile"
+	logFile=invPrefix+"_logFile"
 
 	# Solver
 	LCGsolver=LCG.LCGsolver(stop,logger=logger(logFile))

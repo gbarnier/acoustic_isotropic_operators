@@ -148,7 +148,7 @@ if __name__ == '__main__':
 	prefix=parObject.getString("prefix","None")
 	if (prefix=="None"): prefix=folder
 	invPrefix=folder+"/"+prefix
-	logFile=folder+"/logFile"
+	logFile=invPrefix+"_logFile"
 
 	# Solver
 	LCGsolver=LCG.LCGsolver(stop,logger=logger(logFile))
