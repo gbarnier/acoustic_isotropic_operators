@@ -20,7 +20,7 @@ using namespace SEP;
 class tomoExtShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 
 	private:
-		int _nShot, _nGpu;
+		int _nShot, _nGpu, _iGpuAlloc;
 		int _saveWavefield, _wavefieldShotNumber, _info, _deviceNumberInfo;
 		std::shared_ptr<SEP::double2DReg> _vel;
 		std::vector<std::shared_ptr<SEP::double2DReg>> _sourcesSignalsVector;
@@ -28,6 +28,7 @@ class tomoExtShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 		std::vector<std::shared_ptr<deviceGpu>> _sourcesVector, _receiversVector;
 		std::shared_ptr<SEP::double3DReg> _srcWavefield, _secWavefield1, _secWavefield2;
 		std::shared_ptr<SEP::double3DReg> _reflectivityExt;
+		std::vector<int> _gpuList;
 
 	public:
 
@@ -36,6 +37,9 @@ class tomoExtShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 
 		/* Destructor */
 		~tomoExtShotsGpu(){};
+
+		/* Create Gpu list */
+		void createGpuIdList();
 
 		/* FWD / ADJ */
 		void forward(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data) const;
@@ -49,7 +53,7 @@ class tomoExtShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 		std::shared_ptr<double3DReg> getSecWavefield2() { return _secWavefield2; }
 
 		/* Mutators */
-		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; } 
+		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; }
 		void setReflectivityExt(std::shared_ptr<SEP::double3DReg> reflectivityExt){ _reflectivityExt = reflectivityExt; }
 
 };

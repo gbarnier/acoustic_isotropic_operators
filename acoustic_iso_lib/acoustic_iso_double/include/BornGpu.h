@@ -26,7 +26,7 @@ class BornGpu : public seismicOperator2D<SEP::double2DReg, SEP::double2DReg> {
 	public:
 
 		/* Overloaded constructors */
-		BornGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu);
+		BornGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc);
 
 		/* Mutators */
 		void setAllWavefields(int wavefieldFlag); // Allocates all wavefields assocaited with a seismic operator

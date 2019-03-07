@@ -28,7 +28,7 @@ class wemvaExtGpu : public Operator<SEP::float2DReg, SEP::float3DReg> {
 		int _nSourcesReg, _nReceiversReg;
 		int _nts;
 		int _saveWavefield;
-		int _iGpu, _nGpu;
+		int _iGpu, _nGpu, _iGpuId;
 		int _leg1, _leg2;
 		std::shared_ptr<interpTimeLinTbb> _timeInterp;
 		std::shared_ptr<secondTimeDerivative> _secTimeDer;
@@ -39,7 +39,7 @@ class wemvaExtGpu : public Operator<SEP::float2DReg, SEP::float3DReg> {
 	public:
 
 		/* Overloaded constructors */
-		wemvaExtGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu);
+		wemvaExtGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc);
 
 		/* Acquisition setup */
 		void setSources(std::shared_ptr<deviceGpu> sources, std::shared_ptr<SEP::float2DReg> sourcesSignals);
@@ -51,7 +51,7 @@ class wemvaExtGpu : public Operator<SEP::float2DReg, SEP::float3DReg> {
 
 		/* Other functions */
 		void scaleSeismicSource(const std::shared_ptr<deviceGpu> seismicSource, std::shared_ptr<SEP::float2DReg> signal, const std::shared_ptr<fdParam> parObj);
-		void setGpuNumber(int iGpu){_iGpu = iGpu;}
+		void setGpuNumber(int iGpu, int iGpuId){_iGpu = iGpu; _iGpuId = iGpuId;}
 		std::shared_ptr<float3DReg> setWavefield(int wavefieldFlag); // If flag=1, allocates a wavefield (with the correct size) and returns it. If flag=0, return a dummy wavefield of size 1x1x1
 
 		/* QC */

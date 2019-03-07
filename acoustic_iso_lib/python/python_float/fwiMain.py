@@ -172,9 +172,14 @@ if __name__ == '__main__':
 	invPrefix=folder+"/"+prefix
 	logFile=invPrefix+"_logFile"
 
+	# Solver recording parameters
+	iterSampling=parObject.getInt("iterSampling",1)
+	bufferSize=parObject.getInt("bufferSize",-1)
+	if (bufferSize<0): bufferSize=None
+
 	# Solver
 	NLCGsolver=NLCG.NLCGsolver(stop,logger=logger(logFile))
-	NLCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_sampling=1)
+	NLCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling)
 
 	# Run solver
 	NLCGsolver.run(fwiProb,verbose=True)

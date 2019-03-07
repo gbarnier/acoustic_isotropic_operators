@@ -25,7 +25,7 @@ class seismicOperator2D : public Operator <V1, V2> {
 		int _nSourcesReg, _nReceiversReg;
 		int _nts;
 		int _saveWavefield;
-		int _iGpu, _nGpu;
+		int _iGpu, _nGpu, _iGpuId;
 		std::shared_ptr<interpTimeLinTbb> _timeInterp;
 		std::shared_ptr<secondTimeDerivative> _secTimeDer;
 		std::shared_ptr<V2> _sourcesSignals, _sourcesSignalsRegDts, _sourcesSignalsRegDtsDt2, _sourcesSignalsRegDtwDt2, _sourcesSignalsRegDtw;
@@ -50,7 +50,7 @@ class seismicOperator2D : public Operator <V1, V2> {
 		void scaleSeismicSource(const std::shared_ptr<deviceGpu> seismicSource, std::shared_ptr<V2> signal, const std::shared_ptr<fdParam> parObj) const;
 
 		// Other mutators
-		void setGpuNumber(int iGpu){_iGpu = iGpu;}
+		void setGpuNumber(int iGpu, int iGpuId){_iGpu = iGpu; _iGpuId = iGpuId;}
 		std::shared_ptr<float3DReg> setWavefield(int wavefieldFlag); // If flag=1, allocates a wavefield (with the correct size) and returns it. If flag=0, return a dummy wavefield of size 1x1x1
 		virtual void setAllWavefields(int wavefieldFlag) = 0; // Allocates all wavefields associated with a seismic operator --> this function HAS to be implemented by child classes (it will call setWavefield)
 

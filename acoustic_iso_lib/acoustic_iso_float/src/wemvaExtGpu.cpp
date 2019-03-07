@@ -1,7 +1,7 @@
 #include "wemvaExtGpu.h"
 
 // Overloaded constructor
-wemvaExtGpu::wemvaExtGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu) {
+wemvaExtGpu::wemvaExtGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc) {
 
 	// Finite-difference parameters
 	_fdParam = std::make_shared<fdParam>(vel, par);
@@ -13,11 +13,11 @@ wemvaExtGpu::wemvaExtGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<p
 	_leg2 = par->getInt("leg2", 1);
 	_iGpu = iGpu;
 	_nGpu = nGpu;
-
+	_iGpuId = iGpuId;
 	setAllWavefields(par->getInt("saveWavefield", 0));
 
 	// Initialize GPU
-	initWemvaExtGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _fdParam->_nExt, _leg1, _leg2, _nGpu, _iGpu);
+	initWemvaExtGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _fdParam->_nExt, _leg1, _leg2, _nGpu, _iGpuId, iGpuAlloc);
 }
 
 // Sources setup
@@ -127,10 +127,10 @@ void wemvaExtGpu::forward(const bool add, const std::shared_ptr<float2DReg> mode
 
 	// Wemva forward
 	if(_fdParam->_extension == "time"){
-		wemvaTimeShotsFwdGpu(model->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+		wemvaTimeShotsFwdGpu(model->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
 	}
 	if(_fdParam->_extension == "offset"){
-		wemvaOffsetShotsFwdGpu(model->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+		wemvaOffsetShotsFwdGpu(model->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
 	}
 
 	/* Update data (extended image) */
@@ -146,10 +146,10 @@ void wemvaExtGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model, con
 
 	// Wemva adjoint
 	if(_fdParam->_extension == "time"){
-		wemvaTimeShotsAdjGpu(modelTemp->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+		wemvaTimeShotsAdjGpu(modelTemp->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
 	}
 	if(_fdParam->_extension == "offset"){
-		wemvaOffsetShotsAdjGpu(modelTemp->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+		wemvaOffsetShotsAdjGpu(modelTemp->getVals(), data->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversSignalsRegDts->getVals(), _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
 	}
 
 	// Update model

@@ -179,11 +179,11 @@ int main(int argc, char **argv) {
 	}
 
 	receiversSignalsTempFloat = std::make_shared<float3DReg>(receiversSignalsHyper);
-	receiversSignalsSliceFloat = std::make_shared<float2DReg>(receiversSignalsHyper->getAxis(1), receiversSignalsHyper->getAxis(2));
 	receiversSignalsFile->readFloatStream(receiversSignalsTempFloat);
 
 	for (int iShot=0; iShot<receiversSignalsHyper->getAxis(3).n; iShot++){
-		#pragma omp parallel for
+		receiversSignalsSliceFloat = std::make_shared<float2DReg>(receiversSignalsHyper->getAxis(1), receiversSignalsHyper->getAxis(2));
+		// #pragma omp parallel for
 		for (int iReceiver=0; iReceiver<receiversSignalsHyper->getAxis(2).n; iReceiver++){
 			for (int its=0; its<nts; its++){
 				(*receiversSignalsSliceFloat->_mat)[iReceiver][its] = (*receiversSignalsTempFloat->_mat)[iShot][iReceiver][its];

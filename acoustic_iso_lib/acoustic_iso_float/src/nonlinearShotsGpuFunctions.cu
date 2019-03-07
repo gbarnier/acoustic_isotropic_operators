@@ -15,7 +15,7 @@
 /****************************************************************************************/
 /******************************* Set GPU propagation parameters *************************/
 /****************************************************************************************/
-bool getGpuInfo(int nGpu, int info, int deviceNumberInfo){
+bool getGpuInfo(std::vector<int> gpuList, int info, int deviceNumberInfo){
 
 	int nDevice, driver;
 	cudaGetDeviceCount(&nDevice);
@@ -28,11 +28,16 @@ bool getGpuInfo(int nGpu, int info, int deviceNumberInfo){
 		std::cout << "-------------------------------------------------------------------" << std::endl;
 
 		// Number of devices
-		std::cout << "Number of requested GPUs: " << nGpu << std::endl;
+		std::cout << "Number of requested GPUs: " << gpuList.size() << std::endl;
 		std::cout << "Number of available GPUs: " << nDevice << std::endl;
+		std::cout << "Id of requested GPUs: ";
+		for (int iGpu=0; iGpu<gpuList.size(); iGpu++){
+			if (iGpu<gpuList.size()-1){std::cout << gpuList[iGpu] << ", ";}
+ 			else{ std::cout << gpuList[iGpu] << std::endl;}
+		}
 
 		// Driver version
-		std::cout << "Cuda driver version: " << cudaDriverGetVersion(&driver) << std::endl; // Driver
+		std::cout << "Cuda driver version: " << cudaDriverGetVersion(&driver) << std::endl;
 
 		// Get properties
 		cudaDeviceProp dprop;
@@ -61,13 +66,26 @@ bool getGpuInfo(int nGpu, int info, int deviceNumberInfo){
 		std::cout << " " << std::endl;
 	}
 
-  	if (nGpu<nDevice+1) {return true;}
-  	else {std::cout << "Number of requested GPU greater than available GPUs" << std::endl; return false;}
+	// Check that the number of requested GPU is less or equal to the total number of available GPUs
+	if (gpuList.size()>nDevice) {
+		std::cout << "**** ERROR [getGpuInfo]: Number of requested GPU greater than available GPUs ****" << std::endl;
+		return false;
+	}
+
+	// Check that the GPU numbers in the list are between 0 and nGpu-1
+	for (int iGpu=0; iGpu<gpuList.size(); iGpu++){
+		if (gpuList[iGpu]<0 || gpuList[iGpu]>nDevice-1){
+			std::cout << "**** ERROR [getGpuInfo]: One of the element of the GPU Id list is not a valid GPU Id number ****" << std::endl;
+			return false;
+		}
+	}
+
+	return true;
 }
-void initNonlinearGpu(float dz, float dx, int nz, int nx, int nts, float dts, int sub, int minPad, int blockSize, float alphaCos, int nGpu, int iGpu){
+void initNonlinearGpu(float dz, float dx, int nz, int nx, int nts, float dts, int sub, int minPad, int blockSize, float alphaCos, int nGpu, int iGpuId, int iGpuAlloc){
 
 	// Set GPU
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Host variables
 	host_nz = nz;
@@ -78,7 +96,7 @@ void initNonlinearGpu(float dz, float dx, int nz, int nx, int nts, float dts, in
 
 	/**************************** ALLOCATE ARRAYS OF ARRAYS *****************************/
 	// Only one GPU will perform the following
-	if (iGpu == 0) {
+	if (iGpuId == iGpuAlloc) {
 
 		// Time slices for FD stepping
 		dev_p0 = new float*[nGpu];
@@ -99,7 +117,7 @@ void initNonlinearGpu(float dz, float dx, int nz, int nx, int nts, float dts, in
 	}
 
 	/**************************** COMPUTE LAPLACIAN COEFFICIENTS ************************/
-	float zCoeff[COEFF_SIZE];
+	float zCoeff[COEFF_SIZE]; // Stored on host
 	float xCoeff[COEFF_SIZE];
 
 	zCoeff[0] = -2.927222222 / (dz * dz);
@@ -117,7 +135,7 @@ void initNonlinearGpu(float dz, float dx, int nz, int nx, int nts, float dts, in
   	xCoeff[5] = 0.000317460 / (dx * dx);
 
 	/**************************** COMPUTE TIME-INTERPOLATION FILTER *********************/
-	// Time interpolation filter length/half length
+	// Time interpolation filter length / half length
 	int hInterpFilter = host_sub + 1;
 	int nInterpFilter = 2 * hInterpFilter;
 
@@ -179,10 +197,10 @@ void initNonlinearGpu(float dz, float dx, int nz, int nx, int nts, float dts, in
 	cuda_call(cudaMemcpyToSymbol(dev_ntw, &host_ntw, sizeof(int), 0, cudaMemcpyHostToDevice)); // Copy number of coarse time parameters to device
 
 }
-void allocateNonlinearGpu(float *vel2Dtw2, int iGpu){
+void allocateNonlinearGpu(float *vel2Dtw2, int iGpu, int iGpuId){
 
 	// Get GPU number
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Scaled velocity
 	cuda_call(cudaMalloc((void**) &dev_vel2Dtw2[iGpu], host_nz*host_nx*sizeof(float))); // Allocate scaled velocity model on device
@@ -193,20 +211,20 @@ void allocateNonlinearGpu(float *vel2Dtw2, int iGpu){
 	cuda_call(cudaMalloc((void**) &dev_p1[iGpu], host_nz*host_nx*sizeof(float)));
 
 }
-void deallocateNonlinearGpu(int iGpu){
-		cudaSetDevice(iGpu); // Set device number on GPU cluster
-    	cuda_call(cudaFree(dev_vel2Dtw2[iGpu])); // Deallocate scaled velocity
-		cuda_call(cudaFree(dev_p0[iGpu]));
-    	cuda_call(cudaFree(dev_p1[iGpu]));
+void deallocateNonlinearGpu(int iGpu, int iGpuId){
+	cudaSetDevice(iGpuId); // Set device number on GPU cluster
+	cuda_call(cudaFree(dev_vel2Dtw2[iGpu])); // Deallocate scaled velocity
+	cuda_call(cudaFree(dev_p0[iGpu]));
+	cuda_call(cudaFree(dev_p1[iGpu]));
 }
 
 /****************************************************************************************/
 /******************************* Nonlinear forward propagation **************************/
 /****************************************************************************************/
-void propShotsFwdGpu(float *modelRegDtw, float *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *wavefieldDts, int iGpu) {
+void propShotsFwdGpu(float *modelRegDtw, float *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *wavefieldDts, int iGpu, int iGpuId) {
 
 	// Set device number on GPU cluster
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Sources geometry
 	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
@@ -279,17 +297,17 @@ void propShotsFwdGpu(float *modelRegDtw, float *dataRegDts, int *sourcesPosition
 	// Copy data back to host
 	cuda_call(cudaMemcpy(dataRegDts, dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(float), cudaMemcpyDeviceToHost));
 
-	// Deallocate all slices
+	// Deallocate
     cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
     cuda_call(cudaFree(dev_dataRegDts[iGpu]));
     cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
     cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 
 }
-void propShotsFwdGpuWavefield(float *modelRegDtw, float *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *wavefieldDts, int iGpu) {
+void propShotsFwdGpuWavefield(float *modelRegDtw, float *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *wavefieldDts, int iGpu, int iGpuId) {
 
 	// Set device number on GPU cluster
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Sources geometry
 	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
@@ -376,10 +394,10 @@ void propShotsFwdGpuWavefield(float *modelRegDtw, float *dataRegDts, int *source
 /****************************************************************************************/
 /******************************* Nonlinear adjoint propagation **************************/
 /****************************************************************************************/
-void propShotsAdjGpu(float *modelRegDtw, float *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *wavefieldDts, int iGpu) {
+void propShotsAdjGpu(float *modelRegDtw, float *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *wavefieldDts, int iGpu, int iGpuId) {
 
 	// Set device number on GPU cluster
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Sources geometry
 	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
@@ -450,10 +468,10 @@ void propShotsAdjGpu(float *modelRegDtw, float *dataRegDts, int *sourcesPosition
     cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 
 }
-void propShotsAdjGpuWavefield(float *modelRegDtw, float *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *wavefieldDts, int iGpu) {
+void propShotsAdjGpuWavefield(float *modelRegDtw, float *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *wavefieldDts, int iGpu, int iGpuId) {
 
 	// Set device number on GPU cluster
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Sources geometry
 	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));

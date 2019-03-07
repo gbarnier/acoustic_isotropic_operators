@@ -10,10 +10,10 @@ tomoExtShotsGpu::tomoExtShotsGpu(std::shared_ptr<SEP::float2DReg> vel, std::shar
 	_par = par;
 	_vel = vel;
 	_nShot = par->getInt("nShot");
-	_nGpu = par->getInt("nGpu");
+	createGpuIdList();
 	_info = par->getInt("info", 0);
-	_deviceNumberInfo = par->getInt("deviceNumberInfo", 0);
-	assert(getGpuInfo(_nGpu, _info, _deviceNumberInfo)); // Get info on GPU cluster and check that there are enough available GPUs
+	_deviceNumberInfo = par->getInt("deviceNumberInfo", _gpuList[0]);
+	assert(getGpuInfo(_gpuList, _info, _deviceNumberInfo)); // Get info on GPU cluster and check that there are enough available GPUs
 	_saveWavefield = _par->getInt("saveWavefield", 0);
 	_wavefieldShotNumber = _par->getInt("wavefieldShotNumber", 0);
 	_sourcesVector = sourcesVector;
@@ -21,6 +21,40 @@ tomoExtShotsGpu::tomoExtShotsGpu(std::shared_ptr<SEP::float2DReg> vel, std::shar
 	_sourcesSignalsVector = sourcesSignalsVector;
 	_reflectivityExt = reflectivityExt;
 
+}
+
+void tomoExtShotsGpu::createGpuIdList(){
+
+	// Setup Gpu numbers
+	_nGpu = _par->getInt("nGpu", -1);
+	std::vector<int> dummyVector;
+ 	dummyVector.push_back(-1);
+	_gpuList = _par->getInts("iGpu", dummyVector);
+
+	// If the user does not provide nGpu > 0 or a valid list -> break
+	if (_nGpu <= 0 && _gpuList[0]<0){std::cout << "**** ERROR: Please provide a list of GPUs to be used ****" << std::endl; assert(1==2);}
+
+	// If user does not provide a valid list but provides nGpu -> use id: 0,...,nGpu-1
+	if (_nGpu>0 && _gpuList[0]<0){
+		_gpuList.clear();
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+			_gpuList.push_back(iGpu);
+		}
+	}
+
+	// If the user provides a list -> use that list and ignore nGpu for the parfile
+	if (_gpuList[0]>=0){
+		_nGpu = _gpuList.size();
+		sort(_gpuList.begin(), _gpuList.end());
+		std::vector<int>::iterator it = std::unique(_gpuList.begin(), _gpuList.end());
+		bool isUnique = (it==_gpuList.end());
+		if (isUnique==0) {
+			std::cout << "**** ERROR: Please make sure there are no duplicates in the list ****" << std::endl; assert(1==2);
+		}
+	}
+
+	// Allocation of arrays of arrays will be done by the gpu # _gpuList[0]
+	_iGpuAlloc = _gpuList[0];
 }
 
 /* Forward */
@@ -49,16 +83,16 @@ void tomoExtShotsGpu::forward(const bool add, const std::shared_ptr<float2DReg> 
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create extended tomo object
-		std::shared_ptr<tomoExtGpu> tomoExtGpuObject(new tomoExtGpu(_vel, _par, _reflectivityExt, _nGpu, iGpu));
+		std::shared_ptr<tomoExtGpu> tomoExtGpuObject(new tomoExtGpu(_vel, _par, _reflectivityExt, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		tomoExtGpuObjectVector.push_back(tomoExtGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			tomoExtGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device
-		allocateTomoExtShotsGpu(tomoExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, tomoExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, _reflectivityExt->getVals(), iGpu);
+		allocateTomoExtShotsGpu(tomoExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, tomoExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Create data slice for this GPU number
 		std::shared_ptr<SEP::float2DReg> dataSlice(new SEP::float2DReg(hyperDataSlice));
@@ -66,11 +100,12 @@ void tomoExtShotsGpu::forward(const bool add, const std::shared_ptr<float2DReg> 
 
 	}
 
-	// Launch Tomo forward
+ 	// Launch Tomo forward
 	#pragma omp parallel for num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Set acquisition geometry
 		if ( (constantRecGeom == 1) && (constantSrcSignal == 1) ) {
@@ -87,7 +122,7 @@ void tomoExtShotsGpu::forward(const bool add, const std::shared_ptr<float2DReg> 
 		}
 
 		// Set GPU number for propagator object
-		tomoExtGpuObjectVector[iGpu]->setGpuNumber(iGpu);
+		tomoExtGpuObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		tomoExtGpuObjectVector[iGpu]->forward(false, model, dataSliceVector[iGpu]);
@@ -103,7 +138,7 @@ void tomoExtShotsGpu::forward(const bool add, const std::shared_ptr<float2DReg> 
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateTomoExtShotsGpu(iGpu);
+		deallocateTomoExtShotsGpu(iGpu, _gpuList[iGpu]);
 	}
 
 }
@@ -132,16 +167,16 @@ void tomoExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<flo
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create extended tomo object
-		std::shared_ptr<tomoExtGpu> tomoExtGpuObject(new tomoExtGpu(_vel, _par, _reflectivityExt, _nGpu, iGpu));
+		std::shared_ptr<tomoExtGpu> tomoExtGpuObject(new tomoExtGpu(_vel, _par, _reflectivityExt, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		tomoExtGpuObjectVector.push_back(tomoExtGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			tomoExtGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device
-		allocateTomoExtShotsGpu(tomoExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, tomoExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, _reflectivityExt->getVals(), iGpu);
+		allocateTomoExtShotsGpu(tomoExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, tomoExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Create data slice for this GPU number
 		std::shared_ptr<SEP::float2DReg> dataSlice(new SEP::float2DReg(hyperDataSlice));
@@ -154,6 +189,7 @@ void tomoExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<flo
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Change the wavefield flag
 		if (iShot == _wavefieldShotNumber) {
@@ -177,7 +213,7 @@ void tomoExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<flo
 		}
 
 		// Set GPU number for propagator object
-		tomoExtGpuObjectVector[iGpu]->setGpuNumber(iGpu);
+		tomoExtGpuObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		tomoExtGpuObjectVector[iGpu]->forward(false, model, dataSliceVector[iGpu]);
@@ -202,9 +238,8 @@ void tomoExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<flo
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateTomoExtShotsGpu(iGpu);
+		deallocateTomoExtShotsGpu(iGpu, _gpuList[iGpu]);
 	}
-
 }
 
 /* Adjoint */
@@ -235,16 +270,16 @@ void tomoExtShotsGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model,
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create extended Born object
-		std::shared_ptr<tomoExtGpu> tomoExtGpuObject(new tomoExtGpu(_vel, _par, _reflectivityExt, _nGpu, iGpu));
+		std::shared_ptr<tomoExtGpu> tomoExtGpuObject(new tomoExtGpu(_vel, _par, _reflectivityExt, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		tomoExtGpuObjectVector.push_back(tomoExtGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			tomoExtGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device for that object
-		allocateTomoExtShotsGpu(tomoExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, tomoExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, _reflectivityExt->getVals(), iGpu);
+		allocateTomoExtShotsGpu(tomoExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, tomoExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Model slice
 		std::shared_ptr<SEP::float2DReg> modelSlice(new SEP::float2DReg(hyperModelSlice));
@@ -261,6 +296,7 @@ void tomoExtShotsGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model,
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Copy data slice
 		memcpy(dataSliceVector[iGpu]->getVals(), &(data->getVals()[iShot*hyperDataSlice->getAxis(1).n*hyperDataSlice->getAxis(2).n]), sizeof(float)*hyperDataSlice->getAxis(1).n*hyperDataSlice->getAxis(2).n);
@@ -280,7 +316,7 @@ void tomoExtShotsGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model,
 		}
 
 		// Set GPU number for propagator object
-		tomoExtGpuObjectVector[iGpu]->setGpuNumber(iGpu);
+		tomoExtGpuObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		tomoExtGpuObjectVector[iGpu]->adjoint(true, modelSliceVector[iGpu], dataSliceVector[iGpu]);
@@ -299,7 +335,7 @@ void tomoExtShotsGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model,
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateTomoExtShotsGpu(iGpu);
+		deallocateTomoExtShotsGpu(iGpu, _gpuList[iGpu]);
 	}
 }
 void tomoExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DReg> model, const std::shared_ptr<float3DReg> data) {
@@ -328,16 +364,16 @@ void tomoExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DRe
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create extended Born object
-		std::shared_ptr<tomoExtGpu> tomoExtGpuObject(new tomoExtGpu(_vel, _par, _reflectivityExt, _nGpu, iGpu));
+		std::shared_ptr<tomoExtGpu> tomoExtGpuObject(new tomoExtGpu(_vel, _par, _reflectivityExt, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		tomoExtGpuObjectVector.push_back(tomoExtGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			tomoExtGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device for that object
-		allocateTomoExtShotsGpu(tomoExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, tomoExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, _reflectivityExt->getVals(), iGpu);
+		allocateTomoExtShotsGpu(tomoExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, tomoExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Model slice
 		std::shared_ptr<SEP::float2DReg> modelSlice(new SEP::float2DReg(hyperModelSlice));
@@ -355,6 +391,7 @@ void tomoExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DRe
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Change the wavefield flag
 		if (iShot == _wavefieldShotNumber) {
@@ -381,7 +418,7 @@ void tomoExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DRe
 		}
 
 		// Set GPU number for propagator object
-		tomoExtGpuObjectVector[iGpu]->setGpuNumber(iGpu);
+		tomoExtGpuObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		tomoExtGpuObjectVector[iGpu]->adjoint(true, modelSliceVector[iGpu], dataSliceVector[iGpu]);
@@ -407,7 +444,6 @@ void tomoExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DRe
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateTomoExtShotsGpu(iGpu);
+		deallocateTomoExtShotsGpu(iGpu, _gpuList[iGpu]);
 	}
-
 }

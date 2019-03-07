@@ -4,6 +4,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 
 set(PythonMains
     waveletFloatMain.py
+    fftFwiMain.py
 )
 
 install(FILES ${PythonModules} DESTINATION lib/python)

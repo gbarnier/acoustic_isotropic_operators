@@ -195,10 +195,10 @@ int main(int argc, char **argv) {
 	}
 
 	receiversSignalsTempFloat = std::make_shared<float3DReg>(receiversSignalsHyper);
-	receiversSignalsSliceDouble = std::make_shared<double2DReg>(receiversSignalsHyper->getAxis(1), receiversSignalsHyper->getAxis(2));
 	receiversSignalsFile->readFloatStream(receiversSignalsTempFloat);
 
 	for (int iShot=0; iShot<receiversSignalsHyper->getAxis(3).n; iShot++){
+		receiversSignalsSliceDouble = std::make_shared<double2DReg>(receiversSignalsHyper->getAxis(1), receiversSignalsHyper->getAxis(2));
 		for (int iReceiver=0; iReceiver<receiversSignalsHyper->getAxis(2).n; iReceiver++){
 			for (int its=0; its<nts; its++){
 				(*receiversSignalsSliceDouble->_mat)[iReceiver][its] = (*receiversSignalsTempFloat->_mat)[iShot][iReceiver][its];

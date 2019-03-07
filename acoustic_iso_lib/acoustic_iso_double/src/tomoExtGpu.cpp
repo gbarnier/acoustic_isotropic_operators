@@ -1,6 +1,6 @@
 #include "tomoExtGpu.h"
 
-tomoExtGpu::tomoExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, std::shared_ptr<SEP::double3DReg> reflectivityExt, int nGpu, int iGpu) {
+tomoExtGpu::tomoExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, std::shared_ptr<SEP::double3DReg> reflectivityExt, int nGpu, int iGpu, int iGpuId, int iGpuAlloc){
 
 	// Finite-difference parameters
 	_fdParam = std::make_shared<fdParam>(vel, par);
@@ -11,10 +11,12 @@ tomoExtGpu::tomoExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<pa
 	_leg2 = par->getInt("leg2", 1);
 	_iGpu = iGpu;
 	_nGpu = nGpu;
+	_iGpuId = iGpuId;
+
 	setAllWavefields(par->getInt("saveWavefield", 0));
 
 	// Initialize GPU
-	initTomoExtGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _fdParam->_nExt, _leg1, _leg2, _nGpu, _iGpu);
+	initTomoExtGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _fdParam->_nExt, _leg1, _leg2, _nGpu, _iGpuId, iGpuAlloc);
 }
 
 bool tomoExtGpu::checkParfileConsistency(const std::shared_ptr<SEP::double2DReg> model, const std::shared_ptr<SEP::double2DReg> data) const {
@@ -39,10 +41,10 @@ void tomoExtGpu::forward(const bool add, const std::shared_ptr<double2DReg> mode
 
 	/* Tomo extended forward */
 	if (_fdParam->_extension == "time"){
-		tomoTimeShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+		tomoTimeShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
 	}
 	if (_fdParam->_extension == "offset"){
-		tomoOffsetShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+		tomoOffsetShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
 	}
 	/* Interpolate data to irregular grid */
 	_receivers->forward(true, dataRegDts, data);
@@ -60,10 +62,10 @@ void tomoExtGpu::adjoint(const bool add, std::shared_ptr<double2DReg> model, con
 
 	/* Tomo extended adjoint */
 	if (_fdParam->_extension == "time"){
-		tomoTimeShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+		tomoTimeShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
 	}
 	if (_fdParam->_extension == "offset"){
-		tomoOffsetShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _saveWavefield);
+		tomoOffsetShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
 	}
 
 	/* Update model */

@@ -10,10 +10,10 @@ wemvaExtShotsGpu::wemvaExtShotsGpu(std::shared_ptr<SEP::double2DReg> vel, std::s
 	_par = par;
 	_vel = vel;
 	_nShot = par->getInt("nShot");
-	_nGpu = par->getInt("nGpu");
+	createGpuIdList();
 	_info = par->getInt("info", 0);
 	_deviceNumberInfo = par->getInt("deviceNumberInfo", 0);
-	// assert(getGpuInfo(_nGpu, _info, _deviceNumberInfo)); // Get info on GPU cluster and check that there are enough available GPUs
+	assert(getGpuInfo(_gpuList, _info, _deviceNumberInfo)); // Get info on GPU cluster and check that there are enough available GPUs
 	_saveWavefield = _par->getInt("saveWavefield", 0);
 	_wavefieldShotNumber = _par->getInt("wavefieldShotNumber", 0);
 	_sourcesVector = sourcesVector;
@@ -21,6 +21,40 @@ wemvaExtShotsGpu::wemvaExtShotsGpu(std::shared_ptr<SEP::double2DReg> vel, std::s
 	_sourcesSignalsVector = sourcesSignalsVector;
 	_receiversSignalsVector = receiversSignalsVector;
 
+}
+
+void wemvaExtShotsGpu::createGpuIdList(){
+
+	// Setup Gpu numbers
+	_nGpu = _par->getInt("nGpu", -1);
+	std::vector<int> dummyVector;
+ 	dummyVector.push_back(-1);
+	_gpuList = _par->getInts("iGpu", dummyVector);
+
+	// If the user does not provide nGpu > 0 or a valid list -> break
+	if (_nGpu <= 0 && _gpuList[0]<0){std::cout << "**** ERROR: Please provide a list of GPUs to be used ****" << std::endl; assert(1==2);}
+
+	// If user does not provide a valid list but provides nGpu -> use id: 0,...,nGpu-1
+	if (_nGpu>0 && _gpuList[0]<0){
+		_gpuList.clear();
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+			_gpuList.push_back(iGpu);
+		}
+	}
+
+	// If the user provides a list -> use that list and ignore nGpu for the parfile
+	if (_gpuList[0]>=0){
+		_nGpu = _gpuList.size();
+		sort(_gpuList.begin(), _gpuList.end());
+		std::vector<int>::iterator it = std::unique(_gpuList.begin(), _gpuList.end());
+		bool isUnique = (it==_gpuList.end());
+		if (isUnique==0) {
+			std::cout << "**** ERROR: Please make sure there are no duplicates in the list ****" << std::endl; assert(1==2);
+		}
+	}
+
+	// Allocation of arrays of arrays will be done by the gpu # _gpuList[0]
+	_iGpuAlloc = _gpuList[0];
 }
 
 /* Forward */
@@ -49,19 +83,20 @@ void wemvaExtShotsGpu::forward(const bool add, const std::shared_ptr<double2DReg
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create extended wemva object
-		std::shared_ptr<wemvaExtGpu> wemvaExtGpuObject(new wemvaExtGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<wemvaExtGpu> wemvaExtGpuObject(new wemvaExtGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		wemvaExtGpuObjectVector.push_back(wemvaExtGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			wemvaExtGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device for that specific GPU number
-        allocateWemvaExtShotsGpu(wemvaExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, wemvaExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu);
+        allocateWemvaExtShotsGpu(wemvaExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, wemvaExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Create data slice (extended image) for this GPU number
 		std::shared_ptr<SEP::double3DReg> dataSlice(new SEP::double3DReg(hyperDataSlice));
+		dataSlice->scale(0.0);
 		dataSliceVector.push_back(dataSlice);
 
 	}
@@ -71,6 +106,7 @@ void wemvaExtShotsGpu::forward(const bool add, const std::shared_ptr<double2DReg
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Set acquisition geometry
 		if ( (constantRecGeom == 1) && (constantSrcSignal == 1) ) {
@@ -87,25 +123,28 @@ void wemvaExtShotsGpu::forward(const bool add, const std::shared_ptr<double2DReg
 		}
 
 		// Set GPU number for propagator object
-		wemvaExtGpuObjectVector[iGpu]->setGpuNumber(iGpu);
+		wemvaExtGpuObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
-		wemvaExtGpuObjectVector[iGpu]->forward(false, model, dataSliceVector[iGpu]);
+		wemvaExtGpuObjectVector[iGpu]->forward(true, model, dataSliceVector[iGpu]);
 
-		// Stack data
+	}
+
+	// Stack data
+	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 		#pragma omp parallel for
 		for (int iExt=0; iExt<hyperDataSlice->getAxis(3).n; iExt++){
 			for (int ix=0; ix<hyperDataSlice->getAxis(2).n; ix++){
-                for (int iz=0; iz<hyperDataSlice->getAxis(1).n; iz++){
-                    (*data->_mat)[iExt][ix][iz] += (*dataSliceVector[iGpu]->_mat)[iExt][ix][iz];
-                }
+	            for (int iz=0; iz<hyperDataSlice->getAxis(1).n; iz++){
+	                (*data->_mat)[iExt][ix][iz] += (*dataSliceVector[iGpu]->_mat)[iExt][ix][iz];
+	            }
 			}
 		}
 	}
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateWemvaExtShotsGpu(iGpu);
+		deallocateWemvaExtShotsGpu(iGpu, _gpuList[iGpu]);
 	}
 
 }
@@ -134,16 +173,16 @@ void wemvaExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<do
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create extended wemva object
-		std::shared_ptr<wemvaExtGpu> wemvaExtGpuObject(new wemvaExtGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<wemvaExtGpu> wemvaExtGpuObject(new wemvaExtGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		wemvaExtGpuObjectVector.push_back(wemvaExtGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			wemvaExtGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device
-		allocateWemvaExtShotsGpu(wemvaExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, wemvaExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu);
+		allocateWemvaExtShotsGpu(wemvaExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, wemvaExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Create data slice (extended image) for this GPU number
 		std::shared_ptr<SEP::double3DReg> dataSlice(new SEP::double3DReg(hyperDataSlice));
@@ -156,6 +195,7 @@ void wemvaExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<do
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Change the wavefield flag
 		if (iShot == _wavefieldShotNumber) {
@@ -179,20 +219,10 @@ void wemvaExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<do
 		}
 
 		// Set GPU number for propagator object
-		wemvaExtGpuObjectVector[iGpu]->setGpuNumber(iGpu);
+		wemvaExtGpuObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		wemvaExtGpuObjectVector[iGpu]->forward(false, model, dataSliceVector[iGpu]);
-
-        // Stack data
-		#pragma omp parallel for
-		for (int iExt=0; iExt<hyperDataSlice->getAxis(3).n; iExt++){
-			for (int ix=0; ix<hyperDataSlice->getAxis(2).n; ix++){
-                for (int iz=0; iz<hyperDataSlice->getAxis(1).n; iz++){
-                    (*data->_mat)[iExt][ix][iz] += (*dataSliceVector[iGpu]->_mat)[iExt][ix][iz];
-                }
-			}
-		}
 
 		// Get the wavefields
 		if (iShot == _wavefieldShotNumber) {
@@ -204,11 +234,22 @@ void wemvaExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<do
 		}
 	}
 
-	// Deallocate memory on device
+	// Stack data
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateWemvaExtShotsGpu(iGpu);
+		#pragma omp parallel for
+		for (int iExt=0; iExt<hyperDataSlice->getAxis(3).n; iExt++){
+			for (int ix=0; ix<hyperDataSlice->getAxis(2).n; ix++){
+	            for (int iz=0; iz<hyperDataSlice->getAxis(1).n; iz++){
+	                (*data->_mat)[iExt][ix][iz] += (*dataSliceVector[iGpu]->_mat)[iExt][ix][iz];
+	            }
+			}
+		}
 	}
 
+	// Deallocate memory on device
+	for (int iGpu=0; iGpu<_nGpu; iGpu++){
+		deallocateWemvaExtShotsGpu(iGpu, _gpuList[iGpu]);
+	}
 }
 
 /* Adjoint */
@@ -237,16 +278,16 @@ void wemvaExtShotsGpu::adjoint(const bool add, std::shared_ptr<double2DReg> mode
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create extended wemva object
-		std::shared_ptr<wemvaExtGpu> wemvaExtGpuObject(new wemvaExtGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<wemvaExtGpu> wemvaExtGpuObject(new wemvaExtGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		wemvaExtGpuObjectVector.push_back(wemvaExtGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			wemvaExtGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device for that object
-		allocateWemvaExtShotsGpu(wemvaExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, wemvaExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu);
+		allocateWemvaExtShotsGpu(wemvaExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, wemvaExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Model slice
 		std::shared_ptr<SEP::double2DReg> modelSlice(new SEP::double2DReg(hyperModelSlice));
@@ -254,11 +295,12 @@ void wemvaExtShotsGpu::adjoint(const bool add, std::shared_ptr<double2DReg> mode
 		modelSliceVector.push_back(modelSlice);
 	}
 
-	// Launch Born forward
+	// Launch Born adjoint
 	#pragma omp parallel for num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Set acquisition geometry
 		if ( (constantRecGeom == 1) && (constantSrcSignal == 1) ) {
@@ -275,8 +317,7 @@ void wemvaExtShotsGpu::adjoint(const bool add, std::shared_ptr<double2DReg> mode
 		}
 
 		// Set GPU number for propagator object
-		wemvaExtGpuObjectVector[iGpu]->setGpuNumber(iGpu);
-
+		wemvaExtGpuObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 		// Launch modeling
 		wemvaExtGpuObjectVector[iGpu]->adjoint(true, modelSliceVector[iGpu], data);
 
@@ -294,7 +335,7 @@ void wemvaExtShotsGpu::adjoint(const bool add, std::shared_ptr<double2DReg> mode
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateWemvaExtShotsGpu(iGpu);
+		deallocateWemvaExtShotsGpu(iGpu, _gpuList[iGpu]);
 	}
 }
 void wemvaExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double2DReg> model, const std::shared_ptr<double3DReg> data) {
@@ -321,7 +362,7 @@ void wemvaExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double2D
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create extended wemva object
-		std::shared_ptr<wemvaExtGpu> wemvaExtGpuObject(new wemvaExtGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<wemvaExtGpu> wemvaExtGpuObject(new wemvaExtGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		wemvaExtGpuObjectVector.push_back(wemvaExtGpuObject);
 
 		// Display finite-difference parameters info
@@ -330,7 +371,7 @@ void wemvaExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double2D
 		}
 
 		// Allocate memory on device for that object
-		allocateWemvaExtShotsGpu(wemvaExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, wemvaExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu);
+		allocateWemvaExtShotsGpu(wemvaExtGpuObjectVector[iGpu]->getFdParam()->_vel2Dtw2, wemvaExtGpuObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Model slice
 		std::shared_ptr<SEP::double2DReg> modelSlice(new SEP::double2DReg(hyperModelSlice));
@@ -344,6 +385,7 @@ void wemvaExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double2D
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Change the wavefield flag
 		if (iShot == _wavefieldShotNumber) {
@@ -367,7 +409,7 @@ void wemvaExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double2D
 		}
 
 		// Set GPU number for propagator object
-		wemvaExtGpuObjectVector[iGpu]->setGpuNumber(iGpu);
+		wemvaExtGpuObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		wemvaExtGpuObjectVector[iGpu]->adjoint(true, modelSliceVector[iGpu], data);
@@ -393,7 +435,7 @@ void wemvaExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double2D
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateWemvaExtShotsGpu(iGpu);
+		deallocateWemvaExtShotsGpu(iGpu, _gpuList[iGpu]);
 	}
 
 }

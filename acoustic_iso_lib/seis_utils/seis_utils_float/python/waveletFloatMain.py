@@ -36,14 +36,14 @@ if __name__ == '__main__':
 		f4=parObject.getFloat("f4",-1.0)
 
 		if (not (f1 < f2 <= f3 < f4) ):
-			raise ValueError("****ERROR: Corner frequencies values must be increasing****\n")
+			raise ValueError("**** ERROR: Corner frequencies values must be increasing ****\n")
 
 		# Check if f4 < fNyquist
 		fNyquist=1/(2*dts)
 		if (f4 > fNyquist):
-			raise ValueError("****ERROR: f4 > fNyquist****\n")
+			raise ValueError("**** ERROR: f4 > fNyquist ****\n")
 
-		df=1.0/((nts-1)*dts)
+		df=1.0/((nts)*dts)
 
 		for iFreq in range(nts//2):
 			f=iFreq*df # Loop over frequencies
@@ -99,4 +99,4 @@ if __name__ == '__main__':
 		genericIO.defaultIO.writeVector(waveletFile,wavelet)
 
 	else:
-		raise ValueError("****ERROR: Wavelet type not supported (iz bazicly minz)****")
+		raise ValueError("**** ERROR: Wavelet type not supported (iz bazicly minz) ****")

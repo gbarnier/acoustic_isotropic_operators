@@ -20,13 +20,14 @@ using namespace SEP;
 class BornShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 
 	private:
-		int _nShot, _nGpu;
+		int _nShot, _nGpu, _iGpuAlloc;
 		int _saveWavefield, _wavefieldShotNumber, _info, _deviceNumberInfo;
 		std::shared_ptr<SEP::double2DReg> _vel;
 		std::vector<std::shared_ptr<SEP::double2DReg>> _sourcesSignalsVector;
 		std::shared_ptr<paramObj> _par;
 		std::vector<std::shared_ptr<deviceGpu>> _sourcesVector, _receiversVector;
 		std::shared_ptr<SEP::double3DReg> _srcWavefield, _secWavefield;
+		std::vector<int> _gpuList;
 
 	public:
 
@@ -35,6 +36,9 @@ class BornShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 
 		/* Destructor */
 		~BornShotsGpu(){};
+
+		/* Create Gpu list */
+		void createGpuIdList();
 
 		/* FWD / ADJ */
 		void forward(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data) const;
@@ -47,7 +51,7 @@ class BornShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 		std::shared_ptr<double3DReg> getSecWavefield(){ return _secWavefield; }
 
 		/* Mutators */
-		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; }	
+		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; }
 
 };
 

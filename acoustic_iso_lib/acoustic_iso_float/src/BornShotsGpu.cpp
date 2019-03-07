@@ -9,10 +9,10 @@ BornShotsGpu::BornShotsGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr
 	_par = par;
 	_vel = vel;
 	_nShot = par->getInt("nShot");
-	_nGpu = par->getInt("nGpu");
+	createGpuIdList();
 	_info = par->getInt("info", 0);
-	_deviceNumberInfo = par->getInt("deviceNumberInfo", 0);
-	assert(getGpuInfo(_nGpu, _info, _deviceNumberInfo)); // Get info on GPU cluster and check that there are enough available GPUs
+	_deviceNumberInfo = par->getInt("deviceNumberInfo", _gpuList[0]);
+	assert(getGpuInfo(_gpuList, _info, _deviceNumberInfo)); // Get info on GPU cluster and check that there are enough available GPUs
 	_saveWavefield = _par->getInt("saveWavefield", 0);
 	_wavefieldShotNumber = _par->getInt("wavefieldShotNumber", 0);
 	_sourcesVector = sourcesVector;
@@ -20,6 +20,41 @@ BornShotsGpu::BornShotsGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr
 	_sourcesSignalsVector = sourcesSignalsVector;
 
 }
+
+void BornShotsGpu::createGpuIdList(){
+
+	// Setup Gpu numbers
+	_nGpu = _par->getInt("nGpu", -1);
+	std::vector<int> dummyVector;
+ 	dummyVector.push_back(-1);
+	_gpuList = _par->getInts("iGpu", dummyVector);
+
+	// If the user does not provide nGpu > 0 or a valid list -> break
+	if (_nGpu <= 0 && _gpuList[0]<0){std::cout << "**** ERROR: Please provide a list of GPUs to be used ****" << std::endl; assert(1==2);}
+
+	// If user does not provide a valid list but provides nGpu -> use id: 0,...,nGpu-1
+	if (_nGpu>0 && _gpuList[0]<0){
+		_gpuList.clear();
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+			_gpuList.push_back(iGpu);
+		}
+	}
+
+	// If the user provides a list -> use that list and ignore nGpu for the parfile
+	if (_gpuList[0]>=0){
+		_nGpu = _gpuList.size();
+		sort(_gpuList.begin(), _gpuList.end());
+		std::vector<int>::iterator it = std::unique(_gpuList.begin(), _gpuList.end());
+		bool isUnique = (it==_gpuList.end());
+		if (isUnique==0) {
+			std::cout << "**** ERROR: Please make sure there are no duplicates in the list ****" << std::endl; assert(1==2);
+		}
+	}
+
+	// Allocation of arrays of arrays will be done by the gpu # _gpuList[0]
+	_iGpuAlloc = _gpuList[0];
+}
+
 void BornShotsGpu::forward(const bool add, const std::shared_ptr<float2DReg> model, std::shared_ptr<float3DReg> data) const {
 
 	if (!add) data->scale(0.0);
@@ -45,16 +80,16 @@ void BornShotsGpu::forward(const bool add, const std::shared_ptr<float2DReg> mod
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create Born object
-		std::shared_ptr<BornGpu> BornGpuObject(new BornGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<BornGpu> BornGpuObject(new BornGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		BornObjectVector.push_back(BornGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			BornGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device
-		allocateBornShotsGpu(BornObjectVector[iGpu]->getFdParam()->_vel2Dtw2, BornObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu);
+		allocateBornShotsGpu(BornObjectVector[iGpu]->getFdParam()->_vel2Dtw2, BornObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Create data slice for this GPU number
 		std::shared_ptr<SEP::float2DReg> dataSlice(new SEP::float2DReg(hyperDataSlice));
@@ -67,6 +102,7 @@ void BornShotsGpu::forward(const bool add, const std::shared_ptr<float2DReg> mod
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Set acquisition geometry
 		if ( (constantRecGeom == 1) && (constantSrcSignal == 1) ) {
@@ -83,7 +119,7 @@ void BornShotsGpu::forward(const bool add, const std::shared_ptr<float2DReg> mod
 		}
 
 		// Set GPU number for propagator object
-		BornObjectVector[iGpu]->setGpuNumber(iGpu);
+		BornObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		BornObjectVector[iGpu]->forward(false, model, dataSliceVector[iGpu]);
@@ -100,7 +136,7 @@ void BornShotsGpu::forward(const bool add, const std::shared_ptr<float2DReg> mod
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateBornShotsGpu(iGpu);
+		deallocateBornShotsGpu(iGpu, _gpuList[iGpu]);
 	}
 
 }
@@ -129,16 +165,16 @@ void BornShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<float2
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create Born object
-		std::shared_ptr<BornGpu> BornGpuObject(new BornGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<BornGpu> BornGpuObject(new BornGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		BornObjectVector.push_back(BornGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			BornGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device
-		allocateBornShotsGpu(BornObjectVector[iGpu]->getFdParam()->_vel2Dtw2, BornObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu);
+		allocateBornShotsGpu(BornObjectVector[iGpu]->getFdParam()->_vel2Dtw2, BornObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 		BornObjectVector[iGpu]->setAllWavefields(0); // By default, do not record the scattered wavefields
 
 		// Create data slice for this GPU number
@@ -152,6 +188,7 @@ void BornShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<float2
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Change the wavefield flag
 		if (iShot == _wavefieldShotNumber) {
@@ -177,7 +214,7 @@ void BornShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<float2
 		}
 
 		// Set GPU number for propagator object
-		BornObjectVector[iGpu]->setGpuNumber(iGpu);
+		BornObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		BornObjectVector[iGpu]->forward(false, model, dataSliceVector[iGpu]);
@@ -199,7 +236,7 @@ void BornShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<float2
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateBornShotsGpu(iGpu);
+		deallocateBornShotsGpu(iGpu, _gpuList[iGpu]);
 	}
 
 }
@@ -229,16 +266,16 @@ void BornShotsGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model, co
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create Born object
-		std::shared_ptr<BornGpu> BornGpuObject(new BornGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<BornGpu> BornGpuObject(new BornGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		BornObjectVector.push_back(BornGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			BornGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device for that object
-		allocateBornShotsGpu(BornObjectVector[iGpu]->getFdParam()->_vel2Dtw2, BornObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu);
+		allocateBornShotsGpu(BornObjectVector[iGpu]->getFdParam()->_vel2Dtw2, BornObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 
 		// Model slice
 		std::shared_ptr<SEP::float2DReg> modelSlice(new SEP::float2DReg(hyperModelSlice));
@@ -256,6 +293,7 @@ void BornShotsGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model, co
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Copy data slice
 		memcpy(dataSliceVector[iGpu]->getVals(), &(data->getVals()[iShot*hyperDataSlice->getAxis(1).n*hyperDataSlice->getAxis(2).n]), sizeof(float)*hyperDataSlice->getAxis(1).n*hyperDataSlice->getAxis(2).n);
@@ -275,7 +313,7 @@ void BornShotsGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model, co
 		}
 
 		// Set GPU number for propagator object
-		BornObjectVector[iGpu]->setGpuNumber(iGpu);
+		BornObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		BornObjectVector[iGpu]->adjoint(true, modelSliceVector[iGpu], dataSliceVector[iGpu]);
@@ -294,7 +332,7 @@ void BornShotsGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model, co
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateBornShotsGpu(iGpu);
+		deallocateBornShotsGpu(iGpu, _gpuList[iGpu]);
 	}
 
 }
@@ -324,16 +362,16 @@ void BornShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DReg> 
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Create Born object
-		std::shared_ptr<BornGpu> BornGpuObject(new BornGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<BornGpu> BornGpuObject(new BornGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		BornObjectVector.push_back(BornGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			BornGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device for that object
-		allocateBornShotsGpu(BornObjectVector[iGpu]->getFdParam()->_vel2Dtw2, BornObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu);
+		allocateBornShotsGpu(BornObjectVector[iGpu]->getFdParam()->_vel2Dtw2, BornObjectVector[iGpu]->getFdParam()->_reflectivityScale, iGpu, _gpuList[iGpu]);
 		BornObjectVector[iGpu]->setAllWavefields(0); // By default, do not record the scattered wavefields
 
 		// Model slice
@@ -351,6 +389,7 @@ void BornShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DReg> 
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Change the wavefield flag
 		if (iShot == _wavefieldShotNumber) {
@@ -377,7 +416,7 @@ void BornShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DReg> 
 		}
 
 		// Set GPU number for propagator object
-		BornObjectVector[iGpu]->setGpuNumber(iGpu);
+		BornObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		BornObjectVector[iGpu]->adjoint(true, modelSliceVector[iGpu], dataSliceVector[iGpu]);
@@ -402,7 +441,6 @@ void BornShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DReg> 
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateBornShotsGpu(iGpu);
+		deallocateBornShotsGpu(iGpu, _gpuList[iGpu]);
 	}
-
 }

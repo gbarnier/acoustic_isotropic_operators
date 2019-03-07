@@ -10,16 +10,50 @@ nonlinearPropShotsGpu::nonlinearPropShotsGpu(std::shared_ptr<SEP::double2DReg> v
 	_par = par;
 	_vel = vel;
 	_nShot = par->getInt("nShot");
-	_nGpu = par->getInt("nGpu");
+	createGpuIdList();
 	_info = par->getInt("info", 0);
-	_deviceNumberInfo = par->getInt("deviceNumberInfo", 0);
-	assert(getGpuInfo(_nGpu, _info, _deviceNumberInfo)); // Get info on GPU cluster and check that there are enough available GPUs
+	_deviceNumberInfo = par->getInt("deviceNumberInfo", _gpuList[0]);
+	assert(getGpuInfo(_gpuList, _info, _deviceNumberInfo));
 	_saveWavefield = _par->getInt("saveWavefield", 0);
 	_wavefieldShotNumber = _par->getInt("wavefieldShotNumber", 0);
 	if (_info == 1 && _saveWavefield == 1){std::cout << "Saving wavefield(s) for shot # " << _wavefieldShotNumber << std::endl;}
 	_sourcesVector = sourcesVector;
 	_receiversVector = receiversVector;
 
+}
+
+void nonlinearPropShotsGpu::createGpuIdList(){
+
+	// Setup Gpu numbers
+	_nGpu = _par->getInt("nGpu", -1);
+	std::vector<int> dummyVector;
+ 	dummyVector.push_back(-1);
+	_gpuList = _par->getInts("iGpu", dummyVector);
+
+	// If the user does not provide nGpu > 0 or a valid list -> break
+	if (_nGpu <= 0 && _gpuList[0]<0){std::cout << "**** ERROR: Please provide a list of GPUs to be used ****" << std::endl; assert(1==2);}
+
+	// If user does not provide a valid list but provides nGpu -> use id: 0,...,nGpu-1
+	if (_nGpu>0 && _gpuList[0]<0){
+		_gpuList.clear();
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+			_gpuList.push_back(iGpu);
+		}
+	}
+
+	// If the user provides a list -> use that list and ignore nGpu for the parfile
+	if (_gpuList[0]>=0){
+		_nGpu = _gpuList.size();
+		sort(_gpuList.begin(), _gpuList.end());
+		std::vector<int>::iterator it = std::unique(_gpuList.begin(), _gpuList.end());
+		bool isUnique = (it==_gpuList.end());
+		if (isUnique==0) {
+			std::cout << "**** ERROR: Please make sure there are no duplicates in the GPU Id list ****" << std::endl; assert(1==2);
+		}
+	}
+
+	// Allocation of arrays of arrays will be done by the gpu # _gpuList[0]
+	_iGpuAlloc = _gpuList[0];
 }
 
 // Forward
@@ -52,16 +86,16 @@ void nonlinearPropShotsGpu::forward(const bool add, const std::shared_ptr<double
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Nonlinear propagator object
-		std::shared_ptr<nonlinearPropGpu> propGpuObject(new nonlinearPropGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<nonlinearPropGpu> propGpuObject(new nonlinearPropGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		propObjectVector.push_back(propGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			propGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device
-		allocateNonlinearGpu(propObjectVector[iGpu]->getFdParam()->_vel2Dtw2, iGpu);
+		allocateNonlinearGpu(propObjectVector[iGpu]->getFdParam()->_vel2Dtw2, iGpu, _gpuList[iGpu]);
 
 		// Model slice
 		std::shared_ptr<SEP::double2DReg> modelSlice(new SEP::double2DReg(hyperModelSlice));
@@ -78,6 +112,7 @@ void nonlinearPropShotsGpu::forward(const bool add, const std::shared_ptr<double
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Copy model slice
 		if(constantSrcSignal == 1) {
@@ -94,7 +129,7 @@ void nonlinearPropShotsGpu::forward(const bool add, const std::shared_ptr<double
 		}
 
 		// Set GPU number for propagator object
-		propObjectVector[iGpu]->setGpuNumber(iGpu);
+		propObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		propObjectVector[iGpu]->forward(false, modelSliceVector[iGpu], dataSliceVector[iGpu]);
@@ -110,9 +145,8 @@ void nonlinearPropShotsGpu::forward(const bool add, const std::shared_ptr<double
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateNonlinearGpu(iGpu);
+		deallocateNonlinearGpu(iGpu, _gpuList[iGpu]);
 	}
-
 }
 void nonlinearPropShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<double3DReg> model, std::shared_ptr<double3DReg> data) {
 
@@ -141,16 +175,16 @@ void nonlinearPropShotsGpu::forwardWavefield(const bool add, const std::shared_p
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Nonlinear propagator object
-		std::shared_ptr<nonlinearPropGpu> propGpuObject(new nonlinearPropGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<nonlinearPropGpu> propGpuObject(new nonlinearPropGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		propObjectVector.push_back(propGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			propGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device
-		allocateNonlinearGpu(propObjectVector[iGpu]->getFdParam()->_vel2Dtw2, iGpu);
+		allocateNonlinearGpu(propObjectVector[iGpu]->getFdParam()->_vel2Dtw2, iGpu, _gpuList[iGpu]);
 		propObjectVector[iGpu]->setAllWavefields(0); // By default, do not record the scattered wavefields
 
 		// Model slice
@@ -168,6 +202,7 @@ void nonlinearPropShotsGpu::forwardWavefield(const bool add, const std::shared_p
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Change the wavefield flag
 		if (iShot == _wavefieldShotNumber) {
@@ -191,7 +226,7 @@ void nonlinearPropShotsGpu::forwardWavefield(const bool add, const std::shared_p
 		}
 
 		// Set GPU number for propagator object
-		propObjectVector[iGpu]->setGpuNumber(iGpu);
+		propObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		propObjectVector[iGpu]->forward(false, modelSliceVector[iGpu], dataSliceVector[iGpu]);
@@ -213,9 +248,8 @@ void nonlinearPropShotsGpu::forwardWavefield(const bool add, const std::shared_p
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateNonlinearGpu(iGpu);
+		deallocateNonlinearGpu(iGpu, _gpuList[iGpu]);
 	}
-
 }
 
 // Adjoint
@@ -246,16 +280,16 @@ void nonlinearPropShotsGpu::adjoint(const bool add, std::shared_ptr<double3DReg>
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Nonlinear propagator object
-		std::shared_ptr<nonlinearPropGpu> propGpuObject(new nonlinearPropGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<nonlinearPropGpu> propGpuObject(new nonlinearPropGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		propObjectVector.push_back(propGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			propGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device
-		allocateNonlinearGpu(propObjectVector[iGpu]->getFdParam()->_vel2Dtw2, iGpu);
+		allocateNonlinearGpu(propObjectVector[iGpu]->getFdParam()->_vel2Dtw2, iGpu, _gpuList[iGpu]);
 
 		// Model slice
 		std::shared_ptr<SEP::double2DReg> modelSlice(new SEP::double2DReg(hyperModelSlice));
@@ -273,6 +307,7 @@ void nonlinearPropShotsGpu::adjoint(const bool add, std::shared_ptr<double3DReg>
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Copy data slice
 		memcpy(dataSliceVector[iGpu]->getVals(), &(data->getVals()[iShot*hyperDataSlice->getAxis(1).n*hyperDataSlice->getAxis(2).n]), sizeof(double)*hyperDataSlice->getAxis(1).n*hyperDataSlice->getAxis(2).n);
@@ -285,7 +320,7 @@ void nonlinearPropShotsGpu::adjoint(const bool add, std::shared_ptr<double3DReg>
 		}
 
 		// Set GPU number for propagator object
-		propObjectVector[iGpu]->setGpuNumber(iGpu);
+		propObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		if (constantSrcSignal == 1){
@@ -317,7 +352,7 @@ void nonlinearPropShotsGpu::adjoint(const bool add, std::shared_ptr<double3DReg>
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateNonlinearGpu(iGpu);
+		deallocateNonlinearGpu(iGpu, _gpuList[iGpu]);
 	}
 
 }
@@ -348,16 +383,16 @@ void nonlinearPropShotsGpu::adjointWavefield(const bool add, std::shared_ptr<dou
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Nonlinear propagator object
-		std::shared_ptr<nonlinearPropGpu> propGpuObject(new nonlinearPropGpu(_vel, _par, _nGpu, iGpu));
+		std::shared_ptr<nonlinearPropGpu> propGpuObject(new nonlinearPropGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
 		propObjectVector.push_back(propGpuObject);
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (iGpu == _deviceNumberInfo) ){
+		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
 			propGpuObject->getFdParam()->getInfo();
 		}
 
 		// Allocate memory on device
-		allocateNonlinearGpu(propObjectVector[iGpu]->getFdParam()->_vel2Dtw2, iGpu);
+		allocateNonlinearGpu(propObjectVector[iGpu]->getFdParam()->_vel2Dtw2, iGpu, _gpuList[iGpu]);
 		propObjectVector[iGpu]->setWavefield(0);
 
 		// Model slice
@@ -376,6 +411,7 @@ void nonlinearPropShotsGpu::adjointWavefield(const bool add, std::shared_ptr<dou
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
+		int iGpuId = _gpuList[iGpu];
 
 		// Change the saveWavefield flag
 		if (iShot == _wavefieldShotNumber) { propObjectVector[iGpu]->setAllWavefields(1);}
@@ -391,7 +427,7 @@ void nonlinearPropShotsGpu::adjointWavefield(const bool add, std::shared_ptr<dou
 		}
 
 		// Set GPU number for propagator object
-		propObjectVector[iGpu]->setGpuNumber(iGpu);
+		propObjectVector[iGpu]->setGpuNumber(iGpu, iGpuId);
 
 		// Launch modeling
 		if (constantSrcSignal == 1){
@@ -431,7 +467,6 @@ void nonlinearPropShotsGpu::adjointWavefield(const bool add, std::shared_ptr<dou
 	}
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateNonlinearGpu(iGpu);
+		deallocateNonlinearGpu(iGpu, _gpuList[iGpu]);
 	}
-
 }

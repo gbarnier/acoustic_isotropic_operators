@@ -27,7 +27,7 @@ class BornExtGpu : public seismicOperator2D<SEP::float3DReg, SEP::float2DReg> {
 	public:
 
 		/* Overloaded constructor */
-		BornExtGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu);
+		BornExtGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc);
 
 		/* Mutators */
 		void setAllWavefields(int wavefieldFlag); // Allocates all wavefields assocaited with a seismic operator

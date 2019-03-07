@@ -741,8 +741,7 @@ def wemvaExtOpInitDouble(args):
 		print("**** ERROR: User did not provide wemva seismic data file ****\n")
 		quit()
 	receiversSignalsFloat=genericIO.defaultIO.getVector(wemvaDataFile,ndims=3) 	# Read seismic data as a 3DReg
-	receiversSignalsSliceDouble=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis]),storage="dataDouble") # Create a 2DReg data slice
-	receiversSignalsSliceDoubleNp=receiversSignalsSliceDouble.getNdArray() # Get the numpy array of the slice
+	# receiversSignalsSliceDouble=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis]),storage="dataDouble") # Create a 2DReg data slice
 	receiversSignalsFloatNp=receiversSignalsFloat.getNdArray() # Get the numpy array of the total dataset
 
 	# Initialize receivers signals vector
@@ -750,6 +749,8 @@ def wemvaExtOpInitDouble(args):
 
 	# Copy wemva data to vector of 2DReg
 	for iShot in range(sourceAxis.n):
+		receiversSignalsSliceDouble=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis]),storage="dataDouble") # Create a 2DReg
+		receiversSignalsSliceDoubleNp=receiversSignalsSliceDouble.getNdArray() # Get the numpy array of the slice
 		for iReceiver in range(receiverAxis.n):
 			for its in range(timeAxis.n):
 				receiversSignalsSliceDoubleNp[iReceiver][its]=receiversSignalsFloatNp[iShot][iReceiver][its]

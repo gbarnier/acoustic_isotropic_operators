@@ -29,7 +29,7 @@ class tomoExtGpu : public seismicOperator2D<SEP::double2DReg, SEP::double2DReg> 
 	public:
 
 		/* Overloaded constructors */
-		tomoExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, std::shared_ptr<double3DReg> reflectivityExt, int nGpu, int iGpu);
+		tomoExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, std::shared_ptr<double3DReg> reflectivityExt, int nGpu, int iGpu, int iGpuId, int iGpuAlloc);
 
 		/* Mutators */
 		void setReflectivityExt(std::shared_ptr<double3DReg> reflectivityExt){ _reflectivityExt=reflectivityExt;}

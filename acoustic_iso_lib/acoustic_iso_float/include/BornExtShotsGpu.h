@@ -20,13 +20,14 @@ using namespace SEP;
 class BornExtShotsGpu : public Operator<SEP::float3DReg, SEP::float3DReg> {
 
 	private:
-		int _nShot, _nGpu;
+		int _nShot, _nGpu, _iGpuAlloc;
 		int _saveWavefield, _wavefieldShotNumber, _info, _deviceNumberInfo;
 		std::shared_ptr<SEP::float2DReg> _vel;
 		std::vector<std::shared_ptr<SEP::float2DReg>> _sourcesSignalsVector;
 		std::shared_ptr<paramObj> _par;
 		std::vector<std::shared_ptr<deviceGpu>> _sourcesVector, _receiversVector;
 		std::shared_ptr<SEP::float3DReg> _srcWavefield, _secWavefield;
+		std::vector<int> _gpuList;
 
 	public:
 
@@ -35,6 +36,9 @@ class BornExtShotsGpu : public Operator<SEP::float3DReg, SEP::float3DReg> {
 
 		/* Destructor */
 		~BornExtShotsGpu(){};
+
+		/* Create Gpu list */
+		void createGpuIdList();
 
 		/* FWD / ADJ */
 		void forward(const bool add, const std::shared_ptr<float3DReg> model, std::shared_ptr<float3DReg> data) const;

@@ -2,15 +2,16 @@
 #include <ctime>
 #include "nonlinearPropGpu.h"
 
-nonlinearPropGpu::nonlinearPropGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu){
+nonlinearPropGpu::nonlinearPropGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc){
 	_fdParam = std::make_shared<fdParam>(vel, par);
 	_timeInterp = std::make_shared<interpTimeLinTbb>(_fdParam->_nts, _fdParam->_dts, _fdParam->_ots, _fdParam->_sub);
 	setAllWavefields(par->getInt("saveWavefield", 0));
 	_iGpu = iGpu;
 	_nGpu = nGpu;
+	_iGpuId = iGpuId;
 
 	// Initialize GPU
-	initNonlinearGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _nGpu, _iGpu);
+	initNonlinearGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _nGpu, _iGpuId, iGpuAlloc);
 }
 
 void nonlinearPropGpu::setAllWavefields(int wavefieldFlag){
@@ -49,9 +50,9 @@ void nonlinearPropGpu::forward(const bool add, const std::shared_ptr<float2DReg>
 
 	/* Propagate */
 	if (_saveWavefield == 0) {
-		propShotsFwdGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu);
+		propShotsFwdGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
     } else {
-		propShotsFwdGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu);
+		propShotsFwdGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
 	}
 
 	/* Interpolate to irregular grid */
@@ -73,9 +74,9 @@ void nonlinearPropGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model
 
 	/* Propagate */
 	if (_saveWavefield == 0) {
-		propShotsAdjGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu);
+		propShotsAdjGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
 	} else {
-		propShotsAdjGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu);
+		propShotsAdjGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
 	}
 
 	/* Scale adjoint wavefield */

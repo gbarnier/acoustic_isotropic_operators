@@ -40,7 +40,7 @@ void computeWemvaLeg2OffsetAdj(float *dev_wemvaSrcWavefieldDt2In, float *dev_wem
 /******************************* Set GPU propagation parameters *************************/
 /****************************************************************************************/
 // Display info on GPU
-bool getGpuInfo(int nGpu, int info, int deviceNumberInfo){
+bool getGpuInfo(std::vector<int> gpuList, int info, int deviceNumberInfo){
 
 	int nDevice, driver;
 	cudaGetDeviceCount(&nDevice);
@@ -52,9 +52,14 @@ bool getGpuInfo(int nGpu, int info, int deviceNumberInfo){
 		std::cout << "---------------------------- INFO FOR GPU# " << deviceNumberInfo << " ----------------------" << std::endl;
 		std::cout << "-------------------------------------------------------------------" << std::endl;
 
-		// Number of devices
-		std::cout << "Number of requested GPUs: " << nGpu << std::endl;
+		// List of devices
+		std::cout << "Number of requested GPUs: " << gpuList.size() << std::endl;
 		std::cout << "Number of available GPUs: " << nDevice << std::endl;
+		std::cout << "Id of requested GPUs: ";
+		for (int iGpu=0; iGpu<gpuList.size(); iGpu++){
+			if (iGpu<gpuList.size()-1){std::cout << gpuList[iGpu] << ", ";}
+ 			else{ std::cout << gpuList[iGpu] << std::endl;}
+		}
 
 		// Driver version
 		cudaDriverGetVersion(&driver);
@@ -87,15 +92,28 @@ bool getGpuInfo(int nGpu, int info, int deviceNumberInfo){
 		std::cout << " " << std::endl;
 	}
 
-  	if (nGpu<nDevice+1) {return true;}
-  	else {std::cout << "Number of requested GPU greater than available GPUs" << std::endl; return false;}
+	// Check that the number of requested GPU is less or equal to the total number of available GPUs
+	if (gpuList.size()>nDevice) {
+		std::cout << "**** ERROR [getGpuInfo]: Number of requested GPU greater than available GPUs ****" << std::endl;
+		return false;
+	}
+
+	// Check that the GPU numbers in the list are between 0 and nGpu-1
+	for (int iGpu=0; iGpu<gpuList.size(); iGpu++){
+		if (gpuList[iGpu]<0 || gpuList[iGpu]>nDevice-1){
+			std::cout << "**** ERROR [getGpuInfo]: One of the element of the GPU Id list is not a valid GPU Id number ****" << std::endl;
+			return false;
+		}
+	}
+
+	return true;
 }
 
 // Initialize GPU
-void initWemvaExtGpu(float dz, float dx, int nz, int nx, int nts, float dts, int sub, int minPad, int blockSize, float alphaCos, int nExt, int leg1, int leg2, int nGpu, int iGpu){
+void initWemvaExtGpu(float dz, float dx, int nz, int nx, int nts, float dts, int sub, int minPad, int blockSize, float alphaCos, int nExt, int leg1, int leg2, int nGpu, int iGpuId, int iGpuAlloc){
 
 	// Set GPU number
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	host_nz = nz;
 	host_nx = nx;
@@ -118,7 +136,7 @@ void initWemvaExtGpu(float dz, float dx, int nz, int nx, int nts, float dts, int
 
 	/**************************** ALLOCATE ARRAYS OF ARRAYS *****************************/
 	// Only one GPU will perform the following
-	if (iGpu == 0) {
+	if (iGpuId == iGpuAlloc) {
 
 		// Time slices for FD stepping
 		dev_p0 = new float*[nGpu];
@@ -260,10 +278,10 @@ void initWemvaExtGpu(float dz, float dx, int nz, int nx, int nts, float dts, int
 }
 
 // Allocate on device
-void allocateWemvaExtShotsGpu(float *vel2Dtw2, float *reflectivityScale, int iGpu){
+void allocateWemvaExtShotsGpu(float *vel2Dtw2, float *reflectivityScale, int iGpu, int iGpuId){
 
 	// Set GPU number
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Velocity scale
 	cuda_call(cudaMalloc((void**) &dev_vel2Dtw2[iGpu], host_nz*host_nx*sizeof(float))); // Allocate scaled velocity model on device
@@ -299,10 +317,10 @@ void allocateWemvaExtShotsGpu(float *vel2Dtw2, float *reflectivityScale, int iGp
 }
 
 // Deallocate from device
-void deallocateWemvaExtShotsGpu(int iGpu){
+void deallocateWemvaExtShotsGpu(int iGpu, int iGpuId){
 
  		// Set device number on GPU cluster
-		cudaSetDevice(iGpu);
+		cudaSetDevice(iGpuId);
 
 		// Deallocate all the shit
     	cuda_call(cudaFree(dev_vel2Dtw2[iGpu]));
@@ -323,11 +341,11 @@ void deallocateWemvaExtShotsGpu(int iGpu){
 /****************************************************************************************/
 /************************************** Wemva forward ************************************/
 /****************************************************************************************/
-void wemvaTimeShotsFwdGpu(float *model, float *wemvaExtImage, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, float *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, float *wemvaSrcWavefieldDt2, float *wemvaSecWavefield1, float *wemvaSecWavefield2, int iGpu, int saveWavefield){
+void wemvaTimeShotsFwdGpu(float *model, float *wemvaExtImage, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, float *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, float *wemvaSrcWavefieldDt2, float *wemvaSecWavefield1, float *wemvaSecWavefield2, int iGpu, int iGpuId, int saveWavefield){
 
     // We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Sources geometry
 	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
@@ -437,11 +455,11 @@ void wemvaTimeShotsFwdGpu(float *model, float *wemvaExtImage, float *sourcesSign
 
 }
 
-void wemvaOffsetShotsFwdGpu(float *model, float *wemvaExtImage, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, float *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, float *wemvaSrcWavefieldDt2, float *wemvaSecWavefield1, float *wemvaSecWavefield2, int iGpu, int saveWavefield){
+void wemvaOffsetShotsFwdGpu(float *model, float *wemvaExtImage, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, float *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, float *wemvaSrcWavefieldDt2, float *wemvaSecWavefield1, float *wemvaSecWavefield2, int iGpu, int iGpuId, int saveWavefield){
 
     // We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Sources geometry
 	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
@@ -554,11 +572,11 @@ void wemvaOffsetShotsFwdGpu(float *model, float *wemvaExtImage, float *sourcesSi
 /****************************************************************************************/
 /************************************** Wemva adjoint ************************************/
 /****************************************************************************************/
-void wemvaTimeShotsAdjGpu(float *model, float *wemvaExtImage, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, float *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, float *wemvaSrcWavefieldDt2, float *wemvaSecWavefield1, float *wemvaSecWavefield2, int iGpu, int saveWavefield){
+void wemvaTimeShotsAdjGpu(float *model, float *wemvaExtImage, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, float *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, float *wemvaSrcWavefieldDt2, float *wemvaSecWavefield1, float *wemvaSecWavefield2, int iGpu, int iGpuId, int saveWavefield){
 
     // We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Sources geometry
 	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
@@ -668,11 +686,11 @@ void wemvaTimeShotsAdjGpu(float *model, float *wemvaExtImage, float *sourcesSign
 
 }
 
-void wemvaOffsetShotsAdjGpu(float *model, float *wemvaExtImage, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, float *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, float *wemvaSrcWavefieldDt2, float *wemvaSecWavefield1, float *wemvaSecWavefield2, int iGpu, int saveWavefield){
+void wemvaOffsetShotsAdjGpu(float *model, float *wemvaExtImage, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, float *wemvaDataRegDts, int *receiversPositionReg, int nReceiversReg, float *wemvaSrcWavefieldDt2, float *wemvaSecWavefield1, float *wemvaSecWavefield2, int iGpu, int iGpuId, int saveWavefield){
 
     // We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
-	cudaSetDevice(iGpu);
+	cudaSetDevice(iGpuId);
 
 	// Sources geometry
 	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));

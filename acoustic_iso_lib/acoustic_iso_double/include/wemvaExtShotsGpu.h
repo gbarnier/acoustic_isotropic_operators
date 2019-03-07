@@ -20,7 +20,7 @@ using namespace SEP;
 class wemvaExtShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 
 	private:
-		int _nShot, _nGpu;
+		int _nShot, _nGpu, _iGpuAlloc;
 		int _saveWavefield, _wavefieldShotNumber, _info, _deviceNumberInfo;
 		std::shared_ptr<SEP::double2DReg> _vel;
 		std::vector<std::shared_ptr<SEP::double2DReg>> _sourcesSignalsVector, _receiversSignalsVector;
@@ -28,6 +28,7 @@ class wemvaExtShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 		std::vector<std::shared_ptr<deviceGpu>> _sourcesVector, _receiversVector;
 		std::shared_ptr<SEP::double3DReg> _srcWavefield, _secWavefield1, _secWavefield2;
 		std::shared_ptr<SEP::double3DReg> _reflectivityExt;
+		std::vector<int> _gpuList;
 
 	public:
 
@@ -36,6 +37,9 @@ class wemvaExtShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 
 		/* Destructor */
 		~wemvaExtShotsGpu(){};
+
+		/* Create Gpu list */
+		void createGpuIdList();
 
 		/* FWD / ADJ */
 		void forward(const bool add, const std::shared_ptr<double2DReg> model, std::shared_ptr<double3DReg> data) const;
@@ -50,7 +54,7 @@ class wemvaExtShotsGpu : public Operator<SEP::double2DReg, SEP::double3DReg> {
 
 		/* Mutators */
 		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; }
-		void setReceiversSignalsVector(std::vector<std::shared_ptr<SEP::double2DReg>> receiversSignalsVector){ _receiversSignalsVector = receiversSignalsVector; }	
+		void setReceiversSignalsVector(std::vector<std::shared_ptr<SEP::double2DReg>> receiversSignalsVector){ _receiversSignalsVector = receiversSignalsVector; }
 
 };
 

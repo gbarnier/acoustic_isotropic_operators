@@ -18,12 +18,13 @@ using namespace SEP;
 class nonlinearPropShotsGpu : public Operator<SEP::double3DReg, SEP::double3DReg> {
 
 	private:
-		int _nShot, _nGpu, _info, _deviceNumberInfo;
+		int _nShot, _nGpu, _info, _deviceNumberInfo, _iGpuAlloc;
 		int _saveWavefield, _wavefieldShotNumber;
 		std::shared_ptr<SEP::double2DReg> _vel;
 		std::shared_ptr<paramObj> _par;
 		std::vector<std::shared_ptr<deviceGpu>> _sourcesVector, _receiversVector;
 		std::shared_ptr<SEP::double3DReg> _wavefield;
+		std::vector<int> _gpuList;
 
 	public:
 
@@ -32,6 +33,9 @@ class nonlinearPropShotsGpu : public Operator<SEP::double3DReg, SEP::double3DReg
 
 		/* Destructor */
 		~nonlinearPropShotsGpu(){};
+
+		/* Create Gpu list */
+		void createGpuIdList();
 
 		/* FWD / ADJ */
 		void forward(const bool add, const std::shared_ptr<double3DReg> model, std::shared_ptr<double3DReg> data) const;

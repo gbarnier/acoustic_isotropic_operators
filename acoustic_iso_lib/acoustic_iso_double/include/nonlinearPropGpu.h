@@ -26,7 +26,7 @@ class nonlinearPropGpu : public seismicOperator2D<SEP::double2DReg, SEP::double2
 	public:
 
 		/* Overloaded constructors */
-		nonlinearPropGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu);
+		nonlinearPropGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc);
 
 		/* Mutators */
 		void setAllWavefields(int wavefieldFlag);

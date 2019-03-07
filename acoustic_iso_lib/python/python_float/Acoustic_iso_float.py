@@ -776,13 +776,14 @@ def wemvaExtOpInitFloat(args):
 		quit()
 	receiversSignalsFloat=genericIO.defaultIO.getVector(wemvaDataFile,ndims=3) 	# Read seismic data as a 3DReg
 	receiversSignalsFloatNp=receiversSignalsFloat.getNdArray() # Get the numpy array of the total dataset
-	receiversSignalsSliceFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis])) # Create a 2DReg data slice
-	receiversSignalsSliceFloatNp=receiversSignalsSliceFloat.getNdArray() # Get the numpy array of the slice
+
 	# Initialize receivers signals vector
 	receiversSignalsVector=[]
 
 	# Copy wemva data to vector of 2DReg
 	for iShot in range(sourceAxis.n):
+		receiversSignalsSliceFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis])) # Create a 2DReg data slice
+		receiversSignalsSliceFloatNp=receiversSignalsSliceFloat.getNdArray() # Get the numpy array of the slice
 		for iReceiver in range(receiverAxis.n):
 			for its in range(timeAxis.n):
 				receiversSignalsSliceFloatNp[iReceiver][its]=receiversSignalsFloatNp[iShot][iReceiver][its]
