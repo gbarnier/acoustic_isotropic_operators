@@ -18,9 +18,7 @@ import pyOperator as pyOp
 import pyNLCGsolver as NLCG
 import pyProblem as Prblm
 import pyStopperBase as Stopper
-import inversionUtils
 from sys_util import logger
-
 
 # Template for FWI workflow
 if __name__ == '__main__':
@@ -37,33 +35,28 @@ if __name__ == '__main__':
 	epsilonEval=parObject.getInt("epsilonEval",0)
 
 	print("-------------------------------------------------------------------")
-	print("------------------------ Conventional FWI -------------------------")
+	print("------------------------------ FWIME ------------------------------")
 	print("-------------------------------------------------------------------\n")
 
 	############################# Initialization ###############################
-	# Spline
-	if (spline==1):
-		modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSpline2dModule.bSpline2dInit(sys.argv)
+	# Nonlinear forward operator #1:
+    # model=velocity, data=seismic data
+	model,data,wavelet,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
 
-	# Data taper
-	if (dataTaper==1):
-		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset=dataTaperModule.dataTaperInit(sys.argv)
-
-	# FWI nonlinear operator
-	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
-
-	# Born
+    # Born non-extended (model=velocity perturbation, datat=Born data, set background velocity)
 	_,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+
+	# Nonlinear forward operator #2:
+	# Born extended (model=velocity, data=Born data, set reflectivity)
+    Acoustic_iso_float.BornExtOpInitFloat(sys.argv)
+
+    # Tomo (model=velocity perturbation, data=tomo data, set background velocity)
+    Acoustic_iso_float.tomoExtOpInitFloat(sys.argv)
 
 	############################# Read files ###################################
 	# Seismic source
 	waveletFile=parObject.getString("sources")
 	wavelet=genericIO.defaultIO.getVector(waveletFile,ndims=3)
-
-	# Coarse-grid model
-	if (spline==1):
-		modelCoarseInitFile=parObject.getString("modelCoarseInit")
-		modelCoarseInit=genericIO.defaultIO.getVector(modelCoarseInitFile,ndims=2)
 
 	# Data
 	dataFile=parObject.getString("data")
@@ -163,8 +156,21 @@ if __name__ == '__main__':
 		fwiProb=Prblm.ProblemL2NonLinear(modelInit,data,fwiInvOp,grad_mask=maskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
 
 	############################# Solver #######################################
-	# Initialize parameters for inversion + solver
-	stop,logFile,saveObj,saveRes,saveGrad,saveModel,prefix,bufferSize,iterSampling,restartFolder,flushMemory,info=inversionUtils.inversionInit(sys.argv)
+	# Stopper
+	stop=Stopper.BasicStopper(niter=parObject.getInt("nIter"))
+
+	# Folder
+	folder=parObject.getString("folder")
+	if (os.path.isdir(folder)==False): os.mkdir(folder)
+	prefix=parObject.getString("prefix","None")
+	if (prefix=="None"): prefix=folder
+	invPrefix=folder+"/"+prefix
+	logFile=invPrefix+"_logFile"
+
+	# Solver recording parameters
+	iterSampling=parObject.getInt("iterSampling",1)
+	bufferSize=parObject.getInt("bufferSize",-1)
+	if (bufferSize<0): bufferSize=None
 
 	# Solver
 	NLCGsolver=NLCG.NLCGsolver(stop,logger=logger(logFile))
@@ -175,10 +181,10 @@ if __name__ == '__main__':
 		NLCGsolver.stepper.alpha=initStep
 
 	# Solver
-	NLCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
+	NLCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling)
 
 	# Run solver
-	NLCGsolver.run(fwiProb,verbose=info)
+	NLCGsolver.run(fwiProb,verbose=True)
 
 	print("-------------------------------------------------------------------")
 	print("--------------------------- All done ------------------------------")

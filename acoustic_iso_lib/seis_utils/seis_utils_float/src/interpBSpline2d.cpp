@@ -84,6 +84,30 @@ interpBSpline2d::interpBSpline2d(int zOrder, int xOrder, std::shared_ptr<float1D
 
 }
 
+std::shared_ptr<float1DReg> interpBSpline2d::getZMeshData(){
+    _zMeshDataVector = std::make_shared<float1DReg>(_nData);
+    // Build mesh vectors (1D array) for the fine grid
+    for (int ix=0; ix<_nxData; ix++){
+        for (int iz=0; iz<_nzData; iz++){
+            int i=ix*_nzData+iz;
+            (*_zMeshDataVector->_mat)[i]=(*_zData->_mat)[ix][iz];
+        }
+    }
+    return _zMeshDataVector;
+}
+
+std::shared_ptr<float1DReg> interpBSpline2d::getXMeshData(){
+    _xMeshDataVector = std::make_shared<float1DReg>(_nData);
+    // Build mesh vectors (1D array) for the fine grid
+    for (int ix=0; ix<_nxData; ix++){
+        for (int iz=0; iz<_nzData; iz++){
+            int i=ix*_nzData+iz;
+            (*_xMeshDataVector->_mat)[i]=(*_xData->_mat)[ix][iz];
+        }
+    }
+    return _xMeshDataVector;
+}
+
 interpBSpline2d::interpBSpline2d(int zOrder, int xOrder, std::shared_ptr<float1DReg> zControlPoints, std::shared_ptr<float1DReg> xControlPoints, axis zDataAxis, axis xDataAxis, std::shared_ptr<float1DReg> zParamVector, std::shared_ptr<float1DReg> xParamVector, int scaling, float zTolerance, float xTolerance, int fat){
 
     // B-spline parameters

@@ -63,6 +63,8 @@ if __name__ == '__main__':
 	xParam=splineOp.getXParamVector()
 	zMeshVector=splineOp.getZMesh()
 	xMeshVector=splineOp.getXMesh()
+	zMeshDataVector=splineOp.getZMeshData()
+	xMeshDataVector=splineOp.getXMeshData()
 
 	# Write zParam
 	zParamFile=parObject.getString("zParam","junk")
@@ -87,3 +89,11 @@ if __name__ == '__main__':
 	# Write xMeshVector
 	xMeshVectorFile=parObject.getString("xMeshVector","junk")
 	genericIO.defaultIO.writeVector(xMeshVectorFile,xMeshVector)
+
+	# Write zMeshDataVector (fine grid)
+	zMeshDataVectorFile=parObject.getString("zMeshDataVector","junk")
+	genericIO.defaultIO.writeVector(zMeshDataVectorFile,zMeshDataVector)
+
+	# Write xMeshDataVector
+	xMeshDataVectorFile=parObject.getString("xMeshDataVector","junk")
+	genericIO.defaultIO.writeVector(xMeshDataVectorFile,xMeshDataVector)

@@ -15,7 +15,7 @@ def dsoGpuInit(args):
 	nx=parObject.getInt("nx",0)
 	nExt=parObject.getInt("nExt",0)
 	fat=parObject.getInt("fat",5)
-	zeroShift=parObject.getFloat("zeroShift",0.0)
+	zeroShift=parObject.getFloat("dsoZeroShift",0.0)
 	return nz,nx,nExt,fat,zeroShift
 
 class dsoGpu(Op.Operator):

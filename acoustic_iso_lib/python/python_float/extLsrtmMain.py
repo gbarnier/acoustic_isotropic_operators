@@ -88,7 +88,7 @@ if __name__ == '__main__':
 			print("--- DSO regularization ---")
 			nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
 			dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,zeroShift)
-			invProb=Prblm.ProblemL2LinearReg(modelInit,modelInit,invOp,epsilon,reg_op=dsoOp)
+			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp)
 
 		else:
 			print("--- Regularization that you have required is not supported by our code ---")

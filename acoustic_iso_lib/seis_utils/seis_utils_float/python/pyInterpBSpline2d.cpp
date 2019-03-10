@@ -30,5 +30,9 @@ PYBIND11_MODULE(pyInterpBSpline2d, clsGeneric) {
 
       .def("getXMesh", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getXMesh, "getXMesh")
 
+      .def("getZMeshData", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getZMeshData, "getZMeshData")
+
+      .def("getXMeshData", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getXMeshData, "getXMeshData")
+
   ;
 }

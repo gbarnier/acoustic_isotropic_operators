@@ -52,6 +52,7 @@ if (pybind11_FOUND)
   install( TARGETS pyAcoustic_iso_float_tomo DESTINATION lib/python) # Module for Extended Tomo operator
   install( TARGETS pyAcoustic_iso_float_wemva DESTINATION lib/python) # Module for Extended Wemva operator
   install( FILES Acoustic_iso_float.py DESTINATION lib/python)
+  install( FILES inversionUtils.py DESTINATION lib/python)
 
   # Installing Python executables
   install( FILES nonlinearPythonFloatMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)

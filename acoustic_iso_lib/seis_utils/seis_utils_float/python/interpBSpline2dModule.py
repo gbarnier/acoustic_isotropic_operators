@@ -231,3 +231,15 @@ class bSpline2d(Op.Operator):
 			xMeshVector=self.pyOp.getXMesh()
 			xMeshVector=SepVector.floatVector(fromCpp=xMeshVector)
 		return xMeshVector
+
+	def getZMeshData(self):
+		with pyInterpBSpline2d.ostream_redirect():
+			zMeshDataVector=self.pyOp.getZMeshData()
+			zMeshDataVector=SepVector.floatVector(fromCpp=zMeshDataVector)
+		return zMeshDataVector
+
+	def getXMeshData(self):
+		with pyInterpBSpline2d.ostream_redirect():
+			xMeshDataVector=self.pyOp.getXMeshData()
+			xMeshDataVector=SepVector.floatVector(fromCpp=xMeshDataVector)
+		return xMeshDataVector

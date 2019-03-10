@@ -15,7 +15,7 @@ class interpBSpline2d : public Operator<SEP::float2DReg, SEP::float2DReg> {
 		int _zOrder, _xOrder, _nkz, _nkzSimple, _nkx, _nkxSimple, _nModel, _nData, _nzParamVector, _nxParamVector, _scaling, _nzModel, _nxModel, _nzData, _nxData, _fat;
 		float _okz, _dkz, _dkz2, _dkz3, _fkz, _okx, _dkx, _dkx2, _dkx3, _fkx, _zTolerance, _xTolerance;
 		axis _kzAxis, _kxAxis, _zDataAxis, _xDataAxis;
-		std::shared_ptr<float1DReg> _zControlPoints, _xControlPoints, _zKnots, _xKnots, _zParamVector, _xParamVector, _zMeshVector, _xMeshVector;
+		std::shared_ptr<float1DReg> _zControlPoints, _xControlPoints, _zKnots, _xKnots, _zParamVector, _xParamVector, _zMeshVector, _xMeshVector, _zMeshDataVector, _xMeshDataVector;
 		std::shared_ptr<float2DReg> _zModel, _xModel, _zData, _xData, _scaleVector, _interpSurfaceZ, _interpSurfaceX, _interpSurfaceVel;
 
 	public:
@@ -53,6 +53,8 @@ class interpBSpline2d : public Operator<SEP::float2DReg, SEP::float2DReg> {
 		std::shared_ptr<float2DReg> getScaleVector(){ return _scaleVector;}
 		std::shared_ptr<float1DReg> getZMesh(){ return _zMeshVector;}
 		std::shared_ptr<float1DReg> getXMesh(){ return _xMeshVector;}
+		std::shared_ptr<float1DReg> getZMeshData();
+		std::shared_ptr<float1DReg> getXMeshData();
 
 		// Forward / Adjoint
 		void forward(const bool add, const std::shared_ptr<float2DReg> model, std::shared_ptr<float2DReg> data) const;
