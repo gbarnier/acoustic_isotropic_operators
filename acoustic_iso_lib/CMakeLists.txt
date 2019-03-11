@@ -40,8 +40,7 @@ endif()
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/buffers/external/json)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/buffers/lib)
 
-#Updating the pySolver from remote
-execute_process(COMMAND git submodule update --init --recursive --remote WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/external/genericIO/external/sepVector)
+
 # Finding multithread libraries
 find_package(Threads)
 # Adding TBB library
@@ -58,6 +57,9 @@ add_subdirectory(python/python_float)
 # include folder for Seismic utilities
 add_subdirectory(seis_utils/seis_utils_double/)
 add_subdirectory(seis_utils/seis_utils_float/)
+
+# include folder for pySolver
+add_subdirectory(external/pySolver/GenericSolver/)
 
 include(InstallRequiredSystemLibraries)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
