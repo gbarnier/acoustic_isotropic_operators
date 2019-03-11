@@ -59,7 +59,7 @@ add_subdirectory(seis_utils/seis_utils_double/)
 add_subdirectory(seis_utils/seis_utils_float/)
 
 # include folder for pySolver
-add_subdirectory(external/pySolver/GenericSolver/)
+add_subdirectory(external/python-solver/GenericSolver/)
 
 include(InstallRequiredSystemLibraries)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
