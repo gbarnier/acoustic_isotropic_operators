@@ -102,7 +102,7 @@ void wemvaExtShotsGpu::forward(const bool add, const std::shared_ptr<double2DReg
 	}
 
 	// Launch Wemva forward
-	#pragma omp parallel for num_threads(_nGpu)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
@@ -191,7 +191,7 @@ void wemvaExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<do
 	}
 
 	// Launch wemva forward
-	#pragma omp parallel for num_threads(_nGpu)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
@@ -296,7 +296,7 @@ void wemvaExtShotsGpu::adjoint(const bool add, std::shared_ptr<double2DReg> mode
 	}
 
 	// Launch Born adjoint
-	#pragma omp parallel for num_threads(_nGpu)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
@@ -381,7 +381,7 @@ void wemvaExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double2D
 	}
 
 	// Launch wemva adjoint
-	#pragma omp parallel for num_threads(_nGpu)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();

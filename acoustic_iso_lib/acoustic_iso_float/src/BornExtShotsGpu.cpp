@@ -97,7 +97,7 @@ void BornExtShotsGpu::forward(const bool add, const std::shared_ptr<float3DReg> 
 	}
 
 	// Launch Born forward
-	#pragma omp parallel for num_threads(_nGpu)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
@@ -181,7 +181,7 @@ void BornExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<flo
 	}
 
 	// Launch Born forward
-	#pragma omp parallel for num_threads(_nGpu)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
@@ -287,7 +287,7 @@ void BornExtShotsGpu::adjoint(const bool add, std::shared_ptr<float3DReg> model,
 	}
 
 	// Launch Born forward
-	#pragma omp parallel for num_threads(_nGpu)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
@@ -385,7 +385,7 @@ void BornExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float3DRe
 	}
 
 	// Launch Born adjoint
-	#pragma omp parallel for num_threads(_nGpu)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
 	for (int iShot=0; iShot<_nShot; iShot++){
 
 		int iGpu = omp_get_thread_num();
