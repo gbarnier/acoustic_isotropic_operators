@@ -62,9 +62,6 @@ if __name__ == '__main__':
 	print("iShot=",iShot)
 	print("iShotRecGrid=",iShotRecGrid)
 
-	# iShot=int((xShot-oShot)/dShot)
-	# iShotRecGrid=oShotGrid+iShot*dShotGrid
-
 	# If user provides residual data instead of predicted data
 	if(res==1):
 		for iIter in range(nIter):

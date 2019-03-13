@@ -20,7 +20,11 @@ PYBIND11_MODULE(pyInterpBSpline1d, clsGeneric) {
 
       .def("adjoint", (void (interpBSpline1d::*)(const bool, const std::shared_ptr<float1DReg>, std::shared_ptr<float1DReg>)) &interpBSpline1d::adjoint, "Adjoint")
 
-      .def("getZMesh", (std::shared_ptr<float1DReg> (interpBSpline1d::*)()) &interpBSpline1d::getZMesh, "getZMesh")
+      .def("getZMeshModel", (std::shared_ptr<float1DReg> (interpBSpline1d::*)()) &interpBSpline1d::getZMeshModel, "getZMeshModel")
+
+      .def("getZMeshData", (std::shared_ptr<float1DReg> (interpBSpline1d::*)()) &interpBSpline1d::getZMeshData, "getZMeshData")
+
+      .def("getZControlPoints", (std::shared_ptr<float1DReg> (interpBSpline1d::*)()) &interpBSpline1d::getZControlPoints, "getZControlPoints")        
 
   ;
 }

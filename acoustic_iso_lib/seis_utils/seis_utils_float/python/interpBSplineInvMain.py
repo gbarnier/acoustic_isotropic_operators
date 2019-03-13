@@ -2,7 +2,7 @@
 import genericIO
 import SepVector
 import Hypercube
-import interpBSpline2dModule
+import interpBSplineModule
 import numpy as np
 import time
 import sys
@@ -22,35 +22,50 @@ if __name__ == '__main__':
 	io=genericIO.pyGenericIO.ioModes(sys.argv)
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
-	interp=parObject.getString("interp","spline")
+	nDim=parObject.getInt("nDim")
 
-	# Spline interpolation
-	if (interp=="spline"):
+	# 1d spline
+	if (nDim==1):
 
-		# Spline initialization
-		model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSpline2dModule.bSpline2dInit(sys.argv)
+		# Initialize 1d spline
+		model,data,zOrder,zSplineMesh,zDataAxis,nzParam,scaling,zTolerance,fat=interpBSplineModule.bSpline1dInit(sys.argv)
 
-		# Read starting model
-		modelStartFile=parObject.getString("modelStart","None")
-		if (modelStartFile=="None"):
-			modelStart=model
-			modelStart.scale(0.0)
-		else:
-			modelStart=genericIO.defaultIO.getVector(modelStartFile,ndims=2)
+		# Construct operator
+		splineOp=interpBSplineModule.bSpline1d(model,data,zOrder,zSplineMesh,zDataAxis,nzParam,scaling,zTolerance,fat)
 
-		# Read data
-		dataFile=parObject.getString("data")
-		data=genericIO.defaultIO.getVector(dataFile,ndims=1)
+	# 2d spline
+	if (nDim==2):
 
-		# Spline instanciation
-		invOp=interpBSpline2dModule.bSpline2d(model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+		# Initialize 2d spline
+		model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSplineModule.bSpline2dInit(sys.argv)
 
+		# Construc 2d spline operator
+		splineOp=interpBSplineModule.bSpline2d(model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+
+	# 3d spline
+	if (nDim==3):
+
+		# Initialize operator
+		model,data,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat=interpBSplineModule.bSpline3dInit(sys.argv)
+
+		# Construct operator
+		splineOp=interpBSplineModule.bSpline3d(model,data,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
+
+	# Read starting model
+	modelStartFile=parObject.getString("modelStart","None")
+	if (modelStartFile=="None"):
+		modelStart=model
+		modelStart.scale(0.0)
 	else:
-		raise TypeError("ERROR! Please provide an interpolation method")
+		modelStart=genericIO.defaultIO.getVector(modelStartFile,ndims=nDim)
+
+	# Read data
+	dataFile=parObject.getString("data")
+	data=genericIO.defaultIO.getVector(dataFile,ndims=nDim)
 
 	############################## Problem #####################################
 	# Problem
-	invProb=Prblm.ProblemL2Linear(modelStart,data,invOp)
+	invProb=Prblm.ProblemL2Linear(modelStart,data,splineOp)
 
 	############################## Solver ######################################
 	# Stopper

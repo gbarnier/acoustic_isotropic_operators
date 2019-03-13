@@ -1,5 +1,5 @@
 #include <string>
-#include <float2DReg.h>
+#include <float1DReg.h>
 #include <iostream>
 #include "interpBSpline1d.h"
 #include <omp.h>
@@ -13,7 +13,7 @@ interpBSpline1d::interpBSpline1d(int zOrder, std::shared_ptr<float1DReg> zModel,
     _scaling = scaling;
 
     // Model
-    _zModel=zModel;
+    _zModel = zModel;
     _nzModel = _zModel->getHyper()->getAxis(1).n;
     _nModel = _nzModel;
     _scaleVector = std::make_shared<float1DReg>(_nzModel);
@@ -26,7 +26,7 @@ interpBSpline1d::interpBSpline1d(int zOrder, std::shared_ptr<float1DReg> zModel,
     _zDataAxis = zDataAxis; // z-coordinates of data points assumed to be uniformly distributed
     _nzData = _zDataAxis.n;
     _nData =  _nzData;
-    _zData = std::make_shared<float1DReg>(_nData);
+    _zData = std::make_shared<float1DReg>(_nzData);
     for (int izData=0; izData<_nzData; izData++){
         (*_zData->_mat)[izData]=_zDataAxis.o+izData*_zDataAxis.d;
     }
@@ -44,7 +44,7 @@ interpBSpline1d::interpBSpline1d(int zOrder, std::shared_ptr<float1DReg> zModel,
     _zParamVector = computeParamVectorZ();
 
     // Compute scale for amplitude balancing
-    computeScaleVector();
+    if (scaling == 1){ computeScaleVector();}
 
 }
 

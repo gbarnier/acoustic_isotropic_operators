@@ -16,23 +16,21 @@ PYBIND11_MODULE(pyInterpBSpline2d, clsGeneric) {
   py::class_<interpBSpline2d, std::shared_ptr<interpBSpline2d>>(clsGeneric,"interpBSpline2d")
       .def(py::init<int,int,std::shared_ptr<float1DReg>,std::shared_ptr<float1DReg>,axis,axis,int,int,int,float,float,int>(), "Initialize a interpBSpline2d")
 
-      .def(py::init<int,int,std::shared_ptr<float1DReg>,std::shared_ptr<float1DReg>,axis,axis,std::shared_ptr<float1DReg>,std::shared_ptr<float1DReg>,int,float,float,int>(), "Initialize a interpBSpline2d")
-
       .def("forward", (void (interpBSpline2d::*)(const bool, const std::shared_ptr<float2DReg>, std::shared_ptr<float2DReg>)) &interpBSpline2d::forward, "Forward")
 
       .def("adjoint", (void (interpBSpline2d::*)(const bool, const std::shared_ptr<float2DReg>, std::shared_ptr<float2DReg>)) &interpBSpline2d::adjoint, "Adjoint")
 
-      .def("getZParamVector", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getZParamVector, "getZParamVector")
+      .def("getZMeshModel", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getZMeshModel, "getZMeshModel")
 
-      .def("getXParamVector", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getXParamVector, "getXParamVector")
-
-      .def("getZMesh", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getZMesh, "getZMesh")
-
-      .def("getXMesh", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getXMesh, "getXMesh")
+      .def("getXMeshModel", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getXMeshModel, "getXMeshModel")
 
       .def("getZMeshData", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getZMeshData, "getZMeshData")
 
       .def("getXMeshData", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getXMeshData, "getXMeshData")
+
+      .def("getZControlPoints", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getZControlPoints, "getZControlPoints")
+
+      .def("getXControlPoints", (std::shared_ptr<float1DReg> (interpBSpline2d::*)()) &interpBSpline2d::getXControlPoints, "getXControlPoints")
 
   ;
 }

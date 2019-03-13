@@ -14,7 +14,7 @@ class interpBSpline1d : public Operator<SEP::float1DReg, SEP::float1DReg> {
 		int _zOrder, _nkz, _nkzSimple, _nModel, _nData, _nzParamVector, _scaling, _nzModel, _nzData, _fat;
 		float _okz, _dkz, _dkz2, _dkz3, _fkz, _zTolerance;
 		axis _kzAxis, _zDataAxis;
-		std::shared_ptr<float1DReg> _zKnots, _zParamVector, _zMeshVector, _zModel, _zData, _scaleVector, _interpCurve;
+		std::shared_ptr<float1DReg> _zKnots, _zParamVector, _zMeshVector, _zModel, _zData, _scaleVector;
 
 	public:
 
@@ -31,7 +31,11 @@ class interpBSpline1d : public Operator<SEP::float1DReg, SEP::float1DReg> {
 		void computeScaleVector();
 
 		// Accessors
-		std::shared_ptr<float1DReg> getZMesh(){ return _zModel;}
+		std::shared_ptr<float1DReg> getZParamVector(){ return _zParamVector; }
+		std::shared_ptr<float1DReg> getZKnots(){ return _zKnots; }
+		std::shared_ptr<float1DReg> getZMeshModel(){return _zModel;}
+		std::shared_ptr<float1DReg> getZMeshData(){return _zData;}
+		std::shared_ptr<float1DReg> getZControlPoints(){return _zModel;}
 
 		// Forward / Adjoint
 		void forward(const bool add, const std::shared_ptr<float1DReg> model, std::shared_ptr<float1DReg> data) const;
