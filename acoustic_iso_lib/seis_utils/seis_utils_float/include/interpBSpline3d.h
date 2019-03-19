@@ -17,6 +17,7 @@ class interpBSpline3d : public Operator<SEP::float3DReg, SEP::float3DReg> {
 		axis _kzAxis, _kxAxis, _kyAxis, _zDataAxis, _xDataAxis, _yDataAxis;
 		std::shared_ptr<float1DReg> _zControlPoints, _xControlPoints, _yControlPoints, _zKnots, _xKnots, _yKnots, _zParamVector, _xParamVector, _yParamVector, _zMeshModelVector, _xMeshModelVector, _yMeshModelVector, _zMeshDataVector, _xMeshDataVector, _yMeshDataVector, _zData, _xData, _yData;
 		std::shared_ptr<float3DReg> _scaleVector;
+		std::vector<std::vector<int>> _zDataIndex, _xDataIndex, _yDataIndex, _zModelIndex, _xModelIndex, _yModelIndex;
 
 	public:
 
@@ -30,6 +31,13 @@ class interpBSpline3d : public Operator<SEP::float3DReg, SEP::float3DReg> {
 		std::shared_ptr<float1DReg> computeParamVectorZ();
 		std::shared_ptr<float1DReg> computeParamVectorX();
 		std::shared_ptr<float1DReg> computeParamVectorY();
+
+		void computeZDataIndex();
+		void computeXDataIndex();
+		void computeYDataIndex();
+		void computeZModelIndex();
+		void computeXModelIndex();
+		void computeYModelIndex();	
 
 		// Scaling vector
 		std::shared_ptr<float3DReg> computeScaleVector();

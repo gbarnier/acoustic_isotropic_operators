@@ -110,6 +110,7 @@ if __name__ == '__main__':
 		# 2d spline
 		if (nDim>1):
 
+
 			# Write zMeshVector
 			xMeshModel=splineOp.getXMeshModel()
 			xMeshModelFile=parObject.getString("xMeshModel","junk")

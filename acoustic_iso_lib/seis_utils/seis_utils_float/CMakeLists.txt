@@ -33,18 +33,14 @@ link_directories(${Generic-cpp_BINARY_DIR}
 
 # Compiling the project library
 add_library(SEIS_UTILS_FLOAT_LIB ${SOURCE_NL})
-# Compiling the project executables (if any)
 
-# B-spline interpolation program
-# add_executable(interpSplineTestMain ${SRC_DIR}/interpSplineTestMain.cpp)
-# target_link_libraries(interpSplineTestMain genericCpp OpenMP::OpenMP_CXX)
 
-# Data muting program
-# add_executable(dataTaperDoubleMain ${SRC_DIR}/dataTaperDoubleMain.cpp)
-# target_link_libraries(dataTaperDoubleMain genericCpp OpenMP::OpenMP_CXX)
+add_executable(dataCompMain ${SRC_DIR}/dataCompMain.cpp)
+target_link_libraries(dataCompMain SEIS_UTILS_FLOAT_LIB genericCpp OpenMP::OpenMP_CXX)
+
+
 
 #Adding libray and header files to install destination
 install(TARGETS SEIS_UTILS_FLOAT_LIB DESTINATION lib)
-# install(TARGETS interpSplineTestMain DESTINATION bin)
-# install(TARGETS dataTaperDoubleMain DESTINATION bin)
-# install(FILES ${HEADERS} DESTINATION include)
+install(TARGETS dataCompMain DESTINATION bin)
+install(FILES ${HEADERS} DESTINATION include)

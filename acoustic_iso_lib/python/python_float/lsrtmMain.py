@@ -9,7 +9,7 @@ import os
 
 # Modeling operators
 import Acoustic_iso_float
-import interpBSpline2dModule
+import interpBSplineModule
 import dataTaperModule
 import spatialDerivModule
 
@@ -18,6 +18,7 @@ import pyOperator as pyOp
 import pyLCGsolver as LCG
 import pyProblem as Prblm
 import pyStopperBase as Stopper
+import inversionUtils
 from sys_util import logger
 
 # Template for linearized waveform inversion workflow
@@ -41,7 +42,7 @@ if __name__ == '__main__':
 	############################# Initialization ###############################
 	# Spline
 	if (spline==1):
-		modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSpline2dModule.bSpline2dInit(sys.argv)
+		modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSplineModule.bSpline2dInit(sys.argv)
 
 	# Data taper
 	if (dataTaper==1):
@@ -76,7 +77,7 @@ if __name__ == '__main__':
 	# Spline
 	if (spline==1):
 		print("--- Using spline interpolation ---")
-		splineOp=interpBSpline2dModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 
 	# Data taper
 	if (dataTaper==1):
@@ -139,20 +140,12 @@ if __name__ == '__main__':
 		invProb=Prblm.ProblemL2Linear(modelInit,data,invOp)
 
 	############################## Solver ######################################
-	# Stopper
-	stop=Stopper.BasicStopper(niter=parObject.getInt("nIter"))
-
-	# Folder
-	folder=parObject.getString("folder")
-	if (os.path.isdir(folder)==False): os.mkdir(folder)
-	prefix=parObject.getString("prefix","None")
-	if (prefix=="None"): prefix=folder
-	invPrefix=folder+"/"+prefix
-	logFile=invPrefix+"_logFile"
+	# Initialize parameters for inversion + solver
+	stop,logFile,saveObj,saveRes,saveGrad,saveModel,prefix,bufferSize,iterSampling,restartFolder,flushMemory,info=inversionUtils.inversionInit(sys.argv)
 
 	# Solver
 	LCGsolver=LCG.LCGsolver(stop,logger=logger(logFile))
-	LCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_sampling=1)
+	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver
 	LCGsolver.run(invProb,verbose=True)

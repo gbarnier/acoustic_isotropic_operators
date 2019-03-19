@@ -9,7 +9,7 @@ import os
 
 # Modeling operators
 import Acoustic_iso_float
-import interpBSpline2dModule
+import interpBSplineModule
 import dataTaperModule
 import spatialDerivModule
 import dsoGpuModule
@@ -19,6 +19,7 @@ import pyOperator as pyOp
 import pyLCGsolver as LCG
 import pyProblem as Prblm
 import pyStopperBase as Stopper
+import inversionUtils
 from sys_util import logger
 
 # Template for linearized waveform inversion workflow
@@ -40,6 +41,10 @@ if __name__ == '__main__':
 	print("-------------------------------------------------------------------\n")
 
 	############################# Initialization ###############################
+	# Spline
+	if (spline==1):
+		modelCoarseInit,modelFineInit,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat=interpBSplineModule.bSpline3dInit(sys.argv)
+
 	# Data taper
 	if (dataTaper==1):
 		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset=dataTaperModule.dataTaperInit(sys.argv)
@@ -50,9 +55,17 @@ if __name__ == '__main__':
 	############################# Read files ###################################
 	# Read initial model
 	modelInitFile=parObject.getString("modelInit","None")
-	if (modelInitFile=="None"):
-		modelInit=modelFineInit.clone()
-		modelInit.scale(0.0)
+	if (spline==1):
+		if (modelInitFile=="None"):
+			modelInit=modelCoarseInit.clone()
+			modelInit.scale(0.0)
+		else:
+			modelInit=genericIO.defaultIO.getVector(modelInitFile,ndims=3)
+
+	else:
+		if (modelInitFile=="None"):
+			modelInit=modelFineInit.clone()
+			modelInit.scale(0.0)
 
 	# Data
 	dataFile=parObject.getString("data")
@@ -63,6 +76,11 @@ if __name__ == '__main__':
 	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
 	invOp=BornExtOp
 
+	# Spline
+	if (spline==1):
+		print("--- Using spline interpolation ---")
+		splineOp=interpBSplineModule.bSpline3d(modelCoarseInit,modelFineInit,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
+
 	# Data taper
 	if (dataTaper==1):
 		print("--- Using data tapering ---")
@@ -70,7 +88,15 @@ if __name__ == '__main__':
 		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
+
+	# Concatenate operators
+	if (spline==1 and dataTaper==0):
+		invOp=pyOp.ChainOperator(splineOp,BornExtOp)
+	if (spline==0 and dataTaper==1):
 		invOp=pyOp.ChainOperator(BornExtOp,dataTaperOp)
+	if (spline==1 and dataTaper==1):
+		invOpTemp=pyOp.ChainOperator(splineOp,BornExtOp)
+		invOp=pyOp.ChainOperator(invOpTemp,dataTaperOp)
 
 	############################# Regularization ###############################
 	# Regularization
@@ -106,25 +132,12 @@ if __name__ == '__main__':
 		invProb=Prblm.ProblemL2Linear(modelInit,data,invOp)
 
 	############################## Solver ######################################
-	# Stopper
-	stop=Stopper.BasicStopper(niter=parObject.getInt("nIter"))
-
-	# Folder
-	folder=parObject.getString("folder")
-	if (os.path.isdir(folder)==False): os.mkdir(folder)
-	prefix=parObject.getString("prefix","None")
-	if (prefix=="None"): prefix=folder
-	invPrefix=folder+"/"+prefix
-	logFile=invPrefix+"_logFile"
-
-	# Solver recording parameters
-	iterSampling=parObject.getInt("iterSampling",1)
-	bufferSize=parObject.getInt("bufferSize",-1)
-	if (bufferSize<0): bufferSize=None
+	# Initialize parameters for inversion + solver
+	stop,logFile,saveObj,saveRes,saveGrad,saveModel,prefix,bufferSize,iterSampling,restartFolder,flushMemory,info=inversionUtils.inversionInit(sys.argv)
 
 	# Solver
 	LCGsolver=LCG.LCGsolver(stop,logger=logger(logFile))
-	LCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling)
+	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver
 	LCGsolver.run(invProb,verbose=True)

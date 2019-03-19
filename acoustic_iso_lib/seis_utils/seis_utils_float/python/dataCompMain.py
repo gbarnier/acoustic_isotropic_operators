@@ -18,24 +18,21 @@ if __name__ == '__main__':
 
 	# Read true data
 	obsDataFile=parObject.getString("obsIn")
-	obsData=genericIO.defaultIO.getVector(obsDataFile,ndims=3)
+	obsData=genericIO.defaultIO.getVector(obsDataFile,ndims=2)
 	obsDataNp=obsData.getNdArray()
 
 	# Read data residuals or predicted data
 	modelFile=parObject.getString("model")
-	model=genericIO.defaultIO.getVector(modelFile,ndims=4)
+	model=genericIO.defaultIO.getVector(modelFile,ndims=3)
 	modelNp=model.getNdArray()
 
 	# Iteration
-	oIter=model.getHyper().axes[3].o
-	dIter=model.getHyper().axes[3].d
-	nIter=model.getHyper().axes[3].n
+	oIter=model.getHyper().axes[2].o
+	dIter=model.getHyper().axes[2].d
+	nIter=model.getHyper().axes[2].n
 	iterAxis=Hypercube.axis(n=nIter,o=oIter,d=dIter,label="Iteration #")
 
 	# Shot
-	oShot=obsData.getHyper().axes[2].o
-	dShot=obsData.getHyper().axes[2].d
-	nShot=obsData.getHyper().axes[2].n
 	oShotGrid=parObject.getInt("xSource")
 	dShotGrid=parObject.getInt("spacingShots")
 
@@ -51,21 +48,17 @@ if __name__ == '__main__':
 	nts=obsData.getHyper().axes[0].n
 	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts,label="Time [s]")
 
-	# Find indices on the "shot grid" and "receiver grid"
-
-	xShot=oShot+dShot*iShot # Shot position [km]
-	iShotRecGrid=int((xShot-oRec)/dRec)
-	xShotNew=oRec+iShotRecGrid*dRec
+	# Find indices on the "receiver grid"
+	iShotRecGrid=oShotGrid+iShot*dShotGrid
+	xShot=oRec+iShotRecGrid*dRec
 	print("xShot=",xShot)
-	print("oShot=",oShot)
-	print("dShot=",dShot)
 	print("iShot=",iShot)
 	print("iShotRecGrid=",iShotRecGrid)
 
 	# If user provides residual data instead of predicted data
 	if(res==1):
 		for iIter in range(nIter):
-			modelNp[iIter][iShot][:][:]=modelNp[iIter][iShot][:][:]+obsDataNp[iShot][:][:]
+			modelNp[iIter][:][:]=modelNp[iIter][:][:]+obsDataNp[:][:]
 
 	# Find the number of traces for each side
 	if(offset=="pos"):
@@ -86,42 +79,41 @@ if __name__ == '__main__':
 	superShotGatherNp=superShotGather.getNdArray()
 
 	# Allocate observed data
-	obsHyper=Hypercube.hypercube(axes=[timeAxis,recAxis])
-	obs=SepVector.getSepVector(obsHyper)
-	obsNp=obs.getNdArray()
-	predHyper=Hypercube.hypercube(axes=[timeAxis,recAxis,iterAxis])
-	pred=SepVector.getSepVector(predHyper)
-	predNp=pred.getNdArray()
+	# obsHyper=Hypercube.hypercube(axes=[timeAxis,recAxis])
+	# obs=SepVector.getSepVector(obsHyper)
+	# obsNp=obs.getNdArray()
+	# predHyper=Hypercube.hypercube(axes=[timeAxis,recAxis,iterAxis])
+	# pred=SepVector.getSepVector(predHyper)
+	# predNp=pred.getNdArray()
 
 	# Copy value to super shot gather
 	if (offset=="pos"):
 		for iIter in range(nIter):
 			for iRec in range(nRecNew):
 				for its in range(nts):
-					superShotGatherNp[iIter][iRec][its]=obsDataNp[iShot][iShotRecGrid+nRecNew-iRec][its]
-					superShotGatherNp[iIter][iRec+nRecNew+1][its]=modelNp[iIter][iShot][iShotRecGrid+iRec+1][its]
-			superShotGatherNp[iIter][nRecNew][:]=obsDataNp[iShot][iShotRecGrid][:]
-			predNp[iIter][:][:]=modelNp[iIter][iShot][:][:]
-			# obsNp[iIter][:][:]=obsDataNp[iShot][:][:]
+					superShotGatherNp[iIter][iRec][its]=obsDataNp[iShotRecGrid+nRecNew-iRec][its]
+					superShotGatherNp[iIter][iRec+nRecNew+1][its]=modelNp[iIter][iShotRecGrid+iRec+1][its]
+			superShotGatherNp[iIter][nRecNew][:]=obsDataNp[iShotRecGrid][:]
+			# predNp[iIter][:][:]=modelNp[iIter][:][:]
 
 	else:
 		for iIter in range(nIter):
 			for iRec in range(nRecNew):
-				superShotGatherNp[iIter][iRec][:]=obsDataNp[iShot][iRec][:]
-				superShotGatherNp[iIter][iRec+nRecNew+1][:]=modelNp[iIter][iShot][iShotRecGrid-iRec-1][:]
-			superShotGatherNp[iIter][nRecNew][:]=obsDataNp[iShot][iShotRecGrid][:]
-			predNp[iIter][:][:]=modelNp[iIter][iShot][:][:]
+				superShotGatherNp[iIter][iRec][:]=obsDataNp[iRec][:]
+				superShotGatherNp[iIter][iRec+nRecNew+1][:]=modelNp[iIter][iShotRecGrid-iRec-1][:]
+			superShotGatherNp[iIter][nRecNew][:]=obsDataNp[iShotRecGrid][:]
+			# predNp[iIter][:][:]=modelNp[iIter][:][:]
 
-	obsNp[:][:]=obsDataNp[iShot][:][:]
+	# obsNp[:][:]=obsDataNp[iShot][:][:]
 
 	# Write super shot gather
 	superShotGatherFile=parObject.getString("data")
 	genericIO.defaultIO.writeVector(superShotGatherFile,superShotGather)
 
 	# Write observed shot gather
-	obsOutFile=parObject.getString("obsOut")
-	genericIO.defaultIO.writeVector(obsOutFile,obs)
-
-	# Write predicted shot gather
-	predFile=parObject.getString("pred")
-	genericIO.defaultIO.writeVector(predFile,pred)
+	# obsOutFile=parObject.getString("obsOut")
+	# genericIO.defaultIO.writeVector(obsOutFile,obs)
+	#
+	# # Write predicted shot gather
+	# predFile=parObject.getString("pred")
+	# genericIO.defaultIO.writeVector(predFile,pred)

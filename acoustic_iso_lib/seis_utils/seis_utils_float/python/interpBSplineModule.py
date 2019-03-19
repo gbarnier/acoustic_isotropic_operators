@@ -311,14 +311,8 @@ def bSpline2dInit(args):
 	dataHyper=Hypercube.hypercube(axes=[zDataAxis,xDataAxis])
 	data=SepVector.getSepVector(dataHyper)
 
-	print("nzMesh=",zSplineMesh.getHyper().axes[0].n)
-	print("ozMesh=",zSplineMesh.getHyper().axes[0].o)
-	print("dzMesh=",zSplineMesh.getHyper().axes[0].d)
-	print("nxMesh=",xSplineMesh.getHyper().axes[0].n)
-	print("oxMesh=",xSplineMesh.getHyper().axes[0].o)
-	print("dxMesh=",xSplineMesh.getHyper().axes[0].d)
-
 	return model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat
+
 class bSpline2d(Op.Operator):
 	def __init__(self,domain,range,zOrder,xOrder,zControlPoints,xControlPoints,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat):
 		self.setDomainRange(domain,range)
@@ -417,6 +411,16 @@ def bSpline3dInit(args):
 	# Read data positions
 	dataFile=parObject.getString("vel")
 	dataFile=genericIO.defaultIO.getVector(dataFile)
+	dataHyper=dataFile.getHyper()
+	if (dataHyper.getNdim() < 3):
+		nExt=parObject.getInt("nExt")
+		extension=parObject.getString("extension")
+		if (extension=="time"):	dExt=parObject.getFloat("dts")
+		if (extension=="offset"): dExt=parObject.getFloat("dx")
+		oExt=-(nExt-1)/2*dExt
+		extAxis=Hypercube.axis(n=nExt,o=oExt,d=dExt)
+		dataHyper.addAxis(extAxis)
+	dataFile=SepVector.getSepVector(dataHyper)
 
 	# z-axis
 	zDataAxis=dataFile.getHyper().axes[0]

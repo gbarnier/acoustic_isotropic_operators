@@ -572,9 +572,6 @@ void interpBSpline2d::adjoint(const bool add, std::shared_ptr<float2DReg> model,
     // Model can be on an irregular grid
     if (!add) model->scale(0.0);
 
-    std::cout << "_scaleVector max" << _scaleVector->max() << std::endl;
-    std::cout << "_scaleVector min" << _scaleVector->min() << std::endl;
-
     #pragma omp parallel for collapse(2)
     for (int ixModel=0; ixModel<_nxModel; ixModel++){
         for (int izModel=0; izModel<_nzModel; izModel++){

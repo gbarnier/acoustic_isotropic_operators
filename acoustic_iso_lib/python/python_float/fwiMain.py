@@ -9,7 +9,7 @@ import os
 
 # Modeling operators
 import Acoustic_iso_float
-import interpBSpline2dModule
+import interpBSplineModule
 import dataTaperModule
 import spatialDerivModule
 
@@ -43,7 +43,7 @@ if __name__ == '__main__':
 	############################# Initialization ###############################
 	# Spline
 	if (spline==1):
-		modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSpline2dModule.bSpline2dInit(sys.argv)
+		modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSplineModule.bSpline2dInit(sys.argv)
 
 	# Data taper
 	if (dataTaper==1):
@@ -85,7 +85,7 @@ if __name__ == '__main__':
 	if (spline==1):
 		print("--- Using spline interpolation ---")
 		modelInit=modelCoarseInit
-		splineOp=interpBSpline2dModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
 
 	# Data taper
