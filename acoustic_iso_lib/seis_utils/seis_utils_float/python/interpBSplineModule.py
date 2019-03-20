@@ -68,7 +68,6 @@ def bSpline1dInit(args):
 	zTolerance=parObject.getFloat("zTolerance",0.25)
 	fat=parObject.getInt("fat",5)
 	zSub=parObject.getInt("zSub",1)
-	print("nzParam",nzParam)
 	# Read data positions
 	dataFile=parObject.getString("vel")
 	dataFile=genericIO.defaultIO.getVector(dataFile)
@@ -475,7 +474,6 @@ def bSpline3dInit(args):
 		zPositions.append(fzMesh)
 		zSampling=parObject.getFloats("zSampling",[])
 		zMesh=parObject.getString("zMeshType","irreg")
-
 		# Create mesh
 		zSplineMeshNpTemp=generateSplineMesh1d(zPositions,zSampling,zSub,zMesh,zMeshTolerance,nzDataNf)
 		zMeshAxis=Hypercube.axis(n=zSplineMeshNpTemp.size)

@@ -112,9 +112,20 @@ if __name__ == '__main__':
 		# Dso
 		elif (regType=="dso"):
 			print("--- DSO regularization ---")
-			nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
-			dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,zeroShift)
-			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp)
+
+			if (spline==1):
+				# If using spline, the model dimensions change, you apply the DSO on the coarse grid
+				nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
+				nz=modelInit.getHyper().axes[0].n
+				nx=modelInit.getHyper().axes[1].n
+				nExt=modelInit.getHyper().axes[2].n
+				fat=0
+				dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,zeroShift)
+				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp)
+			else:
+				nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
+				dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,zeroShift)
+				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp)
 
 		else:
 			print("--- Regularization that you have required is not supported by our code ---")
