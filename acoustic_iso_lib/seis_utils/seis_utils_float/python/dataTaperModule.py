@@ -1,6 +1,7 @@
 #Python module encapsulating PYBIND11 module
 import pyOperator as Op
 import pyDataTaper
+import ShotRecTaperModule
 import genericIO
 import SepVector
 import Hypercube
@@ -24,8 +25,10 @@ def dataTaperInit(args):
 	expOffset=parObject.getFloat("expOffset",2)
 	taperWidthOffset=parObject.getFloat("taperWidthOffset",0)
 	reverseOffset=parObject.getInt("reverseOffset",0)
-
-	return t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset
+	#Adding shot and receiver tapering
+	shotRecTaper=parObject.getInt("shotRecTaper",1)
+	taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec=ShotRecTaperModule.ShotRecTaperInit(args)
+	return t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec
 
 class datTaper(Op.Operator):
 
@@ -58,25 +61,38 @@ class datTaper(Op.Operator):
 			self.pyOp = pyDataTaper.dataTaper(maxOffset,expOffset,taperWidthOffset,dataHyper,reverseOffset)
 		if (time==0 and offset==0):
 			self.pyOp = pyDataTaper.dataTaper(dataHyper)
-
+		#Checking if ShotRecTaper is requested and instantiating it
+		shotRecTaper=args[15]
+		if(shotRecTaper):
+			taperShotWidth=args[16]
+			taperRecWidth=args[17]
+			expShot=args[18]
+			expRec=args[19]
+			edgeValShot=args[20]
+			edgeValRec=args[21]
+			self.ShotRecTaperOp=ShotRecTaperModule.ShotRecTaper(domain,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec)
+			#Creating temporary vector to apply chain of operators
+			self.tmp_data_vec = domain.clone()
 		return
 
 	def forward(self,add,model,data):
-		if("getCpp" in dir(model)):
-			model = model.getCpp()
+		#Applying ShotRecTaper operator if present
+		if("ShotRecTaperOp" in dir(self)):
+			self.ShotRecTaperOp.forward(False,model,self.tmp_data_vec)
+			model = self.tmp_data_vec.getCpp()
+		else:
+			if("getCpp" in dir(model)):
+				model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
+		#Applying dataTaper operator
 		with pyDataTaper.ostream_redirect():
 			self.pyOp.forward(add,model,data)
 		return
 
 	def adjoint(self,add,model,data):
-		if("getCpp" in dir(model)):
-			model = model.getCpp()
-		if("getCpp" in dir(data)):
-			data = data.getCpp()
-		with pyDataTaper.ostream_redirect():
-			self.pyOp.adjoint(add,model,data)
+		"""Self-adjoint operator"""
+		self.forward(add,data,model)
 		return
 
 	def getTaperMask(self):

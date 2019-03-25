@@ -69,6 +69,7 @@ if (pybind11_FOUND)
   install( FILES spatialDerivModule.py DESTINATION lib/python)
   install( TARGETS pyInterpRbf1d DESTINATION lib/python)
   install( FILES interpRbf1dModule.py DESTINATION lib/python)
+  install( FILES ShotRecTaperModule.py DESTINATION lib/python)
 
   # Installing Python executables
   install( FILES dataTaperMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
