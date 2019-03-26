@@ -101,9 +101,9 @@ class ShotRecTaper(Op.Operator):
 		modelNp = model.getNdArray()
 		if(self.taperShotWidth > 0. and self.taperRecWidth > 0.):
 			dataNp += modelNp*self.ShotTaperFunc*self.RecTaperFunc
-		elif(self.taperShotWidth > 0. and self.taperRecWidth > 0.):
+		elif(self.taperShotWidth > 0. and self.taperRecWidth == 0.):
 			dataNp += modelNp*self.ShotTaperFunc
-		elif(self.taperShotWidth > 0. and self.taperRecWidth > 0.):
+		elif(self.taperShotWidth == 0. and self.taperRecWidth > 0.):
 			dataNp += modelNp*self.RecTaperFunc
 		return
 

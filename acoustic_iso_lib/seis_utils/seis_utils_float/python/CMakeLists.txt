@@ -70,9 +70,11 @@ if (pybind11_FOUND)
   install( TARGETS pyInterpRbf1d DESTINATION lib/python)
   install( FILES interpRbf1dModule.py DESTINATION lib/python)
   install( FILES ShotRecTaperModule.py DESTINATION lib/python)
+  install( FILES maskGradientModule.py DESTINATION lib/python)
 
   # Installing Python executables
   install( FILES dataTaperMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES maskGradientMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES interpBSplineMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES spatialDerivMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES dsoGpuMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)

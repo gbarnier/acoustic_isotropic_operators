@@ -47,8 +47,12 @@ class nonlinearPropShotsGpu : public Operator<SEP::float3DReg, SEP::float3DReg> 
 		std::shared_ptr<SEP::float3DReg> getWavefield(){ return _wavefield; }
 
 		/* Mutator */
-		void setVel(std::shared_ptr<SEP::float2DReg> vel){ _vel = vel; }
-
+		void setVel(std::shared_ptr<SEP::float2DReg> vel){
+			std::cout << "Applying set vel" << std::endl;
+			std::cout << "[mutator] _vel n1 = " << vel->getHyper()->getAxis(1).n << std::endl;
+			std::cout << "[mutator] _vel n2 = " << vel->getHyper()->getAxis(2).n << std::endl;
+			_vel = vel;
+		}
 };
 
 #endif

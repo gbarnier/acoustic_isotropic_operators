@@ -237,6 +237,8 @@ bool fdParam::checkParfileConsistencyTime(const std::shared_ptr<float2DReg> seis
 bool fdParam::checkParfileConsistencySpace(const std::shared_ptr<float2DReg> model, std::string fileToCheck) const {
 
 	// Vertical axis
+	std::cout << "_nz=" << _nz << std::endl;
+ 	std::cout << "model->getHyper()->getAxis(1).n=" << model->getHyper()->getAxis(1).n << std::endl;
 	if (_nz != model->getHyper()->getAxis(1).n) {std::cout << "**** ["<< fileToCheck << "] ERROR: nz not consistent with parfile ****" << std::endl; return false;}
 	if ( std::abs(_dz - model->getHyper()->getAxis(1).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dz not consistent with parfile ****" << std::endl; return false;}
 	if ( std::abs(_oz - model->getHyper()->getAxis(1).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: oz not consistent with parfile ****" << std::endl; return false;}
@@ -255,7 +257,7 @@ bool fdParam::checkParfileConsistencySpace(const std::shared_ptr<float3DReg> mod
 	if ( std::abs(_dz - modelExt->getHyper()->getAxis(1).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dz not consistent with parfile ****" << std::endl; return false;}
 	if ( std::abs(_oz - modelExt->getHyper()->getAxis(1).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: oz not consistent with parfile ****" << std::endl; return false;}
 
-	// Vertical axis
+	// Horizontal axis
 	if (_nx != modelExt->getHyper()->getAxis(2).n) {std::cout << "**** [" << fileToCheck << "] ERROR: nx not consistent with parfile ****" << std::endl; return false;}
 	if ( std::abs(_dx - modelExt->getHyper()->getAxis(2).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dx not consistent with parfile ****" << std::endl; return false;}
 	if ( std::abs(_ox - modelExt->getHyper()->getAxis(2).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: ox not consistent with parfile ****" << std::endl; return false;}

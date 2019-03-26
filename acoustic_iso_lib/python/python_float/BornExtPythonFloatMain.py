@@ -6,6 +6,7 @@ import Acoustic_iso_float
 import numpy as np
 import time
 import sys
+import time
 
 if __name__ == '__main__':
 
@@ -33,8 +34,9 @@ if __name__ == '__main__':
         modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
 
         # Apply forward
+        # start_time=time.time()
         BornExtOp.forward(False,modelFloat,dataFloat)
-
+        # print("--- Forward time:",time.time() - start_time)
         # Write data
         dataFile=parObject.getString("data","noDataFile")
         if (dataFile == "noDataFile"):
@@ -51,7 +53,7 @@ if __name__ == '__main__':
 
         print("-------------------------------------------------------------------")
         print("---------------- Running Python extended Born adjoint -------------")
-        print("-------------------- Single precision Python code -----------------")            
+        print("-------------------- Single precision Python code -----------------")
         print("-------------------------------------------------------------------\n")
 
         # Check that data was provided
@@ -64,8 +66,9 @@ if __name__ == '__main__':
         dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
 
         # Apply adjoint
+        # start_time=time.time()
         BornExtOp.adjoint(False,modelFloat,dataFloat)
-
+        # print("--- Adjoint time:",time.time() - start_time)
         # Write model
         modelFile=parObject.getString("model","noModelFile")
         if (modelFile == "noModelFile"):

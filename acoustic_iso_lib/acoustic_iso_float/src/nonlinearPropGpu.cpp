@@ -3,8 +3,11 @@
 #include "nonlinearPropGpu.h"
 
 nonlinearPropGpu::nonlinearPropGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc){
+	std::cout << "Vel n1 = " << vel->getHyper()->getAxis(1).n << std::endl;
+	std::cout << "Vel n2 = " << vel->getHyper()->getAxis(2).n << std::endl;
 	_fdParam = std::make_shared<fdParam>(vel, par);
-	_timeInterp = std::make_shared<interpTimeLinTbb>(_fdParam->_nts, _fdParam->_dts, _fdParam->_ots, _fdParam->_sub);
+
+ 	_timeInterp = std::make_shared<interpTimeLinTbb>(_fdParam->_nts, _fdParam->_dts, _fdParam->_ots, _fdParam->_sub);
 	setAllWavefields(par->getInt("saveWavefield", 0));
 	_iGpu = iGpu;
 	_nGpu = nGpu;

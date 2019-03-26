@@ -28,6 +28,8 @@ PYBIND11_MODULE(pyAcoustic_iso_float_tomo, clsGeneric) {
 
       .def("setVel",(void (tomoExtShotsGpu::*)(std::shared_ptr<float2DReg>)) &tomoExtShotsGpu::setVel,"Function to set background velocity")
 
+      .def("setReflectivityExt",(void (tomoExtShotsGpu::*)(std::shared_ptr<float3DReg>)) &tomoExtShotsGpu::setReflectivityExt,"Function to set reflectivity")
+
       .def("dotTest",(bool (tomoExtShotsGpu::*)(const bool, const float)) &tomoExtShotsGpu::dotTest,"Dot-Product Test")
   ;
 }

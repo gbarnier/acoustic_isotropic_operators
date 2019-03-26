@@ -224,6 +224,8 @@ def nonlinearFwiOpInitFloat(args):
 	# Allocate and read starting model
 	modelStartFile=parObject.getString("vel")
 	modelStart=genericIO.defaultIO.getVector(modelStartFile)
+	print("[Acoustic iso float] vel n1 = ",modelStart.getHyper().axes[0].n)
+	print("[Acoustic iso float] vel n2 = ",modelStart.getHyper().axes[1].n)
 
 	# Build sources/receivers geometry
 	sourcesVector,sourceAxis=buildSourceGeometry(parObject,modelStart)
@@ -254,6 +256,8 @@ class nonlinearFwiPropShotsGpu(Op.Operator):
 		#Domain = velocity model
 		#Range = recorded data space
 		self.setDomainRange(domain,range)
+		print("In const, n1=",domain.getHyper().axes[0].n)
+		print("In const, n2=",domain.getHyper().axes[1].n)
 		#Checking if getCpp is present
 		if("getCpp" in dir(domain)):
 			domain = domain.getCpp()
@@ -616,9 +620,10 @@ def tomoExtOpInitFloat(args):
 	# Extended reflectivity
 	reflectivityFile=parObject.getString("reflectivity","noReflectivityFile")
 	if (reflectivityFile == "noReflectivityFile"):
-		print("**** ERROR: User did not provide reflectivity file ****\n")
-		quit()
-	reflectivityFloat=genericIO.defaultIO.getVector(reflectivityFile,ndims=3)
+		reflectivityFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[zAxis,xAxis,extAxis]))
+		reflectivityFloat.scale(0.0)
+	else:
+		reflectivityFloat=genericIO.defaultIO.getVector(reflectivityFile,ndims=3)
 
 	# Allocate model
 	modelFloat=SepVector.getSepVector(velFloat.getHyper())
@@ -695,6 +700,14 @@ class tomoExtShotsGpu(Op.Operator):
 			vel = vel.getCpp()
 		with pyAcoustic_iso_float_tomo.ostream_redirect():
 			self.pyOp.setVel(vel)
+		return
+
+	def setReflectivityExt(self,reflectivityExt):
+		#Checking if getCpp is present
+		if("getCpp" in dir(reflectivityExt)):
+			reflectivityExt = reflectivityExt.getCpp()
+		with pyAcoustic_iso_float_tomo.ostream_redirect():
+			self.pyOp.setReflectivityExt(reflectivityExt)
 		return
 
 	def dotTestCpp(self,verb=False,maxError=.00001):

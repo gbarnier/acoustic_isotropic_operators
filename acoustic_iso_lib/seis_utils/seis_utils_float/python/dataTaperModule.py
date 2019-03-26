@@ -26,7 +26,7 @@ def dataTaperInit(args):
 	taperWidthOffset=parObject.getFloat("taperWidthOffset",0)
 	reverseOffset=parObject.getInt("reverseOffset",0)
 	#Adding shot and receiver tapering
-	shotRecTaper=parObject.getInt("shotRecTaper",1)
+	shotRecTaper=parObject.getInt("shotRecTaper",0)
 	taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec=ShotRecTaperModule.ShotRecTaperInit(args)
 	return t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec
 
@@ -73,6 +73,7 @@ class datTaper(Op.Operator):
 			self.ShotRecTaperOp=ShotRecTaperModule.ShotRecTaper(domain,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec)
 			#Creating temporary vector to apply chain of operators
 			self.tmp_data_vec = domain.clone()
+
 		return
 
 	def forward(self,add,model,data):

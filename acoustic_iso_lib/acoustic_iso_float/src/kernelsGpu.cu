@@ -373,7 +373,6 @@ __global__ void imagingOffsetAdjGpu(float *dev_model, float *dev_timeSlice, floa
 		int iSrcWavefield = dev_nz * dev_nx * its + dev_nz * (ix-iExtShift) + iz; // Source wavefield index
 		int iRecWavefield = dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
 		dev_model[iModel] += dev_timeSlice[iRecWavefield] * dev_srcWavefieldDts[iSrcWavefield];
-
 	}
 }
 

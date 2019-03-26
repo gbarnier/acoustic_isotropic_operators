@@ -12,6 +12,7 @@ import Acoustic_iso_float
 import interpBSplineModule
 import dataTaperModule
 import spatialDerivModule
+import maskGradientModule
 
 # Solver library
 import pyOperator as pyOp
@@ -20,7 +21,6 @@ import pyProblem as Prblm
 import pyStopperBase as Stopper
 import inversionUtils
 from sys_util import logger
-
 
 # Template for FWI workflow
 if __name__ == '__main__':
@@ -35,6 +35,7 @@ if __name__ == '__main__':
 	reg=0
 	if (regType != "None"): reg=1
 	epsilonEval=parObject.getInt("epsilonEval",0)
+	gradientMask=parObject.getInt("gradientMask",0)
 
 	print("-------------------------------------------------------------------")
 	print("------------------------ Conventional FWI -------------------------")
@@ -47,13 +48,17 @@ if __name__ == '__main__':
 
 	# Data taper
 	if (dataTaper==1):
-		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset=dataTaperModule.dataTaperInit(sys.argv)
+		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec=dataTaperModule.dataTaperInit(sys.argv)
 
 	# FWI nonlinear operator
 	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
 
 	# Born
 	_,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+
+	# Gradient mask
+	if (gradientMask==1):
+		vel,bufferUp,bufferDown,taperExp,fat=maskGradientModule.maskGradientInit(sys.argv)
 
 	############################# Read files ###################################
 	# Seismic source
@@ -75,9 +80,13 @@ if __name__ == '__main__':
 
 	# Born
 	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	BornInvOp=BornOp
+	if (gradientMask==1):
+		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat)
+		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
 
 	# Conventional FWI
-	fwiOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornOp,BornOp.setVel)
+	fwiOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornInvOp,BornOp.setVel)
 	fwiInvOp=fwiOp
 	modelInit=modelFineInit
 
@@ -91,7 +100,7 @@ if __name__ == '__main__':
 	# Data taper
 	if (dataTaper==1):
 		print("--- Using data tapering ---")
-		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset)
+		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec)
 		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
