@@ -29,6 +29,7 @@ if __name__ == '__main__':
 	io=genericIO.pyGenericIO.ioModes(sys.argv)
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
+	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
 	regType=parObject.getString("reg","None")
@@ -36,10 +37,15 @@ if __name__ == '__main__':
 	if (regType != "None"): reg=1
 	epsilonEval=parObject.getInt("epsilonEval",0)
 	gradientMask=parObject.getInt("gradientMask",0)
+	# Initialize parameters for inversion
+	stop,logFile,saveObj,saveRes,saveGrad,saveModel,prefix,bufferSize,iterSampling,restartFolder,flushMemory,info=inversionUtils.inversionInit(sys.argv)
+	# Logger
+	inv_log = logger(logFile)
 
-	print("-------------------------------------------------------------------")
-	print("------------------------ Conventional FWI -------------------------")
-	print("-------------------------------------------------------------------\n")
+	if(pyinfo): print("-------------------------------------------------------------------")
+	if(pyinfo): print("------------------------ Conventional FWI -------------------------")
+	if(pyinfo): print("-------------------------------------------------------------------\n")
+	inv_log.addToLog("------------------------ Conventional FWI -------------------------")
 
 	############################# Initialization ###############################
 	# Spline
@@ -92,14 +98,16 @@ if __name__ == '__main__':
 
 	# Spline
 	if (spline==1):
-		print("--- Using spline interpolation ---")
+		if(pyinfo): print("--- Using spline interpolation ---")
+		inv_log.addToLog("--- Using spline interpolation ---")
 		modelInit=modelCoarseInit
 		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
 
 	# Data taper
 	if (dataTaper==1):
-		print("--- Using data tapering ---")
+		if(pyinfo): print("--- Using data tapering ---")
+		inv_log.addToLog("--- Using data tapering ---")
 		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec)
 		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
@@ -130,15 +138,18 @@ if __name__ == '__main__':
 	if (reg==1):
 		# Get epsilon value from user
 		epsilon=parObject.getFloat("epsilon",-1.0)
+		inv_log.addToLog("--- Epsilon value: ",epsilon," ---")
 
 		# Identity regularization
 		if (regType=="id"):
-			print("--- Identity regularization ---")
+			if(pyinfo): print("--- Identity regularization ---")
+			inv_log.addToLog("--- Identity regularization ---")
 			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=maskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
 
 		# Spatial gradient in z-direction
 		if (regType=="zGrad"):
-			print("--- Vertical gradient regularization ---")
+			if(pyinfo): print("--- Vertical gradient regularization ---")
+			inv_log.addToLog("--- Vertical gradient regularization ---")
 			fat=spatialDerivModule.zGradInit(sys.argv)
 			gradOp=spatialDerivModule.zGradPython(modelInit,modelInit,fat)
 			gradNlOp=pyOp.NonLinearOperator(gradOp,gradOp)
@@ -146,7 +157,8 @@ if __name__ == '__main__':
 
 		# Spatial gradient in x-direction
 		if (regType=="xGrad"):
-			print("--- Horizontal gradient regularization ---")
+			if(pyinfo): print("--- Horizontal gradient regularization ---")
+			inv_log.addToLog("--- Horizontal gradient regularization ---")
 			fat=spatialDerivModule.xGradInit(sys.argv)
 			gradOp=spatialDerivModule.xGradPython(modelInit,modelInit,fat)
 			gradNlOp=pyOp.NonLinearOperator(gradOp,gradOp)
@@ -154,7 +166,8 @@ if __name__ == '__main__':
 
 		# Sum of spatial gradients in z and x-directions
 		if (regType=="zxGrad"):
-			print("--- Gradient regularization in both directions ---")
+			if(pyinfo): print("--- Gradient regularization in both directions ---")
+			inv_log.addToLog("--- Gradient regularization in both directions ---")
 			fat=spatialDerivModule.zxGradInit(sys.argv)
 			gradOp=spatialDerivModule.zxGradPython(modelInit,modelInit,fat)
 			gradNlOp=pyOp.NonLinearOperator(gradOp,gradOp)
@@ -162,9 +175,11 @@ if __name__ == '__main__':
 
 		# Evaluate Epsilon
 		if (epsilonEval==1):
-			print("--- Epsilon evaluation ---")
+			if(pyinfo): print("--- Epsilon evaluation ---")
+			inv_log.addToLog("--- Epsilon evaluation ---")
 			epsilonOut=fwiProb.estimate_epsilon()
-			print("--- Epsilon value: ",epsilonOut," ---")
+			if(pyinfo): print("--- Epsilon value: ",epsilonOut," ---")
+			inv_log.addToLog("--- Epsilon value: ",epsilonOut," ---")
 			quit()
 
 	# No regularization
@@ -172,11 +187,8 @@ if __name__ == '__main__':
 		fwiProb=Prblm.ProblemL2NonLinear(modelInit,data,fwiInvOp,grad_mask=maskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
 
 	############################# Solver #######################################
-	# Initialize parameters for inversion + solver
-	stop,logFile,saveObj,saveRes,saveGrad,saveModel,prefix,bufferSize,iterSampling,restartFolder,flushMemory,info=inversionUtils.inversionInit(sys.argv)
-
 	# Solver
-	NLCGsolver=NLCG.NLCGsolver(stop,logger=logger(logFile))
+	NLCGsolver=NLCG.NLCGsolver(stop,logger=inv_log)
 
 	# Manual step length
 	initStep=parObject.getInt("initStep",-1)
@@ -189,6 +201,6 @@ if __name__ == '__main__':
 	# Run solver
 	NLCGsolver.run(fwiProb,verbose=info)
 
-	print("-------------------------------------------------------------------")
-	print("--------------------------- All done ------------------------------")
-	print("-------------------------------------------------------------------\n")
+	if(pyinfo): print("-------------------------------------------------------------------")
+	if(pyinfo): print("--------------------------- All done ------------------------------")
+	if(pyinfo): print("-------------------------------------------------------------------\n")
