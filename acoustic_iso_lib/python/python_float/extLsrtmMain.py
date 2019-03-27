@@ -111,7 +111,7 @@ if __name__ == '__main__':
 	if (reg==1):
 		# Get epsilon value from user
 		epsilon=parObject.getFloat("epsilon",-1.0)
-		inv_log.addToLog("--- Epsilon value: ",epsilon," ---")
+		inv_log.addToLog("--- Epsilon value: %s ---"%(epsilon))
 
 		# Identity regularization
 		if (regType=="id"):
@@ -148,7 +148,7 @@ if __name__ == '__main__':
 			inv_log.addToLog("--- Epsilon evaluation ---")
 			epsilonOut=invProb.estimate_epsilon()
 			if(pyinfo): print("--- Epsilon value: ",epsilonOut," ---")
-			inv_log.addToLog("--- Epsilon value: ",epsilonOut," ---")
+			inv_log.addToLog("--- Epsilon value: %s ---"%(epsilonOut))
 			quit()
 
 	# No regularization
