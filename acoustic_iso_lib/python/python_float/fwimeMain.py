@@ -95,9 +95,9 @@ if __name__ == '__main__':
 	# Coarse-grid model
 	modelInit=modelFineInit
 	if (spline==1):
-		modelInit=modelCoarseInit
 		modelCoarseInitFile=parObject.getString("modelCoarseInit")
 		modelCoarseInit=genericIO.defaultIO.getVector(modelCoarseInitFile,ndims=2)
+		modelInit=modelCoarseInit
 
 	# Data
 	dataFile=parObject.getString("data")
@@ -143,50 +143,34 @@ if __name__ == '__main__':
 	################ Instanciation of variable projection operator #############
 	# Born extended
 	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(reflectivityExtInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	if (spline==1):
+		BornExtOp.add_spline(splineOp)
 
 	# Tomo
 	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExtInit)
 	tomoExtInvOp=tomoExtOp
 
-	print("vel n1",vel.getHyper().axes[0].n)
-	print("vel n2",vel.getHyper().axes[1].n)
-
 	# Concatenate operators
-	if (gradientMask==1 and spline==1 and dataTaper==1):
+	if (gradientMask==1 and dataTaper==1):
 		tomoTemp1=pyOp.ChainOperator(maskGradientOp,tomoExtOp)
-		tomoTemp2=pyOp.ChainOperator(splineOp,tomoTemp1)
-		tomoExtInvOp=pyOp.ChainOperator(tomoTemp2,dataTaperOp)
-
-	if (gradientMask==1 and spline==1 and dataTaper==0):
-		tomoTemp1=pyOp.ChainOperator(maskGradientOp,tomoExtOp)
-		tomoExtInvOp=pyOp.ChainOperator(splineOp,tomoTemp1)
-
-	if (gradientMask==1 and spline==0 and dataTaper==0):
+		tomoExtInvOp=pyOp.ChainOperator(tomoTemp1,dataTaperOp)
+	if (gradientMask==1 and dataTaper==0):
 		tomoExtInvOp=pyOp.ChainOperator(maskGradientOp,tomoExtOp)
-
-	if (gradientMask==1 and spline==0 and dataTaper==1):
-		tomoTemp1=pyOp.ChainOperator(maskGradientOp,tomoExtOp)
-		tomoExtInvOp=pyOp.ChainOperator(tomoTemp1,dataTaperOp)
-
-	if (gradientMask==0 and spline==1 and dataTaper==1):
-		tomoTemp1=pyOp.ChainOperator(splineOp,tomoExtOp)
-		tomoExtInvOp=pyOp.ChainOperator(tomoTemp1,dataTaperOp)
-
-	if (gradientMask==0 and spline==0 and dataTaper==1):
+	if (gradientMask==0 and dataTaper==1):
 		tomoExtInvOp=pyOp.ChainOperator(tomoExtOp,dataTaperOp)
-
-	if (gradientMask==0 and spline==1 and dataTaper==0):
-		tomoExtInvOp=pyOp.ChainOperator(splineOp,tomoExtOp)
 
 	# Dso
 	dsoOp=dsoGpuModule.dsoGpu(reflectivityExtInit,reflectivityExtInit,nz,nx,nExt,fat,zeroShift)
 
 	# h nonlinear
-	hNonlinearDummyOp=pyOp.ZeroOp(modelInit,data)
+	hNonlinearDummyOp=pyOp.ZeroOp(modelFineInit,data)
 	hNonlinearOp=pyOp.NonLinearOperator(hNonlinearDummyOp,tomoExtInvOp,tomoExtOp.setVel) # We don't need the nonlinear fwd (the residuals are already computed in during the variable projection step)
+	hNonlinearInvOp=hNonlinearOp
+	if(spline == 1):
+		hNonlinearInvOp=pyOp.CombNonlinearOp(splineNlOp,hNonlinearOp) # Combine everything
 
 	# Variable projection operator for the data fitting term
-	vpOp=pyVp.VpOperator(hNonlinearOp,BornExtOp,BornExtOp.setVel,tomoExtOp.setReflectivityExt)
+	vpOp=pyVp.VpOperator(hNonlinearInvOp,BornExtOp,BornExtOp.setVel,tomoExtOp.setReflectivityExt)
 
 	# Regularization operators
 	dsoNonlinearJacobian=pyOp.ZeroOp(modelInit,reflectivityExtInit)

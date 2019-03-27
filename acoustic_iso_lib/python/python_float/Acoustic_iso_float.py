@@ -224,8 +224,6 @@ def nonlinearFwiOpInitFloat(args):
 	# Allocate and read starting model
 	modelStartFile=parObject.getString("vel")
 	modelStart=genericIO.defaultIO.getVector(modelStartFile)
-	print("[Acoustic iso float] vel n1 = ",modelStart.getHyper().axes[0].n)
-	print("[Acoustic iso float] vel n2 = ",modelStart.getHyper().axes[1].n)
 
 	# Build sources/receivers geometry
 	sourcesVector,sourceAxis=buildSourceGeometry(parObject,modelStart)
@@ -537,7 +535,21 @@ class BornExtShotsGpu(Op.Operator):
 			self.pyOp.adjointWavefield(add,model,data)
 		return
 
-	def setVel(self,vel):
+	def add_spline(self,Spline_op):
+		"""
+		   Adding spline operator to set background
+		"""
+		print("Added spline")
+		self.Spline_op = Spline_op
+		self.tmp_fine_model = Spline_op.range.clone()
+		return
+
+	def setVel(self,vel_in):
+		if("Spline_op" in dir(self)):
+			self.Spline_op.forward(False,vel_in,self.tmp_fine_model)
+			vel = self.tmp_fine_model
+		else:
+			vel = vel_in
 		#Checking if getCpp is present
 		if("getCpp" in dir(vel)):
 			vel = vel.getCpp()

@@ -9,10 +9,6 @@ nonlinearPropShotsGpu::nonlinearPropShotsGpu(std::shared_ptr<SEP::float2DReg> ve
 	// Setup parameters
 	_par = par;
 	_vel = vel;
-	std::cout << "[shots] Vel n1 = " << vel->getHyper()->getAxis(1).n << std::endl;
-	std::cout << "[shots] Vel n2 = " << vel->getHyper()->getAxis(2).n << std::endl;
-	std::cout << "[shots] _vel n1 = " << _vel->getHyper()->getAxis(1).n << std::endl;
-	std::cout << "[shots] _vel n2 = " << _vel->getHyper()->getAxis(2).n << std::endl;
 	_nShot = par->getInt("nShot");
 	createGpuIdList();
 	_info = par->getInt("info", 0);
@@ -88,9 +84,6 @@ void nonlinearPropShotsGpu::forward(const bool add, const std::shared_ptr<float3
 	// (1) Creation of vector of objects, model, and data.
 	// (2) Memory allocation on GPU
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-
-		std::cout << "[shots-const] _vel n1 = " << _vel->getHyper()->getAxis(1).n << std::endl;
-		std::cout << "[shots-const] _vel n2 = " << _vel->getHyper()->getAxis(2).n << std::endl;
 
 		// Nonlinear propagator object
 		std::shared_ptr<nonlinearPropGpu> propGpuObject(new nonlinearPropGpu(_vel, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));

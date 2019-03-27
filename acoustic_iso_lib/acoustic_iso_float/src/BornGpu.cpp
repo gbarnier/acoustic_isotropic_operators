@@ -1,8 +1,7 @@
 #include "BornGpu.h"
 
 BornGpu::BornGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc){
-	std::cout << "[Born] Vel n1 = " << vel->getHyper()->getAxis(1).n << std::endl;
-	std::cout << "[Born] Vel n2 = " << vel->getHyper()->getAxis(2).n << std::endl;
+
 	_fdParam = std::make_shared<fdParam>(vel, par); // Fd parameter object
 	_timeInterp = std::make_shared<interpTimeLinTbb>(_fdParam->_nts, _fdParam->_dts, _fdParam->_ots, _fdParam->_sub); // Time interpolation object
 	_secTimeDer = std::make_shared<secondTimeDerivative>(_fdParam->_nts, _fdParam->_dts); // Second time derivative object
