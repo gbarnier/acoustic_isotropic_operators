@@ -58,7 +58,6 @@ if __name__ == '__main__':
 		# Read model (on coarse grid)
 		modelFile=parObject.getString("model")
 		model=genericIO.defaultIO.getVector(modelFile)
-
 		# Apply forward
 		startTime=time.time()
 		splineOp.forward(False,model,data)

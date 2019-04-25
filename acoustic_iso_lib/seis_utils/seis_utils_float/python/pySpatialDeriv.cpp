@@ -6,6 +6,7 @@
 #include <pybind11/iostream.h>
 
 #include "spatialDeriv.h"
+#include "SymesZGrad.h"
 
 namespace py = pybind11;
 using namespace SEP;
@@ -53,4 +54,13 @@ PYBIND11_MODULE(pySpatialDeriv, clsGeneric) {
       .def("adjoint", (void (Laplacian::*)(const bool, const std::shared_ptr<float2DReg>, std::shared_ptr<float2DReg>)) &Laplacian::adjoint, "Adjoint")
 
   ;
+
+  py::class_<SymesZGrad, std::shared_ptr<SymesZGrad>>(clsGeneric,"SymesZGrad")
+
+      .def(py::init<int>(), "Initialize a z-gradient operator for extended images")
+
+      .def("forward", (void (SymesZGrad::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &SymesZGrad::forward, "Forward")
+
+  ;
+
 }

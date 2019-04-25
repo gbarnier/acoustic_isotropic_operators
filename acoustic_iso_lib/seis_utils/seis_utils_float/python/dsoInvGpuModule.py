@@ -1,12 +1,12 @@
 #Python module encapsulating PYBIND11 module
 import pyOperator as Op
-import pyDsoGpu
+import pyDsoInvGpu
 import genericIO
 import SepVector
 import Hypercube
 import numpy as np
 
-def dsoGpuInit(args):
+def dsoInvGpuInit(args):
 
 	io=genericIO.pyGenericIO.ioModes(args)
 	ioDef=io.getDefaultIO()
@@ -15,15 +15,15 @@ def dsoGpuInit(args):
 	nx=parObject.getInt("nx")
 	nExt=parObject.getInt("nExt")
 	fat=parObject.getInt("fat")
-	dsoZeroShift=parObject.getFloat("dsoZeroShift")
-	return nz,nx,nExt,fat,dsoZeroShift
+	zeroShift=parObject.getFloat("dsoZeroShift")
+	return nz,nx,nExt,fat,zeroShift
 
-class dsoGpu(Op.Operator):
+class dsoInvGpu(Op.Operator):
 
-	def __init__(self,domain,range,nz,nx,nExt,fat,dsoZeroShift):
+	def __init__(self,domain,range,nz,nx,nExt,fat,zeroShift):
 
 		self.setDomainRange(domain,range)
-		self.pyOp = pyDsoGpu.dsoGpu(nz,nx,nExt,fat,dsoZeroShift)
+		self.pyOp = pyDsoInvGpu.dsoInvGpu(nz,nx,nExt,fat,zeroShift)
 		return
 
 	def forward(self,add,model,data):
@@ -31,7 +31,7 @@ class dsoGpu(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pyDsoGpu.ostream_redirect():
+		with pyDsoInvGpu.ostream_redirect():
 			self.pyOp.forward(add,model,data)
 		return
 
@@ -40,6 +40,6 @@ class dsoGpu(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with pyDsoGpu.ostream_redirect():
+		with pyDsoInvGpu.ostream_redirect():
 			self.pyOp.adjoint(add,model,data)
 		return

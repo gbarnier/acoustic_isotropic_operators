@@ -42,7 +42,7 @@ if __name__ == '__main__':
 		if (f4 > fNyquist):
 			raise ValueError("****ERROR: f4 > fNyquist****\n")
 
-		df=1.0/((nts-1)*dts)
+		df=1.0/((nts)*dts)
 
 		for iFreq in range(nts//2):
 			f=iFreq*df # Loop over frequencies

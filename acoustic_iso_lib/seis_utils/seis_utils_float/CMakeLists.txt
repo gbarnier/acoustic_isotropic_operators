@@ -19,7 +19,10 @@ set(SOURCE_NL ${SRC_DIR}/dataTaper.cpp
 			  ${SRC_DIR}/interpBSpline3d.cpp
 			  ${SRC_DIR}/spatialDeriv.cpp
 			  ${SRC_DIR}/dsoGpu.cpp
+			  ${SRC_DIR}/dsoInvGpu.cpp
 			  ${SRC_DIR}/interpRbf1d.cpp
+			  ${SRC_DIR}/timeInteg.cpp
+			  ${SRC_DIR}/SymesZGrad.cpp
 )
 
 #SEP LIBRARY DIRECTORIES
@@ -38,9 +41,13 @@ add_library(SEIS_UTILS_FLOAT_LIB ${SOURCE_NL})
 add_executable(dataCompMain ${SRC_DIR}/dataCompMain.cpp)
 target_link_libraries(dataCompMain SEIS_UTILS_FLOAT_LIB genericCpp OpenMP::OpenMP_CXX)
 
+# Model padding program for GPU
+add_executable(zGradJunkMain ${SRC_DIR}/zGradJunkMain.cpp)
+target_link_libraries(zGradJunkMain genericCpp OpenMP::OpenMP_CXX)
 
 
 #Adding libray and header files to install destination
 install(TARGETS SEIS_UTILS_FLOAT_LIB DESTINATION lib)
 install(TARGETS dataCompMain DESTINATION bin)
+install(TARGETS zGradJunkMain DESTINATION bin)
 install(FILES ${HEADERS} DESTINATION include)

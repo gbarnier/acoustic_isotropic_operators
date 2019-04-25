@@ -28,6 +28,8 @@ PYBIND11_MODULE(pyAcoustic_iso_float_born_ext, clsGeneric) {
 
       .def("setVel",(void (BornExtShotsGpu::*)(std::shared_ptr<float2DReg>)) &BornExtShotsGpu::setVel,"Function to set background velocity")
 
+      .def("getVel",(std::shared_ptr<float2DReg> (BornExtShotsGpu::*)()) &BornExtShotsGpu::getVel,"Function to get background velocity")
+
       .def("dotTest",(bool (BornExtShotsGpu::*)(const bool, const float)) &BornExtShotsGpu::dotTest,"Dot-Product Test")
   ;
 }

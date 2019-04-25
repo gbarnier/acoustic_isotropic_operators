@@ -34,7 +34,7 @@ def buildSourceGeometry(parObject,vel):
 	sourceAxis=Hypercube.axis(n=parObject.getInt("nShot"),o=ox+oxSource*dx,d=spacingShots*dx)
 	sourcesVector=[]
 	for ishot in range(parObject.getInt("nShot")):
-		sourcesVector.append(deviceGpu(nzSource,ozSource,dzSource,nxSource,oxSource,dxSource,vel.getCpp(),parObject.getInt("nts")))
+		sourcesVector.append(deviceGpu(nzSource,ozSource,dzSource,nxSource,oxSource,dxSource,vel.getCpp(),parObject.getInt("nts"), parObject.getInt("dipole",0), parObject.getInt("zDipoleShift",1), parObject.getInt("xDipoleShift",0)))
 		oxSource=oxSource+spacingShots # Shift source
 
 	return sourcesVector,sourceAxis
@@ -57,7 +57,7 @@ def buildReceiversGeometry(parObject,vel):
 	receiversVector=[]
 	nRecGeom=1; # Constant receivers' geometry
 	for iRec in range(nRecGeom):
-		receiversVector.append(deviceGpu(nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel.getCpp(),parObject.getInt("nts")))
+		receiversVector.append(deviceGpu(nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel.getCpp(),parObject.getInt("nts"), parObject.getInt("dipole",0), parObject.getInt("zDipoleShift",1), parObject.getInt("xDipoleShift",0)))
 
 	return receiversVector,receiverAxis
 

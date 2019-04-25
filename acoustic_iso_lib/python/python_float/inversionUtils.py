@@ -6,13 +6,7 @@ import numpy as np
 import time
 import sys
 import os
-
-# Solver library
-# import pyOperator as pyOp
-# import pyNLCGsolver as NLCG
-# import pyProblem as Prblm
 import pyStopperBase as Stopper
-# from sys_util import logger
 
 def inversionInit(args):
 
@@ -91,13 +85,13 @@ def inversionVpInit(args):
 	stopLin=Stopper.BasicStopper(niter=nIterLin)
 	folderLin=folderNl+"/varProFolder"
 	if (os.path.isdir(folderLin)==False): os.mkdir(folderLin)
-	invPrefixLin=folderLin+"/varPro"
+	invPrefixLin=folderLin+"/varPro_"+prefixNl
 	logFileLin=invPrefixLin+"_logFile"
 
 	# Recording parameters
-	bufferSizeLin=par.getInt("bufferSizeLin",1)
+	bufferSizeLin=par.getInt("bufferSizeLin",3)
 	if (bufferSizeLin==0): bufferSizeLin=None
-	iterSamplingLin=par.getInt("iterSamplingLin",1)
+	iterSamplingLin=par.getInt("iterSamplingLin",10)
 	restartFolderLin=par.getString("restartFolderLin","None")
 	flushMemoryLin=par.getInt("flushMemoryLin",0)
 

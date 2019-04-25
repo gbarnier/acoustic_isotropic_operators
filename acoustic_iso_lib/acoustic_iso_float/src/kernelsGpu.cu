@@ -363,15 +363,15 @@ __global__ void imagingOffsetFwdGpu(float *dev_model, float *dev_timeSlice, floa
 
 __global__ void imagingOffsetAdjGpu(float *dev_model, float *dev_timeSlice, float *dev_srcWavefieldDts, int its){
 
-	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate on main grid
-	int ix = FAT + dev_hExt + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate on main grid for the model where we evaluate the image
-	int iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // offset coordinate (iOffset = 0, ..., dev_nOffset-1)
+	long long iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate on main grid
+	long long ix = FAT + dev_hExt + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate on main grid for the model where we evaluate the image
+	long long iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // offset coordinate (iOffset = 0, ..., dev_nOffset-1)
 
 	if ( (ix < dev_nx-FAT-dev_hExt) && (iExt < dev_nExt) ){
-		int iExtShift=iExt-dev_hExt;
-		int iModel = dev_nz * dev_nx * iExt + dev_nz * ix + iz; // Model index
-		int iSrcWavefield = dev_nz * dev_nx * its + dev_nz * (ix-iExtShift) + iz; // Source wavefield index
-		int iRecWavefield = dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
+		long long iExtShift=iExt-dev_hExt;
+		long long iModel = dev_nz * dev_nx * iExt + dev_nz * ix + iz; // Model index
+		long long iSrcWavefield = dev_nz * dev_nx * its + dev_nz * (ix-iExtShift) + iz; // Source wavefield index
+		long long iRecWavefield = dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
 		dev_model[iModel] += dev_timeSlice[iRecWavefield] * dev_srcWavefieldDts[iSrcWavefield];
 	}
 }

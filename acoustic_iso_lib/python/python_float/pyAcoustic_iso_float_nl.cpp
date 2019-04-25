@@ -16,11 +16,11 @@ PYBIND11_MODULE(pyAcoustic_iso_float_nl, clsGeneric) {
   py::add_ostream_redirect(clsGeneric, "ostream_redirect");
 
   py::class_<deviceGpu, std::shared_ptr<deviceGpu>>(clsGeneric, "deviceGpu")
-      .def(py::init<const std::shared_ptr<SEP::float1DReg>, const std::shared_ptr<SEP::float1DReg>, const std::shared_ptr<float2DReg>, int &>(), "Initialize a deviceGPU object using location, velocity, and nt")
+      .def(py::init<const std::shared_ptr<SEP::float1DReg>, const std::shared_ptr<SEP::float1DReg>, const std::shared_ptr<float2DReg>, int &, int, double, double>(), "Initialize a deviceGPU object using location, velocity, and nt")
 
-      .def(py::init<const std::vector<int> &, const std::vector<int> &, const std::shared_ptr<float2DReg>, int &>(), "Initlialize a deviceGPU object using coordinates and nt")
+      .def(py::init<const std::vector<int> &, const std::vector<int> &, const std::shared_ptr<float2DReg>, int &, int, int, int>(), "Initlialize a deviceGPU object using coordinates and nt")
 
-      .def(py::init<const int &, const int &, const int &, const int &, const int &, const int &, const std::shared_ptr<float2DReg>, int &>(), "Initlialize a deviceGPU object using sampling in z and x axes, velocity, and nt")
+      .def(py::init<const int &, const int &, const int &, const int &, const int &, const int &, const std::shared_ptr<float2DReg>, int &, int, int, int>(), "Initlialize a deviceGPU object using sampling in z and x axes, velocity, and nt")
 
   ;
 

@@ -130,19 +130,23 @@ void fdParam::getInfo(){
 		std::cout << " " << std::endl;
 
 		// Vertical spatial sampling
-		std::cout << "-------------------- Vertical spatial sampling --------------------" << std::endl;
+		std::cout << "--------------------------- Vertical axis -------------------------" << std::endl;
 		std::cout << std::setprecision(2);
-		std::cout << "nz = " << _nz-2*_fat-_zPadMinus-_zPadPlus << " [samples], dz = " << _dz << "[km], oz = " << _oz+(_fat+_zPadMinus)*_dz << " [km]" << std::endl;
-		std::cout << "Model depth = " << _oz+(_nz-2*_fat-_zPadMinus-_zPadPlus-1)*_dz << " [km]" << std::endl;
+		std::cout << "nz = " << _nz-2*_fat-_zPadMinus-_zPadPlus << " [samples], dz = " << _dz << " [km], oz = " << _oz+(_fat+_zPadMinus)*_dz << " [km]" << std::endl;
+		std::cout << "Model thickness (area of interest) = " << _oz+(_fat+_zPadMinus)*_dz+(_nz-2*_fat-_zPadMinus-_zPadPlus-1)*_dz << " [km]" << std::endl;
 		std::cout << "Top padding = " << _zPadMinus << " [samples], bottom padding = " << _zPadPlus << " [samples]" << std::endl;
+		std::cout << "nz (padded) = " << _nz << " [samples], oz (padded) = " << _oz << " [km]" << std::endl;
+		std::cout << "Model thickness (padding+fat) = " << _oz+(_nz-1)*_dz << " [km]" << std::endl;
 		std::cout << " " << std::endl;
 
 		// Horizontal spatial sampling
-		std::cout << "-------------------- Horizontal spatial sampling ------------------" << std::endl;
+		std::cout << "-------------------------- Horizontal x-axis ----------------------" << std::endl;
 		std::cout << std::setprecision(2);
 		std::cout << "nx = " << _nx-2*_fat-_xPadMinus-_xPadPlus << " [samples], dx = " << _dx << " [km], ox = " << _ox+(_fat+_xPadMinus)*_dx << " [km]" << std::endl;
-		std::cout << "Model width = " << _ox+(_nx-2*_fat-_xPadMinus-_xPadPlus-1)*_dx << " [km]" << std::endl;
+		std::cout << "Model width (area of interest) = " << _ox+(_fat+_xPadMinus)*_dx+(_nx-2*_fat-_xPadMinus-_xPadPlus-1)*_dx << " [km]" << std::endl;
 		std::cout << "Left padding = " << _xPadMinus << " [samples], right padding = " << _xPadPlus << " [samples]" << std::endl;
+		std::cout << "nx (padded) = " << _nx << " [samples], ox (padded) = " << _ox << " [km]" << std::endl;
+		std::cout << "Model width (padding+fat) = " << _ox+(_nx-1)*_dx << " [km]" << std::endl;
 		std::cout << " " << std::endl;
 
 		// Extended axis

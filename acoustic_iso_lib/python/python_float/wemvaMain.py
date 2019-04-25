@@ -13,6 +13,7 @@ import interpBSplineModule
 import dataTaperModule
 import spatialDerivModule
 import maskGradientModule
+import dsoGpuModule
 
 # Solver library
 import pyOperator as pyOp
@@ -20,11 +21,10 @@ import pyNLCGsolver as NLCG
 import pyLBFGSsolver as LBFGS
 import pyProblem as Prblm
 import pyStopperBase as Stopper
-import pyStepperParabolic as Stepper
 import inversionUtils
 from sys_util import logger
 
-# Template for FWI workflow
+# Template for Wemva workflow
 if __name__ == '__main__':
 
 	# Bullshit stuff
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 	parObject=ioDef.getParamObj()
 	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)
-	dataTaper=parObject.getInt("dataTaper",0)
+	defocusOp=parObject.getString("defocusOp","dso")
 	regType=parObject.getString("reg","None")
 	reg=0
 	if (regType != "None"): reg=1
@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
 	# Nonlinear solver
 	solverType=parObject.getString("solver","nlcg")
-	stepper=parObject.getString("stepper","parabolic")
+	evalParab=parObject.getInt("evalParab",1)
 
 	# Initialize parameters for inversion
 	stop,logFile,saveObj,saveRes,saveGrad,saveModel,prefix,bufferSize,iterSampling,restartFolder,flushMemory,info=inversionUtils.inversionInit(sys.argv)
@@ -51,57 +51,49 @@ if __name__ == '__main__':
 	inv_log = logger(logFile)
 
 	if(pyinfo): print("-------------------------------------------------------------------")
-	if(pyinfo): print("------------------------ Conventional FWI -------------------------")
+	if(pyinfo): print("------------------------ Conventional WEMVA -------------------------")
 	if(pyinfo): print("-------------------------------------------------------------------\n")
-	inv_log.addToLog("------------------------ Conventional FWI -------------------------")
+	inv_log.addToLog("------------------------ Conventional WEMVA -------------------------")
 
 	############################# Initialization ###############################
 	# Spline
 	if (spline==1):
 		modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSplineModule.bSpline2dInit(sys.argv)
 
-	# Data taper
-	if (dataTaper==1):
-		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth=dataTaperModule.dataTaperInit(sys.argv)
+	# Wemva nonlinear operator (Born extended adjoint)
+	modelFineInit,image,parObject,sourcesVector,sourcesSignalsVector,receiversVector,seismicData=Acoustic_iso_float.wemvaNonlinearOpInitFloat(sys.argv)
 
-	# FWI nonlinear operator
-	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
-
-	# Born
-	_,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	# Wemva operator
+	_,image,velocity,parObject,sourcesVector,sourcesSignalsVector,receiversVector,seismicDataWemva=Acoustic_iso_float.wemvaExtOpInitFloat(sys.argv)
 
 	# Gradient mask
 	if (gradientMask==1):
-		vel,bufferUp,bufferDown,taperExp,fat,wbShift=maskGradientModule.maskGradientInit(sys.argv)
+		velocity,bufferUp,bufferDown,taperExp,fat,wbShift=maskGradientModule.maskGradientInit(sys.argv)
 
 	############################# Read files ###################################
-	# Seismic source
-	waveletFile=parObject.getString("sources")
-	wavelet=genericIO.defaultIO.getVector(waveletFile,ndims=3)
-
 	# Coarse-grid model
 	if (spline==1):
 		modelCoarseInitFile=parObject.getString("modelCoarseInit")
 		modelCoarseInit=genericIO.defaultIO.getVector(modelCoarseInitFile,ndims=2)
 
-	# Data
-	dataFile=parObject.getString("data")
-	data=genericIO.defaultIO.getVector(dataFile,ndims=3)
+	# Contruct a file of zeros for the "data"
+	data=image.clone()
+	data.scale(0.0)
 
 	############################# Instanciation ################################
-	# Nonlinear
-	nonlinearFwiOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector)
+	# Nonlinear wemva (Ext Born adjoint)
+	wemvaNonlinearOp=Acoustic_iso_float.wemvaNonlinearShotsGpu(modelFineInit,image,parObject,sourcesVector,sourcesSignalsVector,receiversVector,seismicData)
 
-	# Born
-	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
-	BornInvOp=BornOp
+	# Wemva
+	wemvaExtOp=Acoustic_iso_float.wemvaExtShotsGpu(modelFineInit,image,velocity,parObject,sourcesVector,sourcesSignalsVector,receiversVector,seismicDataWemva)
+	wemvaExtInvOp=wemvaExtOp
 	if (gradientMask==1):
-		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift)
-		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
+		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,velocity,bufferUp,bufferDown,taperExp,fat,wbShift)
+		wemvaExtInvOp=pyOp.ChainOperator(maskGradientOp,wemvaExtOp)
 
-	# Conventional FWI
-	fwiOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornInvOp,BornOp.setVel)
-	fwiInvOp=fwiOp
+	# Wemva full operator
+	wemvaOp=pyOp.NonLinearOperator(wemvaNonlinearOp,wemvaExtInvOp,wemvaExtOp.setVel)
+	wemvaInvOp=wemvaOp
 	modelInit=modelFineInit
 
 	# Spline
@@ -112,31 +104,31 @@ if __name__ == '__main__':
 		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
 
-	# Data taper
-	if (dataTaper==1):
-		if(pyinfo): print("--- Using data tapering ---")
-		inv_log.addToLog("--- Using data tapering ---")
-		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
-		dataTapered=data.clone()
-		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
-		data=dataTapered
-		dataTaperNlOp=pyOp.NonLinearOperator(dataTaperOp,dataTaperOp) # Create dataTaper nonlinear operator
+	# Dso
+	if (defocusOp=="dso"):
+		if(pyinfo): print("--- Using Dso image defocusing operator ---")
+		inv_log.addToLog("--- Using Dso image defocusing operator ---")
+		nz,nx,nExt,fat,dsoZeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
+		dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,dsoZeroShift)
+		defocusNlOp=pyOp.NonLinearOperator(dsoOp,dsoOp) # Create dso nonlinear operator
+
+	elif (defocusOp=="id"):
+		if(pyinfo): print("--- Using identity image defocusing operator ---")
+		inv_log.addToLog("--- Using identity image defocusing operator ---")
 
 	# Concatenate operators
-	if (spline==1 and dataTaper==0):
-		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiOp)
-	if (spline==0 and dataTaper==1):
-		fwiInvOp=pyOp.CombNonlinearOp(fwiOp,dataTaperNlOp)
-	if (spline==1 and dataTaper==1):
-		fwiInvOpTemp=pyOp.CombNonlinearOp(splineNlOp,fwiOp) # Combine spline and FWI
-		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOpTemp,dataTaperNlOp) # Combine everything
+	if (spline==1 and defocusOp=="dso"):
+		wemvaInvOpTemp=pyOp.CombNonlinearOp(splineNlOp,wemvaOp)
+		wemvaInvOp=pyOp.CombNonlinearOp(wemvaInvOpTemp,defocusNlOp)
+	if (spline==1 and defocusOp=="id"):
+	   wemvaInvOp=pyOp.CombNonlinearOp(splineNlOp,wemvaOp)
 
-	############################# Gradient mask ################################
+	########################## Manual gradient mask ############################
 	maskGradientFile=parObject.getString("maskGradient","NoMaskGradientFile")
 	if (maskGradientFile=="NoMaskGradientFile"):
-		maskGradient=None
+		manualMaskGradient=None
 	else:
-		maskGradient=genericIO.defaultIO.getVector(maskGradientFile,ndims=2)
+		manualMaskGradient=genericIO.defaultIO.getVector(maskGradientFile,ndims=2)
 
 	############################### Bounds #####################################
 	minBoundVector,maxBoundVector=Acoustic_iso_float.createBoundVectors(parObject,modelInit)
@@ -152,69 +144,63 @@ if __name__ == '__main__':
 		if (regType=="id"):
 			if(pyinfo): print("--- Identity regularization ---")
 			inv_log.addToLog("--- Identity regularization ---")
-			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=maskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
+			wemvaProb=Prblm.ProblemL2NonLinearReg(modelInit,data,wemvaInvOp,epsilon,grad_mask=manualMaskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
 
 		# Spatial gradient in z-direction
 		if (regType=="zGrad"):
 			if(pyinfo): print("--- Vertical gradient regularization ---")
 			inv_log.addToLog("--- Vertical gradient regularization ---")
 			fat=spatialDerivModule.zGradInit(sys.argv)
+			if (spline==1): fat=0
 			gradOp=spatialDerivModule.zGradPython(modelInit,modelInit,fat)
 			gradNlOp=pyOp.NonLinearOperator(gradOp,gradOp)
-			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=maskGradient,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
+			wemvaProb=Prblm.ProblemL2NonLinearReg(modelInit,data,wemvaInvOp,epsilon,grad_mask=manualMaskGradient,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
 
 		# Spatial gradient in x-direction
 		if (regType=="xGrad"):
 			if(pyinfo): print("--- Horizontal gradient regularization ---")
 			inv_log.addToLog("--- Horizontal gradient regularization ---")
 			fat=spatialDerivModule.xGradInit(sys.argv)
+			if (spline==1): fat=0
 			gradOp=spatialDerivModule.xGradPython(modelInit,modelInit,fat)
 			gradNlOp=pyOp.NonLinearOperator(gradOp,gradOp)
-			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=maskGradient,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
+			wemvaProb=Prblm.ProblemL2NonLinearReg(modelInit,data,wemvaInvOp,epsilon,grad_mask=manualMaskGradient,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
 
 		# Sum of spatial gradients in z and x-directions
 		if (regType=="zxGrad"):
 			if(pyinfo): print("--- Gradient regularization in both directions ---")
 			inv_log.addToLog("--- Gradient regularization in both directions ---")
 			fat=spatialDerivModule.zxGradInit(sys.argv)
+			if (spline==1): fat=0
 			gradOp=spatialDerivModule.zxGradPython(modelInit,modelInit,fat)
 			gradNlOp=pyOp.NonLinearOperator(gradOp,gradOp)
-			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=maskGradient,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
+			wemvaProb=Prblm.ProblemL2NonLinearReg(modelInit,data,wemvaInvOp,epsilon,grad_mask=manualMaskGradient,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
 
 		# Evaluate Epsilon
 		if (epsilonEval==1):
 			if(pyinfo): print("--- Epsilon evaluation ---")
 			inv_log.addToLog("--- Epsilon evaluation ---")
-			epsilonOut=fwiProb.estimate_epsilon()
+			epsilonOut=wemvaProb.estimate_epsilon()
 			if(pyinfo): print("--- Epsilon value: ",epsilonOut," ---")
 			inv_log.addToLog("--- Epsilon value: %s ---"%(epsilonOut))
 			quit()
 
 	# No regularization
 	else:
-		fwiProb=Prblm.ProblemL2NonLinear(modelInit,data,fwiInvOp,grad_mask=maskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
+		wemvaProb=Prblm.ProblemL2NonLinear(modelInit,data,wemvaInvOp,grad_mask=manualMaskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
 
 	############################# Solver #######################################
-	# Nonlinear conjugate gradient
+	# Solver
+	# Nonlinear solver
 	if (solverType=="nlcg"):
 		nlSolver=NLCG.NLCGsolver(stop,logger=inv_log)
-	# LBFGS
 	elif (solverType=="lbfgs"):
 		nlSolver=LBFGS.LBFGSsolver(stop,logger=inv_log)
-	# Steepest descent
-	elif (solverType=="sd"):
-		nlSolver=NLCG.NLCGsolver(stop,beta_type="SD",logger=inv_log)
 
-	############################# Stepper ######################################
-	if (stepper == "parabolic"):
-		nlSolver.stepper.eval_parab=True
-	elif (stepper == "linear"):
+	if (evalParab==0):
 		nlSolver.stepper.eval_parab=False
-	elif (stepper == "parabolicNew"):
-		print("New parabolic stepper")
-		nlSolver.stepper = Stepper.ParabolicStepConst()
 
-	####################### Manual initial step length #########################
+	# Manual step length
 	initStep=parObject.getInt("initStep",-1)
 	if (initStep>0):
 		nlSolver.stepper.alpha=initStep
@@ -222,7 +208,7 @@ if __name__ == '__main__':
 	nlSolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver
-	nlSolver.run(fwiProb,verbose=info)
+	nlSolver.run(wemvaProb,verbose=info)
 
 	if(pyinfo): print("-------------------------------------------------------------------")
 	if(pyinfo): print("--------------------------- All done ------------------------------")

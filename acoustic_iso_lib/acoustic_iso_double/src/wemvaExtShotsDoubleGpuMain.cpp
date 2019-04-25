@@ -28,6 +28,9 @@ int main(int argc, char **argv) {
 	std::shared_ptr <paramObj> par = io->getParamObj();
 	int adj = par->getInt("adj", 0);
 	int saveWavefield = par->getInt("saveWavefield", 0);
+	int dipole = par->getInt("dipole", 0);
+	int zDipoleShift = par->getInt("zDipoleShift", 1);
+	int xDipoleShift = par->getInt("xDipoleShift", 0);
 	int dotProd = par->getInt("dotProd", 0);
 
 	if (adj == 0 && dotProd == 0){
@@ -136,7 +139,7 @@ int main(int argc, char **argv) {
 	std::vector<std::shared_ptr<deviceGpu>> sourcesVector;
 	int nShot = par->getInt("nShot");
 	for (int iShot; iShot<nShot; iShot++){
-		std::shared_ptr<deviceGpu> sourceDevice(new deviceGpu(nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, velDouble, nts));
+		std::shared_ptr<deviceGpu> sourceDevice(new deviceGpu(nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, velDouble, nts, dipole, zDipoleShift, xDipoleShift));
 		sourcesVector.push_back(sourceDevice);
 		oxSource = oxSource + spacingShots;
 	}
@@ -153,7 +156,7 @@ int main(int argc, char **argv) {
 	std::vector<std::shared_ptr<deviceGpu>> receiversVector;
 	int nRecGeom = 1; // Constant receivers' geometry
 	for (int iRec; iRec<nRecGeom; iRec++){
-		std::shared_ptr<deviceGpu> recDevice(new deviceGpu(nzReceiver, ozReceiver, dzReceiver, nxReceiver, oxReceiver, dxReceiver, velDouble, nts));
+		std::shared_ptr<deviceGpu> recDevice(new deviceGpu(nzReceiver, ozReceiver, dzReceiver, nxReceiver, oxReceiver, dxReceiver, velDouble, nts, dipole, zDipoleShift, xDipoleShift));
 		receiversVector.push_back(recDevice);
 	}
 

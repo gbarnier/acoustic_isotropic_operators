@@ -145,3 +145,29 @@ class LaplacianPython(Op.Operator):
 		with pySpatialDeriv.ostream_redirect():
 			self.pyOp.adjoint(add,model,data)
 		return
+
+# Derivative in the z-direction for extended images (for Symes' preconditioning method)
+def SymesZGradInit(args):
+
+	io=genericIO.pyGenericIO.ioModes(args)
+	ioDef=io.getDefaultIO()
+	parObject=ioDef.getParamObj()
+	fat=parObject.getInt("fat",5)
+	return fat
+
+class SymesZGradPython(Op.Operator):
+
+	def __init__(self,domain,fat):
+
+		self.setDomainRange(domain,domain)
+		self.pyOp = pySpatialDeriv.SymesZGrad(fat)
+		return
+
+	def forward(self,add,model,data):
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pySpatialDeriv.ostream_redirect():
+			self.pyOp.forward(add,model,data)
+		return

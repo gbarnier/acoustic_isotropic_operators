@@ -16,12 +16,13 @@ def maskGradientInit(args):
 	fat=parObject.getInt("fat",5)
 	velFile=parObject.getString("vel","noVelFile")
 	vel=genericIO.defaultIO.getVector(velFile)
+	wbShift=parObject.getFloat("wbShift",0) # Shift water bottom velocity [km] to start tapering at a different depth
 
-	return vel,bufferUp,bufferDown,taperExp,fat
+	return vel,bufferUp,bufferDown,taperExp,fat,wbShift
 
 class maskGradient(Op.Operator):
 
-	def __init__(self,domain,Range,vel,bufferUp,bufferDown,taperExp,fat):
+	def __init__(self,domain,Range,vel,bufferUp,bufferDown,taperExp,fat,wbShift):
 
 		# Set domain/range
 		self.setDomainRange(domain,Range)
@@ -50,11 +51,14 @@ class maskGradient(Op.Operator):
 		indexUpper=np.zeros((nxVel)) # Upper bound index
 		indexLower=np.zeros((nxVel)) # Lower bound index
 
+		# Convert water bottom hift from km->samples
+		iWbShift=int(wbShift/dzVel)
+
 		for ix in range(nxVel-2*fat):
 
 			# Compute water bottom index
 			indexWaterBottom[ix+fat]=np.argwhere(velNp[ix+fat][:]>0)[0][0]
-			indexWaterBottom[ix+fat]=indexWaterBottom[ix+fat]-1
+			indexWaterBottom[ix+fat]=indexWaterBottom[ix+fat]-1+iWbShift
 
 			# Compute water bottom depth [km]
 			depthWaterBottom[ix+fat]=ozVel+indexWaterBottom[ix+fat]*dzVel

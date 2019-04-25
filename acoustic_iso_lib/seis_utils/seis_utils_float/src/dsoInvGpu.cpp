@@ -1,11 +1,11 @@
 #include <float3DReg.h>
-#include "dsoGpu.h"
+#include "dsoInvGpu.h"
 #include <vector>
 #include <omp.h>
 
 using namespace SEP;
 
-dsoGpu::dsoGpu(int nz, int nx, int nExt, int fat, float zeroShift){
+dsoInvGpu::dsoInvGpu(int nz, int nx, int nExt, int fat, float zeroShift){
     _nz = nz;
     _nx = nx;
     _nExt = nExt;
@@ -15,12 +15,12 @@ dsoGpu::dsoGpu(int nz, int nx, int nExt, int fat, float zeroShift){
     _fat = fat;
 }
 
-void dsoGpu::forward(const bool add, const std::shared_ptr<float3DReg> model, std::shared_ptr<float3DReg> data) const {
+void dsoInvGpu::forward(const bool add, const std::shared_ptr<float3DReg> model, std::shared_ptr<float3DReg> data) const {
 
 	if (!add) data->scale(0.0);
-
     for (int iExt=0; iExt<_nExt; iExt++){
         float weight = 1.0*(std::abs(iExt-_hExt)) + std::abs(_zeroShift); // Compute weight for this extended point
+        weight=1.0/weight;
         #pragma omp parallel for collapse(2)
         for (int ix=_fat; ix<_nx-_fat; ix++){
             for (int iz=_fat; iz<_nz-_fat; iz++){
@@ -30,12 +30,13 @@ void dsoGpu::forward(const bool add, const std::shared_ptr<float3DReg> model, st
     }
 }
 
-void dsoGpu::adjoint(const bool add, std::shared_ptr<float3DReg> model, const std::shared_ptr<float3DReg> data) const {
+void dsoInvGpu::adjoint(const bool add, std::shared_ptr<float3DReg> model, const std::shared_ptr<float3DReg> data) const {
 
 	if (!add) model->scale(0.0);
 
     for (int iExt=0; iExt<_nExt; iExt++){
         float weight = 1.0*(std::abs(iExt-_hExt)) + std::abs(_zeroShift); // Compute weight for this extended point
+        weight=1.0/weight;
         #pragma omp parallel for collapse(2)
         for (int ix=_fat; ix<_nx-_fat; ix++){
             for (int iz=_fat; iz<_nz-_fat; iz++){

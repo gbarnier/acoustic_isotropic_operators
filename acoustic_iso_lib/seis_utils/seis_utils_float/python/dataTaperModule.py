@@ -25,10 +25,13 @@ def dataTaperInit(args):
 	expOffset=parObject.getFloat("expOffset",2)
 	taperWidthOffset=parObject.getFloat("taperWidthOffset",0)
 	reverseOffset=parObject.getInt("reverseOffset",0)
+	taperEndTraceWidth=parObject.getFloat("taperEndTraceWidth",0)
+
 	#Adding shot and receiver tapering
 	shotRecTaper=parObject.getInt("shotRecTaper",0)
 	taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec=ShotRecTaperModule.ShotRecTaperInit(args)
-	return t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec
+
+	return t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth
 
 class datTaper(Op.Operator):
 
@@ -53,14 +56,15 @@ class datTaper(Op.Operator):
 			dataHyper = dataHyper.getCpp()
 		time=args[13]
 		offset=args[14]
+		taperEndTraceWidth=args[22]
 		if (time==1 and offset==1):
-			self.pyOp = pyDataTaper.dataTaper(t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,dataHyper)
+			self.pyOp = pyDataTaper.dataTaper(t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,dataHyper,taperEndTraceWidth)
 		if (time==1 and offset==0):
-			self.pyOp = pyDataTaper.dataTaper(t0,velMute,expTime,taperWidthTime,dataHyper,moveout,reverseTime)
+			self.pyOp = pyDataTaper.dataTaper(t0,velMute,expTime,taperWidthTime,dataHyper,moveout,reverseTime,taperEndTraceWidth)
 		if (time==0 and offset==1):
-			self.pyOp = pyDataTaper.dataTaper(maxOffset,expOffset,taperWidthOffset,dataHyper,reverseOffset)
+			self.pyOp = pyDataTaper.dataTaper(maxOffset,expOffset,taperWidthOffset,dataHyper,reverseOffset,taperEndTraceWidth)
 		if (time==0 and offset==0):
-			self.pyOp = pyDataTaper.dataTaper(dataHyper)
+			self.pyOp = pyDataTaper.dataTaper(dataHyper,taperEndTraceWidth)
 		#Checking if ShotRecTaper is requested and instantiating it
 		shotRecTaper=args[15]
 		if(shotRecTaper):

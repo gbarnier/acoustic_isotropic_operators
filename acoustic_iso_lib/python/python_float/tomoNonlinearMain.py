@@ -17,10 +17,8 @@ import maskGradientModule
 # Solver library
 import pyOperator as pyOp
 import pyNLCGsolver as NLCG
-import pyLBFGSsolver as LBFGS
 import pyProblem as Prblm
 import pyStopperBase as Stopper
-import pyStepperParabolic as Stepper
 import inversionUtils
 from sys_util import logger
 
@@ -40,10 +38,6 @@ if __name__ == '__main__':
 	epsilonEval=parObject.getInt("epsilonEval",0)
 	gradientMask=parObject.getInt("gradientMask",0)
 
-	# Nonlinear solver
-	solverType=parObject.getString("solver","nlcg")
-	stepper=parObject.getString("stepper","parabolic")
-
 	# Initialize parameters for inversion
 	stop,logFile,saveObj,saveRes,saveGrad,saveModel,prefix,bufferSize,iterSampling,restartFolder,flushMemory,info=inversionUtils.inversionInit(sys.argv)
 
@@ -51,9 +45,9 @@ if __name__ == '__main__':
 	inv_log = logger(logFile)
 
 	if(pyinfo): print("-------------------------------------------------------------------")
-	if(pyinfo): print("------------------------ Conventional FWI -------------------------")
+	if(pyinfo): print("------------------------ Extended tomo nonlinear inversion ---------------------")
 	if(pyinfo): print("-------------------------------------------------------------------\n")
-	inv_log.addToLog("------------------------ Conventional FWI -------------------------")
+	inv_log.addToLog("------------------------ Extended tomo nonlinear inversion -------------------------")
 
 	############################# Initialization ###############################
 	# Spline
@@ -62,17 +56,17 @@ if __name__ == '__main__':
 
 	# Data taper
 	if (dataTaper==1):
-		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth=dataTaperModule.dataTaperInit(sys.argv)
+		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec=dataTaperModule.dataTaperInit(sys.argv)
 
-	# FWI nonlinear operator
-	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
+	# Born extended for tomo nonlienar inversion (model=velocity)
+	modelFineInit,data,reflectivity,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornExtTomoInvOpInitFloat(sys.argv)
 
-	# Born
-	_,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	# Tomo extended
+	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector,reflectivity=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv
 
 	# Gradient mask
 	if (gradientMask==1):
-		vel,bufferUp,bufferDown,taperExp,fat,wbShift=maskGradientModule.maskGradientInit(sys.argv)
+		vel,bufferUp,bufferDown,taperExp,fat = maskGradientModule.maskGradientInit(sys.argv)
 
 	############################# Read files ###################################
 	# Seismic source
@@ -89,19 +83,19 @@ if __name__ == '__main__':
 	data=genericIO.defaultIO.getVector(dataFile,ndims=3)
 
 	############################# Instanciation ################################
-	# Nonlinear
-	nonlinearFwiOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector)
+	# Born extended for tomo nonlinear inversion
+	BornExtTomoInvOp=Acoustic_iso_float.BornExtTomoInvShotsGpu(modelFineInit,data,reflectivity,wavelet,parObject,sourcesVector,receiversVector)
 
-	# Born
-	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
-	BornInvOp=BornOp
+	# Tomo extended
+	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivity)
+	tomoInvOp=tomoExtOp
 	if (gradientMask==1):
-		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift)
-		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
+		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat)
+		tomoInvOp=pyOp.ChainOperator(maskGradientOp,tomoExtOp)
 
-	# Conventional FWI
-	fwiOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornInvOp,BornOp.setVel)
-	fwiInvOp=fwiOp
+	# Nonlinear operator (Born + tomo)
+	BornExtTomoInvOp=pyOp.NonLinearOperator(BornExtTomoInvOp,tomoInvOp,tomoExtOp.setVel)
+	tomoInvOp=tomoNlOp
 	modelInit=modelFineInit
 
 	# Spline
@@ -111,12 +105,13 @@ if __name__ == '__main__':
 		modelInit=modelCoarseInit
 		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
+		BornExtOp.add_spline(splineOp)
 
 	# Data taper
 	if (dataTaper==1):
 		if(pyinfo): print("--- Using data tapering ---")
 		inv_log.addToLog("--- Using data tapering ---")
-		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
+		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec)
 		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
@@ -195,34 +190,19 @@ if __name__ == '__main__':
 		fwiProb=Prblm.ProblemL2NonLinear(modelInit,data,fwiInvOp,grad_mask=maskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
 
 	############################# Solver #######################################
-	# Nonlinear conjugate gradient
-	if (solverType=="nlcg"):
-		nlSolver=NLCG.NLCGsolver(stop,logger=inv_log)
-	# LBFGS
-	elif (solverType=="lbfgs"):
-		nlSolver=LBFGS.LBFGSsolver(stop,logger=inv_log)
-	# Steepest descent
-	elif (solverType=="sd"):
-		nlSolver=NLCG.NLCGsolver(stop,beta_type="SD",logger=inv_log)
+	# Solver
+	NLCGsolver=NLCG.NLCGsolver(stop,logger=inv_log)
 
-	############################# Stepper ######################################
-	if (stepper == "parabolic"):
-		nlSolver.stepper.eval_parab=True
-	elif (stepper == "linear"):
-		nlSolver.stepper.eval_parab=False
-	elif (stepper == "parabolicNew"):
-		print("New parabolic stepper")
-		nlSolver.stepper = Stepper.ParabolicStepConst()
-
-	####################### Manual initial step length #########################
+	# Manual step length
 	initStep=parObject.getInt("initStep",-1)
 	if (initStep>0):
-		nlSolver.stepper.alpha=initStep
+		NLCGsolver.stepper.alpha=initStep
 
-	nlSolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
+	# Solver
+	NLCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver
-	nlSolver.run(fwiProb,verbose=info)
+	NLCGsolver.run(fwiProb,verbose=info)
 
 	if(pyinfo): print("-------------------------------------------------------------------")
 	if(pyinfo): print("--------------------------- All done ------------------------------")

@@ -1,10 +1,11 @@
+#include <float1DReg.h>
 #include <float3DReg.h>
 #include "dataTaper.h"
 
 using namespace SEP;
 
 // Constructor for both time and offset
-dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTime, std::string moveout, int reverseTime, float maxOffset, float expOffset, float taperWidthOffset, int reverseOffset, std::shared_ptr<SEP::hypercube> dataHyper){
+dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTime, std::string moveout, int reverseTime, float maxOffset, float expOffset, float taperWidthOffset, int reverseOffset, std::shared_ptr<SEP::hypercube> dataHyper, float taperEndTraceWidth){
 
 	// Shots geometry
 	_dataHyper = dataHyper;
@@ -49,10 +50,14 @@ dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTim
 	_taperMask=_taperMaskTime;
 	_taperMask->mult(_taperMaskOffset);
 
+	// Compute weighting for end of trace
+	_taperEndTraceWidth = taperEndTraceWidth; // Taper width [s]
+	computeTaperEndTrace();
+
 }
 
 // Constructor for no tapering
-dataTaper::dataTaper(std::shared_ptr<SEP::hypercube> dataHyper){
+dataTaper::dataTaper(std::shared_ptr<SEP::hypercube> dataHyper, float taperEndTraceWidth){
 
 	// Shots geometry
 	_dataHyper = dataHyper;
@@ -62,11 +67,21 @@ dataTaper::dataTaper(std::shared_ptr<SEP::hypercube> dataHyper){
 	// Allocate and compute taper mask
 	_taperMask=std::make_shared<float3DReg>(_dataHyper);
 	_taperMask->set(1.0); // Set mask value to 1
+	// Time sampling parameters
+	_nts=_dataHyper->getAxis(1).n; // Number of time samples
+	_ots=_dataHyper->getAxis(1).o; // Initial time
+	_dts = _dataHyper->getAxis(1).d; // Time sampling
+	_tMax = _ots+(_nts-1)*_dts; // Max time for recording
+	std::cout << "Inside 1" << std::endl;
+	// Compute weighting for end of trace
+	_taperEndTraceWidth = taperEndTraceWidth; // Taper width [s]
+	std::cout << "_taperEndTraceWidth" << _taperEndTraceWidth << std::endl;
+	computeTaperEndTrace();
 
 }
 
 // Constructor for time only
-dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTime, std::shared_ptr<SEP::hypercube> dataHyper, std::string moveout, int reverseTime){
+dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTime, std::shared_ptr<SEP::hypercube> dataHyper, std::string moveout, int reverseTime, float taperEndTraceWidth){
 
 	// Shots geometry
 	_dataHyper = dataHyper;
@@ -101,10 +116,14 @@ dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTim
 	// Total mask
 	_taperMask=_taperMaskTime;
 
+	// Compute weighting for end of trace
+	_taperEndTraceWidth = taperEndTraceWidth; // Taper width [s]
+	computeTaperEndTrace();
+
 }
 
 // Constructor for offset only
-dataTaper::dataTaper(float maxOffset, float expOffset, float taperWidthOffset, std::shared_ptr<SEP::hypercube> dataHyper, int reverseOffset){
+dataTaper::dataTaper(float maxOffset, float expOffset, float taperWidthOffset, std::shared_ptr<SEP::hypercube> dataHyper, int reverseOffset, float taperEndTraceWidth){
 
 	// Shots geometry
 	_dataHyper = dataHyper;
@@ -136,6 +155,10 @@ dataTaper::dataTaper(float maxOffset, float expOffset, float taperWidthOffset, s
 
 	// Total mask
 	_taperMask=_taperMaskOffset;
+
+	// Compute weighting for end of trace
+	_taperEndTraceWidth = taperEndTraceWidth; // Taper width [s]
+	computeTaperEndTrace();
 
 	// Delete other masks
 	// delete _taperMaskOffset;
@@ -434,6 +457,45 @@ void dataTaper::computeTaperMaskTime(){
 					float argument=1.0*(its-itCutoff2True)/(itCutoff1True-itCutoff2True);
 					float weight=pow(sin(3.14159/2.0*argument), _expTime);
 					(*_taperMaskTime->_mat)[iShot][iRec][its] = weight;
+				}
+			}
+		}
+	}
+}
+void dataTaper::computeTaperEndTrace(){
+
+	// Allocate and computer taper mask
+	_taperEndTrace=std::make_shared<float1DReg>(_nts);
+	_taperEndTrace->set(1.0); // Set mask value to 1
+
+	// Compute trace taper mask
+	std::cout << "_taperEndTraceWidth" << _taperEndTraceWidth << std::endl;
+	if (_taperEndTraceWidth>0.0){
+
+		// Time after which we start tapering the trace [s]
+		float tTaperEndTrace = _tMax - _taperEndTraceWidth;
+		std::cout << "tMax = " << _tMax << std::endl;
+		std::cout << "taperEndTraceWidth = " << _taperEndTraceWidth << std::endl;
+		std::cout << "tTaperEndTrace = " << tTaperEndTrace << std::endl;
+
+		// Make sure you're not out of bounds
+		if (tTaperEndTrace < _ots){
+			std::cout << "**** ERROR [End trace muting]: Make sure taperEndTraceWidth < total recording time ****" << std::endl;
+			assert(1==0);
+		}
+		// Compute index from which you start tapering
+		int itTaperEndTrace = (tTaperEndTrace-_ots)/_dts; // Index from which we start tapering
+		// Compute trace taper
+		for (int its=itTaperEndTrace; its<_nts; its++){
+			float argument = 1.0*(its-itTaperEndTrace)/(_nts-1-itTaperEndTrace);
+			(*_taperEndTrace->_mat)[its] = pow(cos(3.14159/2.0*argument), 2);
+		}
+		// Apply trace taper to taperMask
+		#pragma omp parallel for collapse(3)
+		for (int iShot=0; iShot<_nShot; iShot++){
+			for (int iReceiver=0; iReceiver<_nRec; iReceiver++){
+				for (int its=itTaperEndTrace; its<_nts; its++){
+					(*_taperMask->_mat)[iShot][iReceiver][its] *= (*_taperEndTrace->_mat)[its];
 				}
 			}
 		}

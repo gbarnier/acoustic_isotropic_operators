@@ -22,13 +22,14 @@ class deviceGpu : public Operator<SEP::double2DReg, SEP::double2DReg> {
 		double *_weight;
 		int *_gridPointIndex;
 		int _nDeviceIrreg, _nDeviceReg, _nt, _nz;
+		int _dipole, _nbCorner;
 
 	public:
 
 		/* Overloaded constructors */
-		deviceGpu(const std::shared_ptr<double1DReg> zCoord, const std::shared_ptr<double1DReg> xCoord, const std::shared_ptr<double2DReg> vel, int &nt);
-		deviceGpu(const std::vector<int> &zGridVector, const std::vector<int> &xGridVector, const std::shared_ptr<double2DReg> vel, int &nt);
-		deviceGpu(const int &nzDevice, const int &ozDevice, const int &dzDevice , const int &nxDevice, const int &oxDevice, const int &dxDevice, const std::shared_ptr<double2DReg> vel, int &nt);
+		deviceGpu(const std::shared_ptr<double1DReg> zCoord, const std::shared_ptr<double1DReg> xCoord, const std::shared_ptr<double2DReg> vel, int &nt, int dipole, double zDipoleShift, double xDipoleShift);
+		deviceGpu(const std::vector<int> &zGridVector, const std::vector<int> &xGridVector, const std::shared_ptr<double2DReg> vel, int &nt, int dipole, int zDipoleShift, int xDipoleShift);
+		deviceGpu(const int &nzDevice, const int &ozDevice, const int &dzDevice , const int &nxDevice, const int &oxDevice, const int &dxDevice, const std::shared_ptr<double2DReg> vel, int &nt, int dipole, int zDipoleShift, int xDipoleShift);
 
 		// FWD / ADJ
 		void forward(const bool add, const std::shared_ptr<double2DReg> signalReg, std::shared_ptr<double2DReg> signalIrreg) const;

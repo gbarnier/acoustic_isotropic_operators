@@ -3,7 +3,7 @@ import genericIO
 import SepVector
 import Hypercube
 import numpy as np
-import dsoGpuModule
+import dsoInvGpuModule
 import matplotlib.pyplot as plt
 import sys
 import time
@@ -16,7 +16,7 @@ if __name__ == '__main__':
 	parObject=ioDef.getParamObj()
 	adj=parObject.getInt("adj",0)
 
-	nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
+	nz,nx,nExt,fat,zeroShift=dsoInvGpuModule.dsoInvGpuInit(sys.argv)
 
 	# Forward
 	if (adj==0):
@@ -29,8 +29,8 @@ if __name__ == '__main__':
 		data=model.clone()
 
 		# Create DSO object and run forward
-		dsoOp=dsoGpuModule.dsoGpu(model,data,nz,nx,nExt,fat,zeroShift)
-		dsoOp.forward(False,model,data)
+		dsoInvOp=dsoInvGpuModule.dsoInvGpu(model,data,nz,nx,nExt,fat,zeroShift)
+		dsoInvOp.forward(False,model,data)
 
 		# Write data
 		dataFile=parObject.getString("data")
@@ -48,8 +48,8 @@ if __name__ == '__main__':
 		model=data.clone()
 
 		# Create DSO object and run forward
-		dsoOp=dsoGpuModule.dsoGpu(model,data,nz,nx,nExt,fat,zeroShift)
-		dsoOp.adjoint(False,model,data)
+		dsoInvOp=dsoInvGpuModule.dsoInvGpu(model,data,nz,nx,nExt,fat,zeroShift)
+		dsoInvOp.adjoint(False,model,data)
 
 		# Write model
 		modelFile=parObject.getString("model")

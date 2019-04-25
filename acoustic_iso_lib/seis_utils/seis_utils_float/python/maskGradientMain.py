@@ -18,16 +18,10 @@ if __name__ == '__main__':
 	model=genericIO.defaultIO.getVector(modelFile)
 
 	# Initialize operator
-	vel,bufferUp,bufferDown,taperExp,fat=maskGradientModule.maskGradientInit(sys.argv)
-
-	print("vel",vel)
-	print("bufferUp",bufferUp)
-	print("bufferDown",bufferDown)
-	print("taperExp",taperExp)
-	print("fat",fat)
+	vel,bufferUp,bufferDown,taperExp,fat,wbShift=maskGradientModule.maskGradientInit(sys.argv)
 
 	# Instanciate operator
-	maskGradientOp=maskGradientModule.maskGradient(model,model,vel,bufferUp,bufferDown,taperExp,fat)
+	maskGradientOp=maskGradientModule.maskGradient(model,model,vel,bufferUp,bufferDown,taperExp,fat,wbShift)
 
 	# Get tapering mask
 	maskFile=parObject.getString("mask","noMaskFile")
