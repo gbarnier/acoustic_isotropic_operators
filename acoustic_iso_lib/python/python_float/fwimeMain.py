@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
 	# Nonlinear solver
 	nlSolverType=parObject.getString("nlSolver")
-	evalParab=parObject.getInt("evalParab")
+	evalParab=parObject.getInt("evalParab",1)
 
 	print("-------------------------------------------------------------------")
 	print("------------------------------ FWIME ------------------------------")
@@ -200,14 +200,14 @@ if __name__ == '__main__':
 	# Nonlinear solver
 	if (nlSolverType=="nlcg"):
 		nlSolver=NLCG.NLCGsolver(stopNl,logger=logger(logFileNl))
+		if (evalParab==0):
+			nlSolver.stepper.eval_parab=False
 	elif(nlSolverType=="lbfgs"):
+		# By default, Lbfgs uses MT stepper
 		nlSolver=LBFGS.LBFGSsolver(stopNl,logger=logger(logFileNl))
 	else:
-		print("**** ERROR: User did not provide a solver type ****")
+		print("**** ERROR: User did not provide a nonlinear solver type ****")
 		quit()
-
-	if (evalParab==0):
-		nlSolver.stepper.eval_parab=False
 
 	# Manual step length for the nonlinear solver
 	initStep=parObject.getFloat("initStep",-1)

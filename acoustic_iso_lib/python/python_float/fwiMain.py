@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
 	# Nonlinear solver
 	solverType=parObject.getString("solver","nlcg")
-	stepper=parObject.getString("stepper","parabolic")
+	stepper=parObject.getString("stepper","default")
 
 	# Initialize parameters for inversion
 	stop,logFile,saveObj,saveRes,saveGrad,saveModel,prefix,bufferSize,iterSampling,restartFolder,flushMemory,info=inversionUtils.inversionInit(sys.argv)

@@ -3,7 +3,7 @@ import genericIO
 import SepVector
 import Hypercube
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import sys
 
 if __name__ == '__main__':
