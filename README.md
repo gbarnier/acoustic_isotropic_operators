@@ -20,7 +20,7 @@ Change pathtoSEPIO and run to build the library:
 ```
 cd build
 
-cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc -DSEPlib_LIBDIR=pathtoSEPIO/iolibs/local/lib/ -DSEPlib_DIR=pathtoSEPIO/iolibs/local/cmake/SEP -DCMAKE_MODULE_PREFIX=pathtoSEPIO/iolibs/local/cmake ../acoustic_iso_lib/
+cmake -DCMAKE_INSTALL_PREFIX=folder_for_buiding -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc -DSEPlib_LIBDIR=pathtoSEPIO/iolibs/local/lib/ -DSEPlib_DIR=pathtoSEPIO/iolibs/local/cmake/SEP -DCMAKE_MODULE_PREFIX=pathtoSEPIO/iolibs/local/cmake ../acoustic_iso_lib/
 
 make install
 ```
