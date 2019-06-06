@@ -7,19 +7,19 @@
          Parameterized with slowness SQUARED.
  ***********************************************/
  #pragma once
- #include <Operator.h>
+ #include <operator.h>
  #include <float2DReg.h>
  #include <float3DReg.h>
  #include <SecondDeriv.h>
  #include <Laplacian2d.h>
  #include <Mask3d.h>
 namespace waveform {
-class WaveReconV2 : public giee::Operator {
+class WaveReconV2 : public Operator {
 public:
 
-  WaveReconV2(const std::shared_ptr<giee::float3DReg>model,
-              const std::shared_ptr<giee::float3DReg>data,
-              const std::shared_ptr<giee::float2DReg>slsqModel,
+  WaveReconV2(const std::shared_ptr<SEP::float3DReg>model,
+              const std::shared_ptr<SEP::float3DReg>data,
+              const std::shared_ptr<SEP::float2DReg>slsqModel,
               int                                    n1min,
               int                                    n1max,
               int                                    n2min,
@@ -28,9 +28,9 @@ public:
               int                                    n3max,
               int                                    boundaryCond = 0);
 
-  WaveReconV2(const std::shared_ptr<giee::float3DReg>model,
-              const std::shared_ptr<giee::float3DReg>data,
-              const std::shared_ptr<giee::float2DReg>slsqModel) :
+  WaveReconV2(const std::shared_ptr<SEP::float3DReg>model,
+              const std::shared_ptr<SEP::float3DReg>data,
+              const std::shared_ptr<SEP::float2DReg>slsqModel) :
     WaveReconV2(model,
                 data,
                 slsqModel,
@@ -43,16 +43,16 @@ public:
                 0) {}
 
   void forward(const bool                         add,
-               const std::shared_ptr<giee::Vector>model,
-               std::shared_ptr<giee::Vector>      data);
+               const std::shared_ptr<SEP::Vector>model,
+               std::shared_ptr<SEP::Vector>      data);
 
   void adjoint(const bool                         add,
-               std::shared_ptr<giee::Vector>      model,
-               const std::shared_ptr<giee::Vector>data);
+               std::shared_ptr<SEP::Vector>      model,
+               const std::shared_ptr<SEP::Vector>data);
 
 private:
 
-  std::shared_ptr<giee::float2DReg>_slsqModel;
+  std::shared_ptr<SEP::float2DReg>_slsqModel;
   std::shared_ptr<waveform::SecondDeriv>_D;
   std::shared_ptr<waveform::Laplacian2d>_L;
   std::shared_ptr<waveform::Mask3d>_W;

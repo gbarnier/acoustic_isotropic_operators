@@ -1,11 +1,8 @@
 #include <PadModel2d.h>
-using namespace giee;
-using namespace waveform;
-using namespace SEP;
 
 PadModel2d::PadModel2d(
-  const std::shared_ptr<giee::float2DReg>model,
-  const std::shared_ptr<giee::float2DReg>data,
+  const std::shared_ptr<SEP::float2DReg>model,
+  const std::shared_ptr<SEP::float2DReg>data,
   const int                              padSize,
   const int                              padOption)
 {
@@ -41,8 +38,8 @@ PadModel2d::PadModel2d(
 
 // adds padSize indices on either end of each axis
 void PadModel2d::forward(const bool                         add,
-                         const std::shared_ptr<giee::Vector>model,
-                         std::shared_ptr<giee::Vector>      data) {
+                         const std::shared_ptr<SEP::float2DReg>model,
+                         std::shared_ptr<SEP::float2DReg>      data) const {
   assert(checkDomainRange(model, data, true));
 
   if (!add) data->scale(0.);
@@ -118,8 +115,8 @@ void PadModel2d::forward(const bool                         add,
 
 // truncates padSize indices from either end of each axis
 void PadModel2d::adjoint(const bool                         add,
-                         std::shared_ptr<giee::Vector>      model,
-                         const std::shared_ptr<giee::Vector>data) {
+                         std::shared_ptr<SEP::float2DReg>      model,
+                         const std::shared_ptr<SEP::float2DReg>data) const {
   assert(checkDomainRange(model, data, true));
 
   if (!add) model->scale(0.);

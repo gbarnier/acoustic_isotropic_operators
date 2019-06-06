@@ -11,55 +11,54 @@
       3D->3D. Adjoint 3D->3D.
  ***********************************************/
  #pragma once
- #include <Operator.h>
+ #include <operator.h>
  #include <float1DReg.h>
  #include <float2DReg.h>
  #include <float3DReg.h>
-namespace waveform {
-class TruncateSpatial : public giee::Operator {
+using namespace SEP;
+class TruncateSpatial : public Operator<SEP::float3DReg, SEP::float2DReg> {
 public:
 
   // regular grid
-  TruncateSpatial(const std::shared_ptr<giee::float3DReg>model,
-                  const std::shared_ptr<giee::float3DReg>data);
+  // TruncateSpatial(const std::shared_ptr<SEP::float3DReg>model,
+  //                 const std::shared_ptr<SEP::float3DReg>data);
 
   // irregular grid
-  // TruncateSpatial(const std::shared_ptr<giee::float3DReg>model,
-  //                 const std::shared_ptr<giee::float2DReg>data,
-  //                 const std::shared_ptr<giee::float1DReg>xCoordinates,
-  //                 const std::shared_ptr<giee::float1DReg>zCoordinates);
-  TruncateSpatial(const std::shared_ptr<giee::float3DReg>model,
-                                   const std::shared_ptr<giee::float2DReg>data,
-                                   const std::shared_ptr<giee::float2DReg>recCoordinates);    
+  // TruncateSpatial(const std::shared_ptr<SEP::float3DReg>model,
+  //                 const std::shared_ptr<SEP::float2DReg>data,
+  //                 const std::shared_ptr<SEP::float1DReg>xCoordinates,
+  //                 const std::shared_ptr<SEP::float1DReg>zCoordinates);
+  TruncateSpatial(const std::shared_ptr<SEP::float3DReg>model,
+                                   const std::shared_ptr<SEP::float2DReg>data,
+                                   const std::shared_ptr<SEP::float2DReg>recCoordinates);
 
-  virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data);
+  void forward(const bool                         add,
+                       const std::shared_ptr<SEP::float3DReg>model,
+                       std::shared_ptr<SEP::float2DReg>      data) const ;
 
-  virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data);
-
-  // irregular grid
-  void pullToData(const std::shared_ptr<giee::Vector>model,
-                  std::shared_ptr<giee::float2DReg>  data);
-
-  // regular grid
-  void pullToData(const std::shared_ptr<giee::Vector>model,
-                  std::shared_ptr<giee::float3DReg>  data);
+  void adjoint(const bool                         add,
+                       std::shared_ptr<SEP::float3DReg>      model,
+                       const std::shared_ptr<SEP::float2DReg>data) const ;
 
   // irregular grid
-  void pushToModel(std::shared_ptr<giee::Vector>          model,
-                   const std::shared_ptr<giee::float3DReg>data);
+  void pullToData(const std::shared_ptr<SEP::float3DReg>model,
+                  std::shared_ptr<SEP::float2DReg>  data);
 
-  // regular grid
-  void pushToModel(std::shared_ptr<giee::Vector>          model,
-                   const std::shared_ptr<giee::float2DReg>data);
+  // // regular grid
+  // void pullToData(const std::shared_ptr<SEP::Vector>model,
+  //                 std::shared_ptr<SEP::float3DReg>  data);
+
+  // irregular grid
+  void pushToModel(std::shared_ptr<SEP::float3DReg>          model,
+                   const std::shared_ptr<SEP::float2DReg>data);
+
+  // // regular grid
+  // void pushToModel(std::shared_ptr<SEP::Vector>          model,
+  //                  const std::shared_ptr<SEP::float2DReg>data);
 
 private:
 
-  // std::shared_ptr<giee::float1DReg>_xCoordinates;
-  // std::shared_ptr<giee::float1DReg>_zCoordinates;
-  std::shared_ptr<giee::float2DReg>_recCoordinates;
+  // std::shared_ptr<SEP::float1DReg>_xCoordinates;
+  // std::shared_ptr<SEP::float1DReg>_zCoordinates;
+  std::shared_ptr<SEP::float2DReg>_recCoordinates;
 };
-}

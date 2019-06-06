@@ -4,16 +4,17 @@
    Description:  Mask values in a cube
  ***********************************************/
  #pragma once
- #include <Operator.h>
+ #include <operator.h>
  #include <float3DReg.h>
-namespace waveform {
-class Mask3d : public giee::Operator {
+using namespace SEP;
+
+class Mask3d : public Operator<SEP::float3DReg, SEP::float3DReg> {
 public:
 
   // regular grid
   Mask3d(
-    const std::shared_ptr<giee::float3DReg>model,
-    const std::shared_ptr<giee::float3DReg>data,
+    const std::shared_ptr<SEP::float3DReg>model,
+    const std::shared_ptr<SEP::float3DReg>data,
     int                                    n1min,
     int                                    n1max,
     int                                    n2min,
@@ -22,13 +23,16 @@ public:
     int                                    n3max,
     int                                    maskType = 0);
 
-  virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data);
+    void forward(const bool                         add,
+                 const std::shared_ptr<SEP::float3DReg>model,
+                 std::shared_ptr<SEP::float3DReg>      data) const;
 
-  virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data);
+    void adjoint(const bool                         add,
+                 std::shared_ptr<SEP::float3DReg>      model,
+                 const std::shared_ptr<SEP::float3DReg>data) const;
+
+                 /* Destructor */
+             		~Mask3d(){};
 
 private:
 
@@ -36,4 +40,3 @@ private:
   int _maskType;
   std::shared_ptr<float3D>_mask;
 };
-}

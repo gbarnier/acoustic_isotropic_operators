@@ -3,9 +3,9 @@ using namespace giee;
 using namespace waveform;
 
 C2_2DCube::C2_2DCube(
-  const std::shared_ptr<giee::float3DReg>model,
-  const std::shared_ptr<giee::float3DReg>data,
-  const std::shared_ptr<giee::float2DReg>velPadded,
+  const std::shared_ptr<SEP::float3DReg>model,
+  const std::shared_ptr<SEP::float3DReg>data,
+  const std::shared_ptr<SEP::float2DReg>velPadded,
   const float                            dt
   ) {
   // model and data and velocity domains must match
@@ -23,8 +23,8 @@ C2_2DCube::C2_2DCube(
 }
 
 void C2_2DCube::forward(const bool                         add,
-                        const std::shared_ptr<giee::Vector>model,
-                        std::shared_ptr<giee::Vector>      data)
+                        const std::shared_ptr<SEP::Vector>model,
+                        std::shared_ptr<SEP::Vector>      data)
 {
   assert(checkDomainRange(model, data, true));
   int n1 =
@@ -63,8 +63,8 @@ void C2_2DCube::forward(const bool                         add,
 }
 
 void C2_2DCube::adjoint(const bool                         add,
-                        std::shared_ptr<giee::Vector>      model,
-                        const std::shared_ptr<giee::Vector>data)
+                        std::shared_ptr<SEP::Vector>      model,
+                        const std::shared_ptr<SEP::Vector>data)
 {
   assert(checkDomainRange(model, data, true));
   int n1 =

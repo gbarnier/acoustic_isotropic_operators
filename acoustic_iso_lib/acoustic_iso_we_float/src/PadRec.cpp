@@ -1,6 +1,5 @@
 #include<PadRec.h>
-using namespace waveform;
-using namespace giee;
+using namespace SEP;
 
 PadRec::PadRec(const std::shared_ptr<float2DReg> model,
   const std::shared_ptr<float3DReg> data, const int s2){
@@ -25,8 +24,8 @@ PadRec::PadRec(const std::shared_ptr<float2DReg> model,
 }
 
 void PadRec::forward(const bool add,
-  const std::shared_ptr<giee::Vector> model,
-  std::shared_ptr<giee::Vector> data){
+  const std::shared_ptr<SEP::float2DReg> model,
+  std::shared_ptr<SEP::float3DReg> data){
 
 
   assert(checkDomainRange(model,data,true));
@@ -49,8 +48,8 @@ void PadRec::forward(const bool add,
 }
 
 void PadRec::adjoint(const bool add,
-  std::shared_ptr<giee::Vector> model,
-  const std::shared_ptr<giee::Vector> data){
+  std::shared_ptr<SEP::float2DReg> model,
+  const std::shared_ptr<SEP::float3DReg> data){
 
   assert(checkDomainRange(model,data,true));
   if(!add) model->scale(0.);

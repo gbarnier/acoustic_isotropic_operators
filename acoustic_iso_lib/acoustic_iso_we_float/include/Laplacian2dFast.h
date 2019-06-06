@@ -6,35 +6,37 @@
  ***********************************************/
 
 #pragma once
-#include <Operator.h>
+#include <operator.h>
 #include <float2DReg.h>
 #include <float3DReg.h>
-namespace waveform {
-class Laplacian2dFast : public giee::Operator {
+
+using namespace SEP;
+
+class Laplacian2dFast : public Operator<SEP::float3DReg, SEP::float3DReg> {
 public:
 
   /**
      2d lapl of each slice of fast axis
    */
-  Laplacian2dFast(const std::shared_ptr<giee::float3DReg>model,
-                  const std::shared_ptr<giee::float3DReg>data);
+  Laplacian2dFast(const std::shared_ptr<SEP::float3DReg>model,
+                  const std::shared_ptr<SEP::float3DReg>data);
 
-  Laplacian2dFast(const std::shared_ptr<giee::float2DReg>model,
-                  const std::shared_ptr<giee::float2DReg>data);
+  // Laplacian2dFast(const std::shared_ptr<SEP::float2DReg>model,
+  //                 const std::shared_ptr<SEP::float2DReg>data);
 
   /**
      lapl(model) -> data
    */
   virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data);
+                       const std::shared_ptr<SEP::float3DReg>model,
+                       std::shared_ptr<SEP::float3DReg>      data);
 
   /**
      lapl(data) -> model
    */
   virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data);
+                       std::shared_ptr<SEP::float3DReg>      model,
+                       const std::shared_ptr<SEP::float3DReg>data);
 
 private:
 
@@ -47,4 +49,3 @@ private:
                                                                     // coeff
   int _bufferSize = 5;
 };
-}

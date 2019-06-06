@@ -5,29 +5,29 @@
  ***********************************************/
 
 #pragma once
-#include <Operator.h>
+#include <operator.h>
 #include <float2DReg.h>
 #include <float3DReg.h>
 namespace WRI {
-class Gradio : public giee::Operator {
+class Gradio : public Operator {
 public:
 
-  Gradio(const std::shared_ptr<giee::float2DReg>model,
-         const std::shared_ptr<giee::float3DReg>data,
-         const std::shared_ptr<giee::float3DReg>pressureData);
+  Gradio(const std::shared_ptr<SEP::float2DReg>model,
+         const std::shared_ptr<SEP::float3DReg>data,
+         const std::shared_ptr<SEP::float3DReg>pressureData);
 
   virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data);
+                       const std::shared_ptr<SEP::Vector>model,
+                       std::shared_ptr<SEP::Vector>      data);
 
   virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data);
+                       std::shared_ptr<SEP::Vector>      model,
+                       const std::shared_ptr<SEP::Vector>data);
 
 private:
 
-  std::shared_ptr<giee::float3DReg>_pressureData;
-  std::shared_ptr<giee::float3DReg>_pressureDatad2;
+  std::shared_ptr<SEP::float3DReg>_pressureData;
+  std::shared_ptr<SEP::float3DReg>_pressureDatad2;
   float _dt;
   int _truncateSize;
 };

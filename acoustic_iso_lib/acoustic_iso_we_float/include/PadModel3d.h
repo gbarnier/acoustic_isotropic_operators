@@ -5,35 +5,34 @@
       with zeros and with edge values.
  ***********************************************/
  #pragma once
- #include <Operator.h>
+ #include <operator.h>
  #include <float3DReg.h>
-namespace waveform {
-class PadModel3d : public giee::Operator {
+using namespace SEP;
+class PadModel3d : public Operator<SEP::float3DReg, SEP::float3DReg> {
 public:
 
   // regular grid
-  PadModel3d(const std::shared_ptr<giee::float3DReg>model,
-             const std::shared_ptr<giee::float3DReg>data,
+  PadModel3d(const std::shared_ptr<SEP::float3DReg>model,
+             const std::shared_ptr<SEP::float3DReg>data,
              const int                              padSize1,
              const int                              padSize2,
              const int                              padSize3,
              const int                              padOption = 0);
-  PadModel3d(const std::shared_ptr<giee::float3DReg>model,
-             const std::shared_ptr<giee::float3DReg>data,
+  PadModel3d(const std::shared_ptr<SEP::float3DReg>model,
+             const std::shared_ptr<SEP::float3DReg>data,
              const int                              padSize   = 1,
              const int                              padOption = 0);
 
-  virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data);
+  void forward(const bool                         add,
+                       const std::shared_ptr<SEP::float3DReg>model,
+                       std::shared_ptr<SEP::float3DReg>      data) const ;
 
-  virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data);
+  void adjoint(const bool                         add,
+                       std::shared_ptr<SEP::float3DReg>      model,
+                       const std::shared_ptr<SEP::float3DReg>data) const ;
 
 private:
 
   int _padSize1, _padSize2, _padSize3;
   int _padOption;
 };
-}

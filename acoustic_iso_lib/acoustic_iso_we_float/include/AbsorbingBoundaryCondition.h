@@ -8,34 +8,32 @@
 #include <BoundaryCondition.h>
 #include <float2DReg.h>
 #include <float3DReg.h>
-using namespace giee;
+using namespace SEP;
 
-namespace waveform {
-class AbsorbingBoundaryCondition : public waveform::BoundaryCondition {
+class AbsorbingBoundaryCondition : public BoundaryCondition {
 public:
 
-  AbsorbingBoundaryCondition(const std::shared_ptr<giee::float2DReg>model,
-                             const std::shared_ptr<giee::float2DReg>data,
-                             const std::shared_ptr<giee::float2DReg>paddedVel,
+  AbsorbingBoundaryCondition(const std::shared_ptr<SEP::float2DReg>model,
+                             const std::shared_ptr<SEP::float2DReg>data,
+                             const std::shared_ptr<SEP::float2DReg>paddedVel,
                              const int                              velPadx,
                              const int                              velPadz,
                              const float                            absConst,
                              const float                            dt);
 
   void forward(const bool                         add,
-               const std::shared_ptr<giee::Vector>model,
-               std::shared_ptr<giee::Vector>      data);
+               const std::shared_ptr<SEP::float2DReg>model,
+               std::shared_ptr<SEP::float2DReg>      data);
 
   void adjoint(const bool                         add,
-               std::shared_ptr<giee::Vector>      model,
-               const std::shared_ptr<giee::Vector>data);
+               std::shared_ptr<SEP::float2DReg>      model,
+               const std::shared_ptr<SEP::float2DReg>data);
 
-  // std::shared_ptr<giee::float2DReg> getWeight();
+  // std::shared_ptr<SEP::float2DReg> getWeight();
 
 private:
 
   float _absConst, _dt;
 
-  // std::shared_ptr<giee::float2DReg> _paddedVel;
+  // std::shared_ptr<SEP::float2DReg> _paddedVel;
 };
-}

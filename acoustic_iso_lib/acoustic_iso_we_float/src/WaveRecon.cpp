@@ -1,10 +1,9 @@
 #include <WaveRecon.h>
-using namespace waveform;
-using namespace giee;
 
-WaveRecon::WaveRecon(const std::shared_ptr<giee::float3DReg>model,
-                     const std::shared_ptr<giee::float3DReg>data,
-                     const std::shared_ptr<giee::float2DReg>slowModel,
+
+WaveRecon::WaveRecon(const std::shared_ptr<SEP::float3DReg>model,
+                     const std::shared_ptr<SEP::float3DReg>data,
+                     const std::shared_ptr<SEP::float2DReg>slowModel,
                      int                                    n1min,
                      int                                    n1max,
                      int                                    n2min,
@@ -54,13 +53,13 @@ WaveRecon::WaveRecon(const std::shared_ptr<giee::float3DReg>model,
 // WAm=d
 // W[d^2/dt^2(model)*s^2 -Lapl(model)]=data
 void WaveRecon::forward(const bool                         add,
-                        const std::shared_ptr<giee::Vector>model,
-                        std::shared_ptr<giee::Vector>      data) {
+                        const std::shared_ptr<SEP::float3DReg>model,
+                        std::shared_ptr<SEP::float3DReg>      data) {
   assert(checkDomainRange(model, data, true));
 
-  std::shared_ptr<giee::float3DReg> temp0 =
+  std::shared_ptr<SEP::float3DReg> temp0 =
     std::dynamic_pointer_cast<float3DReg>(data->clone());
-  std::shared_ptr<giee::float3DReg> temp1 =
+  std::shared_ptr<SEP::float3DReg> temp1 =
     std::dynamic_pointer_cast<float3DReg>(data->clone());
   temp0->scale(0.);
   temp1->scale(0.);
@@ -118,15 +117,15 @@ void WaveRecon::forward(const bool                         add,
 // A*W*d=m
 // (d^2/dt^2)*(W(data))*s^2 -Lapl*(W(data))]=model
 void WaveRecon::adjoint(const bool                         add,
-                        std::shared_ptr<giee::Vector>      model,
-                        const std::shared_ptr<giee::Vector>data) {
+                        std::shared_ptr<SEP::float3DReg>      model,
+                        const std::shared_ptr<SEP::float3DReg>data) {
   assert(checkDomainRange(model, data, true));
 
-  std::shared_ptr<giee::float3DReg> temp0 =
+  std::shared_ptr<SEP::float3DReg> temp0 =
     std::dynamic_pointer_cast<float3DReg>(model->clone());
-  std::shared_ptr<giee::float3DReg> temp1 =
+  std::shared_ptr<SEP::float3DReg> temp1 =
     std::dynamic_pointer_cast<float3DReg>(model->clone());
-  std::shared_ptr<giee::float3DReg> temp2 =
+  std::shared_ptr<SEP::float3DReg> temp2 =
     std::dynamic_pointer_cast<float3DReg>(model->clone());
 
   temp0->scale(0.);

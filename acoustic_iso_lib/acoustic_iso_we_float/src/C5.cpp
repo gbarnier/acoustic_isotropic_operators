@@ -3,9 +3,9 @@ using namespace giee;
 using namespace waveform;
 
 C5::C5(
-  const std::shared_ptr<giee::float2DReg>model,
-  const std::shared_ptr<giee::float2DReg>data,
-  const std::shared_ptr<giee::float2DReg>velPadded,
+  const std::shared_ptr<SEP::float2DReg>model,
+  const std::shared_ptr<SEP::float2DReg>data,
+  const std::shared_ptr<SEP::float2DReg>velPadded,
   const int                              velPadx,
   const int                              velPadz,
   const float                            dt
@@ -31,8 +31,8 @@ C5::C5(
 }
 
 void C5::forward(const bool                         add,
-                 const std::shared_ptr<giee::Vector>model,
-                 std::shared_ptr<giee::Vector>      data)
+                 const std::shared_ptr<SEP::Vector>model,
+                 std::shared_ptr<SEP::Vector>      data)
 {
   assert(checkDomainRange(model, data, true));
   int n1 =
@@ -86,8 +86,8 @@ void C5::forward(const bool                         add,
 }
 
 void C5::adjoint(const bool                         add,
-                 std::shared_ptr<giee::Vector>      model,
-                 const std::shared_ptr<giee::Vector>data)
+                 std::shared_ptr<SEP::Vector>      model,
+                 const std::shared_ptr<SEP::Vector>data)
 {
   assert(checkDomainRange(model, data, true));
   int n1 =

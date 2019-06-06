@@ -1,23 +1,22 @@
 #pragma once
-#include <Operator.h>
+#include <operator.h>
 #include <float2DReg.h>
-using namespace giee;
+using namespace SEP;
 
-namespace waveform {
-class BoundaryCondition : public giee::Operator {
+class BoundaryCondition : public Operator<SEP::float2DReg, SEP::float2DReg> {
 public:
 
   // BoundaryCondition() {}
 
   virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data) = 0;
+                       const std::shared_ptr<SEP::float2DReg>model,
+                       std::shared_ptr<SEP::float2DReg>      data) = 0;
 
   virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data) = 0;
+                       std::shared_ptr<SEP::float2DReg>      model,
+                       const std::shared_ptr<SEP::float2DReg>data) = 0;
 
-  std::shared_ptr<giee::float2DReg>getWeight() {
+  std::shared_ptr<SEP::float2DReg>getWeight() {
     return _w;
   }
 
@@ -25,6 +24,5 @@ protected:
 
   std::shared_ptr<SEP::hypercube>_paddedModelHyper;
   int _velPadx, _velPadz;
-  std::shared_ptr<giee::float2DReg>_w;
+  std::shared_ptr<SEP::float2DReg>_w;
 };
-}

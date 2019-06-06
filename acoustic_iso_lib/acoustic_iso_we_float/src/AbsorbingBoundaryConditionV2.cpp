@@ -1,11 +1,10 @@
 #include <AbsorbingBoundaryConditionV2.h>
-using namespace giee;
-using namespace waveform;
+using namespace SEP;
 
 AbsorbingBoundaryConditionV2::AbsorbingBoundaryConditionV2(
-  const std::shared_ptr<giee::float3DReg>model,
-  const std::shared_ptr<giee::float3DReg>data,
-  const std::shared_ptr<giee::float2DReg>paddedVel,
+  const std::shared_ptr<SEP::float3DReg>model,
+  const std::shared_ptr<SEP::float3DReg>data,
+  const std::shared_ptr<SEP::float2DReg>paddedVel,
   const int                              velPadx,
   const int                              velPadz,
   const float                            absConst,
@@ -22,7 +21,7 @@ AbsorbingBoundaryConditionV2::AbsorbingBoundaryConditionV2(
   assert(data->getHyper()->getAxis(3).n == paddedVel->getHyper()->getAxis(2).n);
   setDomainRange(model, data);
 
-  std::shared_ptr<giee::float2DReg> _paddedVel = paddedVel;
+  std::shared_ptr<SEP::float2DReg> _paddedVel = paddedVel;
   _paddedModelHyper = paddedVel->getHyper();
   _velPadx          = velPadx;
   _velPadz          = velPadz;
@@ -97,8 +96,8 @@ AbsorbingBoundaryConditionV2::AbsorbingBoundaryConditionV2(
 }
 
 void AbsorbingBoundaryConditionV2::forward(const bool                         add,
-                                           const std::shared_ptr<giee::Vector>model,
-                                           std::shared_ptr<giee::Vector>      data)
+                                           const std::shared_ptr<SEP::float3DReg>model,
+                                           std::shared_ptr<SEP::float3DReg>      data)
 {
   assert(checkDomainRange(model, data, true));
 
@@ -129,8 +128,8 @@ void AbsorbingBoundaryConditionV2::forward(const bool                         ad
 }
 
 void AbsorbingBoundaryConditionV2::adjoint(const bool                         add,
-                                           const std::shared_ptr<giee::Vector>model,
-                                           std::shared_ptr<giee::Vector>      data)
+                                           const std::shared_ptr<SEP::float3DReg>model,
+                                           std::shared_ptr<SEP::float3DReg>      data)
 {
   assert(checkDomainRange(model, data, true));
 

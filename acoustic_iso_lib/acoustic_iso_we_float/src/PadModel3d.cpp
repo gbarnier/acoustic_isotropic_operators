@@ -1,11 +1,8 @@
 #include <PadModel3d.h>
-using namespace giee;
-using namespace waveform;
-using namespace SEP;
 
 PadModel3d::PadModel3d(
-  const std::shared_ptr<giee::float3DReg>model,
-  const std::shared_ptr<giee::float3DReg>data,
+  const std::shared_ptr<SEP::float3DReg>model,
+  const std::shared_ptr<SEP::float3DReg>data,
   const int                              padSize1,
   const int                              padSize2,
   const int                              padSize3,
@@ -51,8 +48,8 @@ PadModel3d::PadModel3d(
 }
 
 PadModel3d::PadModel3d(
-  const std::shared_ptr<giee::float3DReg>model,
-  const std::shared_ptr<giee::float3DReg>data,
+  const std::shared_ptr<SEP::float3DReg>model,
+  const std::shared_ptr<SEP::float3DReg>data,
   const int                              padSize,
   const int                              padOption)
 {
@@ -97,8 +94,8 @@ PadModel3d::PadModel3d(
 
 // adds padSize indices on either end of each axis
 void PadModel3d::forward(const bool                         add,
-                         const std::shared_ptr<giee::Vector>model,
-                         std::shared_ptr<giee::Vector>      data) {
+                         const std::shared_ptr<SEP::float3DReg>model,
+                         std::shared_ptr<SEP::float3DReg>      data) const{
   assert(checkDomainRange(model, data, true));
 
   if (!add) data->scale(0.);
@@ -238,8 +235,8 @@ void PadModel3d::forward(const bool                         add,
 
 // truncates padSize indices from either end of each axis
 void PadModel3d::adjoint(const bool                         add,
-                         std::shared_ptr<giee::Vector>      model,
-                         const std::shared_ptr<giee::Vector>data) {
+                         std::shared_ptr<SEP::float3DReg>      model,
+                         const std::shared_ptr<SEP::float3DReg>data) const {
   assert(checkDomainRange(model, data, true));
 
   if (!add) model->scale(0.);

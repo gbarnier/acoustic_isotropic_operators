@@ -2,8 +2,8 @@
 using namespace giee;
 using namespace waveform;
 
-PropogateAcoustic::PropogateAcoustic(const std::shared_ptr<giee::float3DReg>model,
-                                     const std::shared_ptr<giee::float3DReg>data,
+PropogateAcoustic::PropogateAcoustic(const std::shared_ptr<SEP::float3DReg>model,
+                                     const std::shared_ptr<SEP::float3DReg>data,
                                      const waveform::PropogateStepper       StepperOp,
                                      const waveform::BoundaryCondition      BoundaryOp)
 {
@@ -28,8 +28,8 @@ PropogateAcoustic::PropogateAcoustic(const std::shared_ptr<giee::float3DReg>mode
 }
 
 void PropogateAcoustic::forward(const bool                         add,
-                                const std::shared_ptr<giee::Vector>f,
-                                std::shared_ptr<giee::Vector>      p) {
+                                const std::shared_ptr<SEP::Vector>f,
+                                std::shared_ptr<SEP::Vector>      p) {
   assert(checkDomainRange(model, data, true));
 
   if (!add) data->scale(0.);
@@ -66,5 +66,5 @@ void PropogateAcoustic::forward(const bool                         add,
 }
 
 void PropogateAcoustic::adjoint(const bool                         add,
-                                std::shared_ptr<giee::Vector>      model,
-                                const std::shared_ptr<giee::Vector>data) {}
+                                std::shared_ptr<SEP::Vector>      model,
+                                const std::shared_ptr<SEP::Vector>data) {}

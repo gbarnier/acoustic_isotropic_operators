@@ -1,10 +1,9 @@
 #include <InterpRec.h>
-using namespace giee;
-using namespace waveform;
+using namespace SEP;
 
-InterpRec::InterpRec(const std::shared_ptr<giee::float2DReg>model,
-                     const std::shared_ptr<giee::float2DReg>data,
-                     const std::shared_ptr<giee::float1DReg>dataCoordinates,
+InterpRec::InterpRec(const std::shared_ptr<SEP::float2DReg>model,
+                     const std::shared_ptr<SEP::float2DReg>data,
+                     const std::shared_ptr<SEP::float1DReg>dataCoordinates,
                      float                                  oversamp) {
   assert(data->getHyper()->getAxis(1).n == dataCoordinates->getHyper()->getAxis(
            1).n);
@@ -18,8 +17,8 @@ InterpRec::InterpRec(const std::shared_ptr<giee::float2DReg>model,
 }
 
 void InterpRec::forward(const bool                         add,
-                        const std::shared_ptr<giee::Vector>model,
-                        std::shared_ptr<giee::Vector>      data) {
+                        const std::shared_ptr<SEP::float2DReg>model,
+                        std::shared_ptr<SEP::float2DReg>      data) {
   assert(checkDomainRange(model, data, true));
 
   if (!add) data->scale(0.);
@@ -52,8 +51,8 @@ void InterpRec::forward(const bool                         add,
 }
 
 void InterpRec::adjoint(const bool                         add,
-                        std::shared_ptr<giee::Vector>      model,
-                        const std::shared_ptr<giee::Vector>data) {
+                        std::shared_ptr<SEP::float2DReg>      model,
+                        const std::shared_ptr<SEP::float2DReg>data) {
   assert(checkDomainRange(model, data, true));
 
   if (!add) model->scale(0.);

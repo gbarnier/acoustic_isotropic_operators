@@ -3,9 +3,9 @@ using namespace giee;
 using namespace waveform;
 
 ScaleSourceAcousticMonopole::ScaleSourceAcousticMonopole(
-  const std::shared_ptr<giee::float3DReg>model,
-  const std::shared_ptr<giee::float3DReg>data,
-  const std::shared_ptr<giee::float2DReg>velModel)
+  const std::shared_ptr<SEP::float3DReg>model,
+  const std::shared_ptr<SEP::float3DReg>data,
+  const std::shared_ptr<SEP::float2DReg>velModel)
 {
   assert(model->getHyper()->getAxis(1).n == data->getHyper()->getAxis(1).n);
   assert(model->getHyper()->getAxis(2).n == data->getHyper()->getAxis(
@@ -19,8 +19,8 @@ ScaleSourceAcousticMonopole::ScaleSourceAcousticMonopole(
 }
 
 void ScaleSourceAcousticMonopole::forward(const bool                         add,
-                                          const std::shared_ptr<giee::Vector>model,
-                                          std::shared_ptr<giee::Vector>      data)
+                                          const std::shared_ptr<SEP::Vector>model,
+                                          std::shared_ptr<SEP::Vector>      data)
 {
   assert(checkDomainRange(model, data, true));
 
@@ -52,8 +52,8 @@ void ScaleSourceAcousticMonopole::forward(const bool                         add
 }
 
 void ScaleSourceAcousticMonopole::adjoint(const bool                         add,
-                                          std::shared_ptr<giee::Vector>      model,
-                                          const std::shared_ptr<giee::Vector>data)
+                                          std::shared_ptr<SEP::Vector>      model,
+                                          const std::shared_ptr<SEP::Vector>data)
 {
   assert(checkDomainRange(model, data, true));
 

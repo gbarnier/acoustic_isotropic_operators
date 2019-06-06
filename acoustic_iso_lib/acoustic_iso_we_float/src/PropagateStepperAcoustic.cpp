@@ -3,10 +3,10 @@ using namespace giee;
 using namespace waveform;
 
 PropagateStepperAcoustic::PropagateStepperAcoustic(
-  const std::shared_ptr<giee::float2DReg>           model,
-  const std::shared_ptr<giee::float2DReg>           data,
-  const std::shared_ptr<giee::float2DReg>           velPadded,
-  const std::shared_ptr<giee::float3DReg>           sourceCube,
+  const std::shared_ptr<SEP::float2DReg>           model,
+  const std::shared_ptr<SEP::float2DReg>           data,
+  const std::shared_ptr<SEP::float2DReg>           velPadded,
+  const std::shared_ptr<SEP::float3DReg>           sourceCube,
   const std::shared_ptr<waveform::BoundaryCondition>BC,
   const int                                         velPadx,
   const int                                         velPadz
@@ -48,10 +48,10 @@ PropagateStepperAcoustic::PropagateStepperAcoustic(
 }
 
 void PropagateStepperAcoustic::forward(const bool                         add,
-                                       const std::shared_ptr<giee::Vector>pCur,
-                                       std::shared_ptr<giee::Vector>      pNew)
+                                       const std::shared_ptr<SEP::Vector>pCur,
+                                       std::shared_ptr<SEP::Vector>      pNew)
 {
-  std::shared_ptr<giee::float2DReg> temp0;
+  std::shared_ptr<SEP::float2DReg> temp0;
 
   if (!add) pNew->scale(0.);
   else temp0 = std::dynamic_pointer_cast<float2DReg>(pNew->clone());
@@ -89,10 +89,10 @@ void PropagateStepperAcoustic::forward(const bool                         add,
 }
 
 void PropagateStepperAcoustic::adjoint(const bool                         add,
-                                       std::shared_ptr<giee::Vector>      pCur,
-                                       const std::shared_ptr<giee::Vector>pNew)
+                                       std::shared_ptr<SEP::Vector>      pCur,
+                                       const std::shared_ptr<SEP::Vector>pNew)
 {
-  std::shared_ptr<giee::float2DReg> temp0;
+  std::shared_ptr<SEP::float2DReg> temp0;
 
   if (!add) pCur->scale(0.);
   else temp0 = std::dynamic_pointer_cast<float2DReg>(pCur->clone());

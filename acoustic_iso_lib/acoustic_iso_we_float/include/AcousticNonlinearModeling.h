@@ -5,7 +5,7 @@
       time
  ***********************************************/
  #pragma once
-#include <Operator.h>
+#include <operator.h>
 #include <float1DReg.h>
 #include <float2DReg.h>
 #include <float3DReg.h>
@@ -27,14 +27,14 @@ public:
   /** model all shots forward in time.
    */
   void forward(const bool                         add,
-               const std::shared_ptr<giee::Vector>model,
-               std::shared_ptr<giee::Vector>      data);
+               const std::shared_ptr<SEP::Vector>model,
+               std::shared_ptr<SEP::Vector>      data);
 
   /** model all shots gathers backward in time
    */
   void adjoint(const bool                         add,
-               std::shared_ptr<giee::Vector>      model,
-               const std::shared_ptr<giee::Vector>data);
+               std::shared_ptr<SEP::Vector>      model,
+               const std::shared_ptr<SEP::Vector>data);
 
 
   void writeWavefield(); // write out wavefield at given time

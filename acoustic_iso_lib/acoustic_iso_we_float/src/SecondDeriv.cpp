@@ -1,27 +1,26 @@
 #include <SecondDeriv.h>
-using namespace waveform;
-using namespace giee;
+using namespace SEP;
 
-/**
-   2d case
- */
-SecondDeriv::SecondDeriv(const std::shared_ptr<float2DReg>model,
-                         const std::shared_ptr<float2DReg>data) {
-  // ensure dimensions match
-  assert(model->getHyper()->getAxis(1).n == data->getHyper()->getAxis(1).n);
-  assert(model->getHyper()->getAxis(2).n == data->getHyper()->getAxis(2).n);
-  assert(model->getHyper()->getAxis(1).d == data->getHyper()->getAxis(1).d);
-  assert(model->getHyper()->getAxis(2).d == data->getHyper()->getAxis(2).d);
-
-  // set dim
-  _dim = 2;
-
-  // get sampling of fast axis and square it
-  _df2 = model->getHyper()->getAxis(1).d * model->getHyper()->getAxis(1).d;
-
-  // set domain and range
-  setDomainRange(model, data);
-}
+// /**
+//    2d case
+//  */
+// SecondDeriv::SecondDeriv(const std::shared_ptr<float2DReg>model,
+//                          const std::shared_ptr<float2DReg>data) {
+//   // ensure dimensions match
+//   assert(model->getHyper()->getAxis(1).n == data->getHyper()->getAxis(1).n);
+//   assert(model->getHyper()->getAxis(2).n == data->getHyper()->getAxis(2).n);
+//   assert(model->getHyper()->getAxis(1).d == data->getHyper()->getAxis(1).d);
+//   assert(model->getHyper()->getAxis(2).d == data->getHyper()->getAxis(2).d);
+//
+//   // set dim
+//   _dim = 2;
+//
+//   // get sampling of fast axis and square it
+//   _df2 = model->getHyper()->getAxis(1).d * model->getHyper()->getAxis(1).d;
+//
+//   // set domain and range
+//   setDomainRange(model, data);
+// }
 
 /**
    Many 2d slices case
@@ -46,8 +45,8 @@ SecondDeriv::SecondDeriv(const std::shared_ptr<float3DReg>model,
 }
 
 void SecondDeriv::forward(const bool                         add,
-                          const std::shared_ptr<giee::Vector>model,
-                          std::shared_ptr<giee::Vector>      data) {
+                          const std::shared_ptr<SEP::float3DReg>model,
+                          std::shared_ptr<SEP::float3DReg>      data) const{
   assert(checkDomainRange(model, data, true));
 
   if (!add) data->scale(0.);
@@ -107,8 +106,8 @@ void SecondDeriv::forward(const bool                         add,
 }
 
 void SecondDeriv::adjoint(const bool                         add,
-                          std::shared_ptr<giee::Vector>      model,
-                          const std::shared_ptr<giee::Vector>data) {
+                          std::shared_ptr<SEP::float3DReg>      model,
+                          const std::shared_ptr<SEP::float3DReg>data) const{
   assert(checkDomainRange(model, data, true));
 
   if (!add) model->scale(0.);

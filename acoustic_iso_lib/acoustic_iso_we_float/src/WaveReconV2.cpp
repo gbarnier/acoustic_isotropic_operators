@@ -1,10 +1,8 @@
 #include <WaveReconV2.h>
-using namespace waveform;
-using namespace giee;
 
-WaveReconV2::WaveReconV2(const std::shared_ptr<giee::float3DReg>model,
-                         const std::shared_ptr<giee::float3DReg>data,
-                         const std::shared_ptr<giee::float2DReg>slsqModel,
+WaveReconV2::WaveReconV2(const std::shared_ptr<SEP::float3DReg>model,
+                         const std::shared_ptr<SEP::float3DReg>data,
+                         const std::shared_ptr<SEP::float2DReg>slsqModel,
                          int                                    n1min,
                          int                                    n1max,
                          int                                    n2min,
@@ -42,8 +40,7 @@ WaveReconV2::WaveReconV2(const std::shared_ptr<giee::float3DReg>model,
   _n3max = n3max;
 
   // set up time deriv and lapl operator
-  _W.reset(new Mask3d(model, data, _n1min, _n1max, _n2min, _n2max, _n3min,
-                      _n3max, boundaryCond));
+  _W.reset(new Mask3d(model, data, _n1min, _n1max, _n2min, _n2max, _n3min, _n3max, boundaryCond));
   _D.reset(new SecondDeriv(model, data));
   _L.reset(new Laplacian2d(model, data));
 
@@ -54,13 +51,13 @@ WaveReconV2::WaveReconV2(const std::shared_ptr<giee::float3DReg>model,
 // WAm=d
 // W[d^2/dt^2(model)*s^2 -Lapl(model)]=data
 void WaveReconV2::forward(const bool                         add,
-                          const std::shared_ptr<giee::Vector>model,
-                          std::shared_ptr<giee::Vector>      data) {
+                          const std::shared_ptr<SEP::float3DReg>model,
+                          std::shared_ptr<SEP::float3DReg>      data) const{
   assert(checkDomainRange(model, data, true));
 
-  std::shared_ptr<giee::float3DReg> temp0 =
+  std::shared_ptr<SEP::float3DReg> temp0 =
     std::dynamic_pointer_cast<float3DReg>(data->clone());
-  std::shared_ptr<giee::float3DReg> temp1 =
+  std::shared_ptr<SEP::float3DReg> temp1 =
     std::dynamic_pointer_cast<float3DReg>(data->clone());
   temp0->scale(0.);
   temp1->scale(0.);
@@ -98,7 +95,7 @@ void WaveReconV2::forward(const bool                         add,
   // subtract forward lapl
   _L->forward(0, model, temp1);  // temp1 = Lapl(model)
 
-  temp0->scaleAdd(1, temp1, -1); // temp 0 = temp0 - temp1 = d^2/dt^2(model)*s^2
+  temp0->scaleAdd(temp1, 1, -1); // temp 0 = temp0 - temp1 = d^2/dt^2(model)*s^2
                                  // -
                                  // Lapl(model)
 
@@ -109,24 +106,24 @@ void WaveReconV2::forward(const bool                         add,
   _W->forward(0, temp0, temp1); // temp1 = W[temp0] = W[d^2/dt^2(model)*s^2
                                 // -Lapl(model)]
 
-  if (!add) data->scaleAdd(0, temp1, 1);
+  if (!add) data->scaleAdd(temp1,0, 1);
   else {
-    data->scaleAdd(1, temp1, 1);
+    data->scaleAdd(temp1, 1,1);
   }
 }
 
 // A*W*d=m
 // (d^2/dt^2)*(W(data))*s^2 -Lapl*(W(data))]=model
 void WaveReconV2::adjoint(const bool                         add,
-                          std::shared_ptr<giee::Vector>      model,
-                          const std::shared_ptr<giee::Vector>data) {
+                          std::shared_ptr<SEP::float3DReg>      model,
+                          const std::shared_ptr<SEP::float3DReg>data) const{
   assert(checkDomainRange(model, data, true));
 
-  std::shared_ptr<giee::float3DReg> temp0 =
+  std::shared_ptr<SEP::float3DReg> temp0 =
     std::dynamic_pointer_cast<float3DReg>(model->clone());
-  std::shared_ptr<giee::float3DReg> temp1 =
+  std::shared_ptr<SEP::float3DReg> temp1 =
     std::dynamic_pointer_cast<float3DReg>(model->clone());
-  std::shared_ptr<giee::float3DReg> temp2 =
+  std::shared_ptr<SEP::float3DReg> temp2 =
     std::dynamic_pointer_cast<float3DReg>(model->clone());
 
   temp0->scale(0.);
@@ -170,11 +167,11 @@ void WaveReconV2::adjoint(const bool                         add,
   _L->adjoint(0, temp2, temp0);  // temp2 = Lapl*(W(data))
 
   // subtract adjoint lapl
-  temp1->scaleAdd(1, temp2, -1); // temp1 = temp1 - temp2 =
+  temp1->scaleAdd(temp2,1, -1); // temp1 = temp1 - temp2 =
                                  // (d^2/dt^2)*(W(data))s^2 -//
                                  // Lapl*(W(data))
 
 
-  if (!add) model->scaleAdd(0, temp1, 1);
-  else model->scaleAdd(1, temp1, 1);
+  if (!add) model->scaleAdd(temp1,0, 1);
+  else model->scaleAdd(temp1,1, 1);
 }

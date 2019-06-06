@@ -3,8 +3,8 @@ using namespace giee;
 using namespace waveform;
 
 G_2DCube::G_2DCube(
-  const std::shared_ptr<giee::float3DReg>model,
-  const std::shared_ptr<giee::float3DReg>data,
+  const std::shared_ptr<SEP::float3DReg>model,
+  const std::shared_ptr<SEP::float3DReg>data,
   const int                              velPadx,
   const int                              velPadz)
 {
@@ -16,8 +16,8 @@ G_2DCube::G_2DCube(
 }
 
 void G_2DCube::forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data)
+                       const std::shared_ptr<SEP::Vector>model,
+                       std::shared_ptr<SEP::Vector>      data)
 {
   assert(checkDomainRange(model, data, true));
 
@@ -90,8 +90,8 @@ void G_2DCube::forward(const bool                         add,
 }
 
 void G_2DCube::adjoint(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data)
+                       const std::shared_ptr<SEP::Vector>model,
+                       std::shared_ptr<SEP::Vector>      data)
 {
   assert(checkDomainRange(model, data, true));
 

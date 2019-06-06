@@ -5,11 +5,79 @@ project(ACOUSTIC_ISO_FLOAT-lib)
 include_directories(include)
 
 set(SRC_DIR src)
-set(SOURCES ${SRC_DIR}/PadSource.cpp ${SRC_DIR}/PadRec.cpp ${SRC_DIR}/InterpSource.cpp ${SRC_DIR}/InterpRec.cpp ${SRC_DIR}/BoundaryCondition.cpp ${SRC_DIR}/AbsorbingBoundaryCondition.cpp ${SRC_DIR}/AbsorbingBoundaryConditionV2.cpp ${SRC_DIR}/Laplacian2d.cpp ${SRC_DIR}/Laplacian2dFast.cpp ${SRC_DIR}/AbsorbingDeriv.cpp ${SRC_DIR}/PropagateStepper.cpp ${SRC_DIR}/C6.cpp ${SRC_DIR}/C5.cpp ${SRC_DIR}/C4.cpp ${SRC_DIR}/TruncateSpatial.cpp ${SRC_DIR}/SecondDeriv.cpp ${SRC_DIR}/WaveRecon.cpp ${SRC_DIR}/WaveReconV2.cpp ${SRC_DIR}/PadModel2d.cpp ${SRC_DIR}/PadModel3d.cpp ${SRC_DIR}/Mask3d.cpp ${SRC_DIR}/Mask2d.cpp ${SRC_DIR}/Gradio.cpp ${SRC_DIR}/C2_2DCube.cpp ${SRC_DIR}/G_2DCube.cpp ${SRC_DIR}/C5_2DCube.cpp ${SRC_DIR}/C4_2DCube.cpp ${SRC_DIR}/C4R_2DCube.cpp ${SRC_DIR}/C6_2DCube.cpp ${SRC_DIR}/HelmABC.cpp ${SRC_DIR}/C2.cpp ${SRC_DIR}/G.cpp ${SRC_DIR}/AcousticProp.cpp ${SRC_DIR}/AcousticPropABC.cpp
+set(SOURCES
+  # ${SRC_DIR}/PadSource.cpp
+  # ${SRC_DIR}/PadRec.cpp
+  # ${SRC_DIR}/InterpSource.cpp
+  # ${SRC_DIR}/InterpRec.cpp
+  # ${SRC_DIR}/BoundaryCondition.cpp
+  # ${SRC_DIR}/AbsorbingBoundaryCondition.cpp
+  # ${SRC_DIR}/AbsorbingBoundaryConditionV2.cpp
+  ${SRC_DIR}/Laplacian2d.cpp
+  # ${SRC_DIR}/Laplacian2dFast.cpp
+  # ${SRC_DIR}/AbsorbingDeriv.cpp
+  # ${SRC_DIR}/PropagateStepper.cpp
+  # ${SRC_DIR}/C6.cpp
+  # ${SRC_DIR}/C5.cpp
+  # ${SRC_DIR}/C4.cpp
+  ${SRC_DIR}/TruncateSpatial.cpp
+  ${SRC_DIR}/SecondDeriv.cpp
+  # ${SRC_DIR}/WaveRecon.cpp
+  ${SRC_DIR}/WaveReconV2.cpp
+  ${SRC_DIR}/PadModel2d.cpp
+  ${SRC_DIR}/PadModel3d.cpp
+  ${SRC_DIR}/Mask3d.cpp
+  # ${SRC_DIR}/Mask2d.cpp
+  # ${SRC_DIR}/Gradio.cpp
+  # ${SRC_DIR}/C2_2DCube.cpp
+  # ${SRC_DIR}/G_2DCube.cpp
+  # ${SRC_DIR}/C5_2DCube.cpp
+  # ${SRC_DIR}/C4_2DCube.cpp
+  # ${SRC_DIR}/C4R_2DCube.cpp
+  # ${SRC_DIR}/C6_2DCube.cpp
+  # ${SRC_DIR}/HelmABC.cpp
+  # ${SRC_DIR}/C2.cpp
+  # ${SRC_DIR}/G.cpp
+  # ${SRC_DIR}/AcousticProp.cpp
+  # ${SRC_DIR}/AcousticPropABC.cpp
   )
 
 set(INC_DIR include)
-set(HEADERS ${INC_DIR}/PadSource.h ${INC_DIR}/PadRec.h ${INC_DIR}/InterpSource.h ${INC_DIR}/InterpRec.h ${INC_DIR}/BoundaryCondition.h ${INC_DIR}/AbsorbingBoundaryCondition.h ${INC_DIR}/AbsorbingBoundaryConditionV2.h ${INC_DIR}/Laplacian2d.h  ${INC_DIR}/Laplacian2dFast.h ${INC_DIR}/AbsorbingDeriv.h ${INC_DIR}/PropagateStepper.h ${INC_DIR}/C6.h ${INC_DIR}/C5.h ${INC_DIR}/C4.h ${INC_DIR}/TruncateSpatial.h ${INC_DIR}/SecondDeriv.h ${INC_DIR}/WaveRecon.h ${INC_DIR}/WaveReconV2.h ${INC_DIR}/PadModel2d.h ${INC_DIR}/PadModel3d.h ${INC_DIR}/Mask3d.h ${INC_DIR}/Mask2d.h ${INC_DIR}/Gradio.h ${INC_DIR}/C2_2DCube.h ${INC_DIR}/G_2DCube.h ${INC_DIR}/C5_2DCube.h ${INC_DIR}/C4_2DCube.h ${INC_DIR}/C4R_2DCube.h ${INC_DIR}/C6_2DCube.h ${INC_DIR}/HelmABC.h ${INC_DIR}/C2.h ${INC_DIR}/G.h ${INC_DIR}/AcousticProp.h ${INC_DIR}/AcousticPropABC.h
+set(HEADERS
+  # ${INC_DIR}/PadSource.h
+  # ${INC_DIR}/PadRec.h
+  # ${INC_DIR}/InterpSource.h
+  # ${INC_DIR}/InterpRec.h
+  # ${INC_DIR}/BoundaryCondition.h
+  # ${INC_DIR}/AbsorbingBoundaryCondition.h
+  # ${INC_DIR}/AbsorbingBoundaryConditionV2.h
+  ${INC_DIR}/Laplacian2d.h
+  # ${INC_DIR}/Laplacian2dFast.h
+  # ${INC_DIR}/AbsorbingDeriv.h
+  # ${INC_DIR}/PropagateStepper.h
+  # ${INC_DIR}/C6.h
+  # ${INC_DIR}/C5.h
+  # ${INC_DIR}/C4.h
+  ${INC_DIR}/TruncateSpatial.h
+  ${INC_DIR}/SecondDeriv.h
+  # ${INC_DIR}/WaveRecon.h
+  ${INC_DIR}/WaveReconV2.h
+  ${INC_DIR}/PadModel2d.h
+  ${INC_DIR}/PadModel3d.h
+  ${INC_DIR}/Mask3d.h
+  # ${INC_DIR}/Mask2d.h
+  # ${INC_DIR}/Gradio.h
+  # ${INC_DIR}/C2_2DCube.h
+  # ${INC_DIR}/G_2DCube.h
+  # ${INC_DIR}/C5_2DCube.h
+  # ${INC_DIR}/C4_2DCube.h
+  # ${INC_DIR}/C4R_2DCube.h
+  # ${INC_DIR}/C6_2DCube.h
+  # ${INC_DIR}/HelmABC.h
+  # ${INC_DIR}/C2.h
+  # ${INC_DIR}/G.h
+  # ${INC_DIR}/AcousticProp.h
+  # ${INC_DIR}/AcousticPropABC.h
   )
 
   #SEP LIBRARY DIRECTORIES

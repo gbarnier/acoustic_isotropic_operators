@@ -1,49 +1,48 @@
 #include <Laplacian2d.h>
-using namespace waveform;
-using namespace giee;
+
 
 /**
    One 2d slice case
  */
-Laplacian2d::Laplacian2d(const std::shared_ptr<float2DReg>model,
-                         const std::shared_ptr<float2DReg>data) {
-  // ensure dimensions match
-  assert(model->getHyper()->getAxis(1).n == data->getHyper()->getAxis(1).n);
-  assert(model->getHyper()->getAxis(2).n == data->getHyper()->getAxis(2).n);
-  assert(model->getHyper()->getAxis(1).d == data->getHyper()->getAxis(1).d);
-  assert(model->getHyper()->getAxis(2).d == data->getHyper()->getAxis(2).d);
-
-  // get spatial sampling
-  _db = model->getHyper()->getAxis(2).d;
-  _da = model->getHyper()->getAxis(1).d;
-
-  // set 3d flag
-  _3d = false;
-
-  // set domain and range
-  setDomainRange(model, data);
-
-  // calculate lapl coefficients
-  C0z = -2.927222222 / (_db * _db);
-  C1z =  1.666666667 / (_db * _db);
-  C2z = -0.238095238 / (_db * _db);
-  C3z =  0.039682539 / (_db * _db);
-  C4z = -0.004960317 / (_db * _db);
-  C5z =  0.000317460 / (_db * _db);
-
-  C0x = -2.927222222 / (_da * _da);
-  C1x =  1.666666667 / (_da * _da);
-  C2x = -0.238095238 / (_da * _da);
-  C3x =  0.039682539 / (_da * _da);
-  C4x = -0.004960317 / (_da * _da);
-  C5x =  0.000317460 / (_da * _da);
-
-  buffer.reset(new giee::float2DReg(data->getHyper()->getAxis(1).n + 2 *
-                                    _bufferSize,
-                                    data->getHyper()->getAxis(2).n + 2 *
-                                    _bufferSize));
-  buffer->scale(0);
-}
+// Laplacian2d::Laplacian2d(const std::shared_ptr<float2DReg>model,
+//                          const std::shared_ptr<float2DReg>data) {
+//   // ensure dimensions match
+//   assert(model->getHyper()->getAxis(1).n == data->getHyper()->getAxis(1).n);
+//   assert(model->getHyper()->getAxis(2).n == data->getHyper()->getAxis(2).n);
+//   assert(model->getHyper()->getAxis(1).d == data->getHyper()->getAxis(1).d);
+//   assert(model->getHyper()->getAxis(2).d == data->getHyper()->getAxis(2).d);
+//
+//   // get spatial sampling
+//   _db = model->getHyper()->getAxis(2).d;
+//   _da = model->getHyper()->getAxis(1).d;
+//
+//   // set 3d flag
+//   _3d = false;
+//
+//   // set domain and range
+//   setDomainRange(model, data);
+//
+//   // calculate lapl coefficients
+//   C0z = -2.927222222 / (_db * _db);
+//   C1z =  1.666666667 / (_db * _db);
+//   C2z = -0.238095238 / (_db * _db);
+//   C3z =  0.039682539 / (_db * _db);
+//   C4z = -0.004960317 / (_db * _db);
+//   C5z =  0.000317460 / (_db * _db);
+//
+//   C0x = -2.927222222 / (_da * _da);
+//   C1x =  1.666666667 / (_da * _da);
+//   C2x = -0.238095238 / (_da * _da);
+//   C3x =  0.039682539 / (_da * _da);
+//   C4x = -0.004960317 / (_da * _da);
+//   C5x =  0.000317460 / (_da * _da);
+//
+//   buffer.reset(new SEP::float2DReg(data->getHyper()->getAxis(1).n + 2 *
+//                                     _bufferSize,
+//                                     data->getHyper()->getAxis(2).n + 2 *
+//                                     _bufferSize));
+//   buffer->scale(0);
+// }
 
 /**
    Many 2d slices case
@@ -82,7 +81,7 @@ Laplacian2d::Laplacian2d(const std::shared_ptr<float3DReg>model,
 
   setDomainRange(model, data);
 
-  buffer.reset(new giee::float3DReg(data->getHyper()->getAxis(1).n,
+  buffer.reset(new SEP::float3DReg(data->getHyper()->getAxis(1).n,
                                     data->getHyper()->getAxis(2).n + 2 *
                                     _bufferSize,
                                     data->getHyper()->getAxis(3).n + 2 *
@@ -91,8 +90,8 @@ Laplacian2d::Laplacian2d(const std::shared_ptr<float3DReg>model,
 }
 
 void Laplacian2d::forward(const bool                         add,
-                          const std::shared_ptr<giee::Vector>model,
-                          std::shared_ptr<giee::Vector>      data) {
+                          const std::shared_ptr<SEP::float3DReg>model,
+                          std::shared_ptr<SEP::float3DReg>      data) const {
   assert(checkDomainRange(model, data, true));
 
   if (!add) data->scale(0.);
@@ -245,8 +244,8 @@ void Laplacian2d::forward(const bool                         add,
 }
 
 void Laplacian2d::adjoint(const bool                         add,
-                          std::shared_ptr<giee::Vector>      model,
-                          const std::shared_ptr<giee::Vector>data) {
+                          std::shared_ptr<SEP::float3DReg>      model,
+                          const std::shared_ptr<SEP::float3DReg>data) const {
   assert(checkDomainRange(model, data, true));
 
   if (!add) model->scale(0.);

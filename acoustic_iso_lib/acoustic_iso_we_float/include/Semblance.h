@@ -4,24 +4,24 @@
    Description:  Semblance scan over many cmp gathers. Fwd (tau,s)->(t,off)
  ***********************************************/
  #pragma once
- #include <Operator.h>
+ #include <operator.h>
  #include <float3DReg.h>
 namespace waveform {
-class Semblance : public giee::Operator {
+class Semblance : public Operator {
 public:
 
   // regular grid
   Semblance(
-    const std::shared_ptr<giee::float3DReg>model,
-    const std::shared_ptr<giee::float3DReg>data)
+    const std::shared_ptr<SEP::float3DReg>model,
+    const std::shared_ptr<SEP::float3DReg>data)
 
   virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>data);
+                       const std::shared_ptr<SEP::Vector>model,
+                       std::shared_ptr<SEP::Vector>data);
 
   virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data);
+                       std::shared_ptr<SEP::Vector>      model,
+                       const std::shared_ptr<SEP::Vector>data);
 
 private:
 

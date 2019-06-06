@@ -4,9 +4,9 @@ using namespace waveform;
 using namespace SEP;
 
 HelmABC::HelmABC(
-  const std::shared_ptr<giee::float3DReg>model,
-  const std::shared_ptr<giee::float3DReg>data,
-  const std::shared_ptr<giee::float2DReg>velPadded,
+  const std::shared_ptr<SEP::float3DReg>model,
+  const std::shared_ptr<SEP::float3DReg>data,
+  const std::shared_ptr<SEP::float2DReg>velPadded,
   const int                              velPadx,
   const int                              velPadz)
 {
@@ -64,8 +64,8 @@ HelmABC::HelmABC(
 
 // forward
 void HelmABC::forward(const bool                         add,
-                      const std::shared_ptr<giee::Vector>model,
-                      std::shared_ptr<giee::Vector>      data) {
+                      const std::shared_ptr<SEP::Vector>model,
+                      std::shared_ptr<SEP::Vector>      data) {
   assert(checkDomainRange(model, data, true));
 
   if (!add) data->scale(0.);
@@ -148,8 +148,8 @@ void HelmABC::forward(const bool                         add,
 
 // adjoint
 void HelmABC::adjoint(const bool                         add,
-                      std::shared_ptr<giee::Vector>      model,
-                      const std::shared_ptr<giee::Vector>data) {
+                      std::shared_ptr<SEP::Vector>      model,
+                      const std::shared_ptr<SEP::Vector>data) {
   assert(checkDomainRange(model, data, true));
 
   if (!add) model->scale(0.);

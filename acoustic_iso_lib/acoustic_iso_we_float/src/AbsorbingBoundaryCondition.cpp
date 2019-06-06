@@ -1,11 +1,10 @@
 #include <AbsorbingBoundaryCondition.h>
-using namespace giee;
-using namespace waveform;
+using namespace SEP;
 
 AbsorbingBoundaryCondition::AbsorbingBoundaryCondition(
-  const std::shared_ptr<giee::float2DReg>model,
-  const std::shared_ptr<giee::float2DReg>data,
-  const std::shared_ptr<giee::float2DReg>paddedVel,
+  const std::shared_ptr<SEP::float2DReg>model,
+  const std::shared_ptr<SEP::float2DReg>data,
+  const std::shared_ptr<SEP::float2DReg>paddedVel,
   const int                              velPadx,
   const int                              velPadz,
   const float                            absConst,
@@ -17,7 +16,7 @@ AbsorbingBoundaryCondition::AbsorbingBoundaryCondition(
   assert(data->getHyper()->getAxis(2).n == paddedVel->getHyper()->getAxis(2).n);
   setDomainRange(model, data);
 
-  std::shared_ptr<giee::float2DReg> _paddedVel = paddedVel;
+  std::shared_ptr<SEP::float2DReg> _paddedVel = paddedVel;
   _paddedModelHyper = paddedVel->getHyper();
   _velPadx          = velPadx;
   _velPadz          = velPadz;
@@ -92,8 +91,8 @@ AbsorbingBoundaryCondition::AbsorbingBoundaryCondition(
 }
 
 void AbsorbingBoundaryCondition::forward(const bool                         add,
-                                         const std::shared_ptr<giee::Vector>model,
-                                         std::shared_ptr<giee::Vector>      data)
+                                         const std::shared_ptr<SEP::float2DReg>model,
+                                         std::shared_ptr<SEP::float2DReg>      data)
 {
   assert(checkDomainRange(model, data, true));
 
@@ -119,8 +118,8 @@ void AbsorbingBoundaryCondition::forward(const bool                         add,
 }
 
 void AbsorbingBoundaryCondition::adjoint(const bool                         add,
-                                         const std::shared_ptr<giee::Vector>model,
-                                         std::shared_ptr<giee::Vector>      data)
+                                         const std::shared_ptr<SEP::float2DReg>model,
+                                         std::shared_ptr<SEP::float2DReg>      data)
 {
   assert(checkDomainRange(model, data, true));
 

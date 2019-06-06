@@ -4,6 +4,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 
 # include folder for ACOUSTIC_ISO_FLOAT library
 include_directories(../../acoustic_iso_float/include)
+include_directories(../../acoustic_iso_we_float/include)
 
 # This is a CMake example for Python
 find_package(pybind11)
@@ -44,6 +45,8 @@ if (pybind11_FOUND)
   target_link_libraries(pyAcoustic_iso_float_tomo PRIVATE ACOUSTIC_ISO_FLOAT_TOMO_EXT ${LIBS})
   pybind11_add_module(pyAcoustic_iso_float_wemva MODULE pyAcoustic_iso_float_wemva.cpp)
   target_link_libraries(pyAcoustic_iso_float_wemva PRIVATE ACOUSTIC_ISO_FLOAT_WEMVA_EXT ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_float_we MODULE pyAcoustic_iso_float_we.cpp)
+  target_link_libraries(pyAcoustic_iso_float_we PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
 
   # Installing library
   install( TARGETS pyAcoustic_iso_float_nl DESTINATION lib/python) # Module for non-linear operator

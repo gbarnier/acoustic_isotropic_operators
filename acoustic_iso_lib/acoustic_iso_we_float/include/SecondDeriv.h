@@ -6,42 +6,44 @@
  ***********************************************/
 
 #pragma once
-#include <Operator.h>
+#include <operator.h>
 #include <float2DReg.h>
 #include <float3DReg.h>
-namespace waveform {
-class SecondDeriv : public giee::Operator {
+
+using namespace SEP;
+
+
+class SecondDeriv : public Operator<SEP::float3DReg, SEP::float3DReg> {
 public:
 
   /**
      2d case
    */
-  SecondDeriv(const std::shared_ptr<giee::float2DReg>model,
-              const std::shared_ptr<giee::float2DReg>data);
+  // SecondDeriv(const std::shared_ptr<SEP::float2DReg>model,
+  //             const std::shared_ptr<SEP::float2DReg>data);
 
   /**
      3d case
    */
-  SecondDeriv(const std::shared_ptr<giee::float3DReg>model,
-              const std::shared_ptr<giee::float3DReg>data);
+  SecondDeriv(const std::shared_ptr<SEP::float3DReg>model,
+              const std::shared_ptr<SEP::float3DReg>data);
 
   /**
      lapl(model) -> data
    */
-  virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data);
+  void forward(const bool                         add,
+                       const std::shared_ptr<SEP::float3DReg>model,
+                       std::shared_ptr<SEP::float3DReg>      data) const;
 
   /**
      lapl(data) -> model
    */
-  virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data);
+  void adjoint(const bool                         add,
+                       std::shared_ptr<SEP::float3DReg>      model,
+                       const std::shared_ptr<SEP::float3DReg>data) const;
 
 private:
 
   float _df2; // sampling of fast axis squared
   int _dim;   // dimensions of input
 };
-}

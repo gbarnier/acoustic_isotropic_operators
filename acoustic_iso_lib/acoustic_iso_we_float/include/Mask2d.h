@@ -4,16 +4,16 @@
    Description:  Mask values in a slice
  ***********************************************/
  #pragma once
- #include <Operator.h>
+ #include <operator.h>
  #include <float2DReg.h>
 namespace waveform {
-class Mask2d : public giee::Operator {
+class Mask2d : public Operator {
 public:
 
   // regular grid
   Mask2d(
-    const std::shared_ptr<giee::float2DReg>model,
-    const std::shared_ptr<giee::float2DReg>data,
+    const std::shared_ptr<SEP::float2DReg>model,
+    const std::shared_ptr<SEP::float2DReg>data,
     int                                    n1min,
     int                                    n1max,
     int                                    n2min,
@@ -21,12 +21,12 @@ public:
     int                                    maskType = 0);
 
   virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data);
+                       const std::shared_ptr<SEP::Vector>model,
+                       std::shared_ptr<SEP::Vector>      data);
 
   virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data);
+                       std::shared_ptr<SEP::Vector>      model,
+                       const std::shared_ptr<SEP::Vector>data);
 
 private:
 

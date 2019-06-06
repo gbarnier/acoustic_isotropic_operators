@@ -1,10 +1,9 @@
 #include <InterpSource.h>
-using namespace giee;
-using namespace waveform;
+using namespace SEP;
 
 /*
-   InterpSource::InterpSource(const std::shared_ptr<giee::float1DReg> model,
-        const std::shared_ptr<giee::float1DReg> data,
+   InterpSource::InterpSource(const std::shared_ptr<SEP::float1DReg> model,
+        const std::shared_ptr<SEP::float1DReg> data,
     float oversamp){
 
    assert(data->getHyper()->getAxis(1).n ==
@@ -17,9 +16,9 @@ using namespace waveform;
    _scale = 1.0 / (sqrt(oversamp));
    }*/
 
-InterpSource::InterpSource(const std::shared_ptr<giee::float1DReg>model,
-                           const std::shared_ptr<giee::float1DReg>data,
-                           const std::shared_ptr<giee::float1DReg>dataCoordinates,
+InterpSource::InterpSource(const std::shared_ptr<SEP::float1DReg>model,
+                           const std::shared_ptr<SEP::float1DReg>data,
+                           const std::shared_ptr<SEP::float1DReg>dataCoordinates,
                            float                                  oversamp) {
   assert(data->getHyper()->getAxis(1).n == dataCoordinates->getHyper()->getAxis(
            1).n);
@@ -32,8 +31,8 @@ InterpSource::InterpSource(const std::shared_ptr<giee::float1DReg>model,
 }
 
 void InterpSource::forward(const bool                         add,
-                           const std::shared_ptr<giee::Vector>model,
-                           std::shared_ptr<giee::Vector>      data) {
+                           const std::shared_ptr<SEP::float1DReg>model,
+                           std::shared_ptr<SEP::float1DReg>      data) {
   assert(checkDomainRange(model, data, true));
 
   if (!add) data->scale(0.);
@@ -61,8 +60,8 @@ void InterpSource::forward(const bool                         add,
 }
 
 void InterpSource::adjoint(const bool                         add,
-                           std::shared_ptr<giee::Vector>      model,
-                           const std::shared_ptr<giee::Vector>data) {
+                           std::shared_ptr<SEP::float1DReg>      model,
+                           const std::shared_ptr<SEP::float1DReg>data) {
   assert(checkDomainRange(model, data, true));
 
   if (!add) model->scale(0.);

@@ -1,9 +1,8 @@
 #include <AbsorbingDeriv.h>
-using namespace giee;
-using namespace waveform;
 
-AbsorbingDeriv::AbsorbingDeriv(const std::shared_ptr<giee::float2DReg>model,
-                               const std::shared_ptr<giee::float2DReg>data,
+
+AbsorbingDeriv::AbsorbingDeriv(const std::shared_ptr<SEP::float2DReg>model,
+                               const std::shared_ptr<SEP::float2DReg>data,
                                const int                              velPadx,
                                const int                              velPadz)
 {
@@ -16,8 +15,8 @@ AbsorbingDeriv::AbsorbingDeriv(const std::shared_ptr<giee::float2DReg>model,
 }
 
 void AbsorbingDeriv::forward(const bool                         add,
-                             const std::shared_ptr<giee::Vector>model,
-                             std::shared_ptr<giee::Vector>      data)
+                             const std::shared_ptr<SEP::float2DReg>model,
+                             std::shared_ptr<SEP::float2DReg>      data)
 {
   assert(checkDomainRange(model, data, true));
 
@@ -66,8 +65,8 @@ void AbsorbingDeriv::forward(const bool                         add,
 }
 
 void AbsorbingDeriv::adjoint(const bool                         add,
-                             const std::shared_ptr<giee::Vector>model,
-                             std::shared_ptr<giee::Vector>      data)
+                             const std::shared_ptr<SEP::float2DReg>model,
+                             std::shared_ptr<SEP::float2DReg>      data)
 {
   assert(checkDomainRange(model, data, true));
 
@@ -130,8 +129,8 @@ void AbsorbingDeriv::adjoint(const bool                         add,
 }
 
 AbsorbingDeriv_2DCube::AbsorbingDeriv_2DCube(
-  const std::shared_ptr<giee::float3DReg>model,
-  const std::shared_ptr<giee::float3DReg>data,
+  const std::shared_ptr<SEP::float3DReg>model,
+  const std::shared_ptr<SEP::float3DReg>data,
   const int                              velPadx,
   const int                              velPadz)
 {
@@ -143,8 +142,8 @@ AbsorbingDeriv_2DCube::AbsorbingDeriv_2DCube(
 }
 
 void AbsorbingDeriv_2DCube::forward(const bool                         add,
-                                    const std::shared_ptr<giee::Vector>model,
-                                    std::shared_ptr<giee::Vector>      data)
+                                    const std::shared_ptr<SEP::float3DReg>model,
+                                    std::shared_ptr<SEP::float3DReg>      data)
 {
   assert(checkDomainRange(model, data, true));
 
@@ -217,8 +216,8 @@ void AbsorbingDeriv_2DCube::forward(const bool                         add,
 }
 
 void AbsorbingDeriv_2DCube::adjoint(const bool                         add,
-                                    const std::shared_ptr<giee::Vector>model,
-                                    std::shared_ptr<giee::Vector>      data)
+                                    const std::shared_ptr<SEP::float3DReg>model,
+                                    std::shared_ptr<SEP::float3DReg>      data)
 {
   assert(checkDomainRange(model, data, true));
 

@@ -4,8 +4,8 @@ using namespace waveform;
 using namespace SEP;
 
 TEMPLATE::TEMPLATE(
-  const std::shared_ptr<giee::float2DReg>model,
-  const std::shared_ptr<giee::float2DReg>data)
+  const std::shared_ptr<SEP::float2DReg>model,
+  const std::shared_ptr<SEP::float2DReg>data)
 {
   assert(model->getHyper()->getAxis(1).n == data->getHyper()->getAxis(1).n);
   assert(model->getHyper()->getAxis(2).n == data->getHyper()->getAxis(2).n);
@@ -20,8 +20,8 @@ TEMPLATE::TEMPLATE(
 
 // forward
 void TEMPLATE::forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data) {
+                       const std::shared_ptr<SEP::Vector>model,
+                       std::shared_ptr<SEP::Vector>      data) {
   assert(checkDomainRange(model, data, true));
 
   if (!add) data->scale(0.);
@@ -40,8 +40,8 @@ void TEMPLATE::forward(const bool                         add,
 
 // adjoint
 void TEMPLATE::adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data) {
+                       std::shared_ptr<SEP::Vector>      model,
+                       const std::shared_ptr<SEP::Vector>data) {
   assert(checkDomainRange(model, data, true));
 
   if (!add) model->scale(0.);

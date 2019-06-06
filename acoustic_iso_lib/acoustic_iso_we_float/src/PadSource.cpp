@@ -1,6 +1,5 @@
 #include<PadSource.h>
-using namespace waveform;
-using namespace giee;
+using namespace SEP;
 
 PadSource::PadSource(const std::shared_ptr<float1DReg> model,
   const std::shared_ptr<float3DReg> data, const int s2, const int s3){
@@ -17,8 +16,8 @@ PadSource::PadSource(const std::shared_ptr<float1DReg> model,
 }
 
 void PadSource::forward(const bool add,
-  const std::shared_ptr<giee::Vector> model,
-  std::shared_ptr<giee::Vector> data){
+  const std::shared_ptr<SEP::float1DReg> model,
+  std::shared_ptr<SEP::float3DReg> data){
 
 
   assert(checkDomainRange(model,data,true));
@@ -34,8 +33,8 @@ void PadSource::forward(const bool add,
 }
 
 void PadSource::adjoint(const bool add,
-  std::shared_ptr<giee::Vector> model,
-  const std::shared_ptr<giee::Vector> data){
+  std::shared_ptr<SEP::float1DReg> model,
+  const std::shared_ptr<SEP::float3DReg> data){
 
   assert(checkDomainRange(model,data,true));
   if(!add) model->scale(0.);

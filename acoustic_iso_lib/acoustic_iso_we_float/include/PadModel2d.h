@@ -5,29 +5,28 @@
       with zeros and with edge values.
  ***********************************************/
  #pragma once
- #include <Operator.h>
+ #include <operator.h>
  #include <float2DReg.h>
-namespace waveform {
-class PadModel2d : public giee::Operator {
+using namespace SEP;
+class PadModel2d : public Operator<SEP::float2DReg, SEP::float2DReg> {
 public:
 
   // regular grid
-  PadModel2d(const std::shared_ptr<giee::float2DReg>model,
-             const std::shared_ptr<giee::float2DReg>data,
+  PadModel2d(const std::shared_ptr<SEP::float2DReg>model,
+             const std::shared_ptr<SEP::float2DReg>data,
              const int                              padSize   = 1,
              const int                              padOption = 0);
 
-  virtual void forward(const bool                         add,
-                       const std::shared_ptr<giee::Vector>model,
-                       std::shared_ptr<giee::Vector>      data);
+  void forward(const bool                         add,
+                       const std::shared_ptr<SEP::float2DReg>model,
+                       std::shared_ptr<SEP::float2DReg>      data) const ;
 
-  virtual void adjoint(const bool                         add,
-                       std::shared_ptr<giee::Vector>      model,
-                       const std::shared_ptr<giee::Vector>data);
+  void adjoint(const bool                         add,
+                       std::shared_ptr<SEP::float2DReg>      model,
+                       const std::shared_ptr<SEP::float2DReg>data) const ;
 
 private:
 
   int _padSize;
   int _padOption;
 };
-}
