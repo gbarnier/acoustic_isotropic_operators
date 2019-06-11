@@ -370,6 +370,7 @@ void BornShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignals, 
 		dev_ssTemp1[iGpu] = dev_ssLeft[iGpu];
 		dev_ssLeft[iGpu] = dev_ssRight[iGpu];
 		dev_ssRight[iGpu] = dev_ssTemp1[iGpu];
+		cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double)));
 	}
 
 	// Copy data back to host
@@ -508,6 +509,7 @@ void BornShotsFwdGpuWavefield(double *model, double *dataRegDts, double *sources
 		dev_ssTemp1[iGpu] = dev_ssLeft[iGpu];
 		dev_ssLeft[iGpu] = dev_ssRight[iGpu];
 		dev_ssRight[iGpu] = dev_ssTemp1[iGpu];
+		cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double)));
 
 	}
 
@@ -638,7 +640,7 @@ void BornShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignals, 
 		dev_ssTemp1[iGpu] = dev_ssRight[iGpu];
 		dev_ssRight[iGpu] = dev_ssLeft[iGpu];
 		dev_ssLeft[iGpu] = dev_ssTemp1[iGpu];
-  		cuda_call(cudaMemset(dev_ssLeft[iGpu], 0, host_nz*host_nx*sizeof(double))); // Reinitialize slice for coarse time-sampling before time derivative
+  	cuda_call(cudaMemset(dev_ssLeft[iGpu], 0, host_nz*host_nx*sizeof(double))); // Reinitialize slice for coarse time-sampling before time derivative
 
 	} // Finished main loop - we still have to compute imaging condition for its=0
 
