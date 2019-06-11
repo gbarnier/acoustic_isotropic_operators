@@ -4,7 +4,8 @@ Note use cmake 3.14
 ##COMPILATION
 When the package is cloned, run the following command once:
 ```
-git submodule update --init --recursive --remote elastic_iso_double_lib/external/genericIO
+git submodule update --init --recursive --remote acoustic_iso_lib/external/genericIO
+git submodule update --init --recursive --remote acoustic_iso_lib/external/python-solver
 
 ```
 
