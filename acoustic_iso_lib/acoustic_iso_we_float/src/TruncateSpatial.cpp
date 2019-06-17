@@ -161,7 +161,7 @@ TruncateSpatial::TruncateSpatial(const std::shared_ptr<SEP::float3DReg>model,
 void TruncateSpatial::forward(const bool                         add,
                               const std::shared_ptr<SEP::float3DReg>model,
                               std::shared_ptr<SEP::float2DReg>      data) const{
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
 
@@ -236,7 +236,7 @@ void TruncateSpatial::forward(const bool                         add,
 void TruncateSpatial::adjoint(const bool                         add,
                               std::shared_ptr<SEP::float3DReg>      model,
                               const std::shared_ptr<SEP::float2DReg>data) const{
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
 

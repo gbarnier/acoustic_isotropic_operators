@@ -96,7 +96,7 @@ PadModel3d::PadModel3d(
 void PadModel3d::forward(const bool                         add,
                          const std::shared_ptr<SEP::float3DReg>model,
                          std::shared_ptr<SEP::float3DReg>      data) const{
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
 
@@ -237,7 +237,7 @@ void PadModel3d::forward(const bool                         add,
 void PadModel3d::adjoint(const bool                         add,
                          std::shared_ptr<SEP::float3DReg>      model,
                          const std::shared_ptr<SEP::float3DReg>data) const {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
 

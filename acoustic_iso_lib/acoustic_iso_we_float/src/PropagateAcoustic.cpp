@@ -30,7 +30,7 @@ PropogateAcoustic::PropogateAcoustic(const std::shared_ptr<SEP::float3DReg>model
 void PropogateAcoustic::forward(const bool                         add,
                                 const std::shared_ptr<SEP::Vector>f,
                                 std::shared_ptr<SEP::Vector>      p) {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
 

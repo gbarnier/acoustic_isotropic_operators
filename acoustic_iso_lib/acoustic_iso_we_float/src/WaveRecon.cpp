@@ -55,7 +55,7 @@ WaveRecon::WaveRecon(const std::shared_ptr<SEP::float3DReg>model,
 void WaveRecon::forward(const bool                         add,
                         const std::shared_ptr<SEP::float3DReg>model,
                         std::shared_ptr<SEP::float3DReg>      data) {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   std::shared_ptr<SEP::float3DReg> temp0 =
     std::dynamic_pointer_cast<float3DReg>(data->clone());
@@ -119,7 +119,7 @@ void WaveRecon::forward(const bool                         add,
 void WaveRecon::adjoint(const bool                         add,
                         std::shared_ptr<SEP::float3DReg>      model,
                         const std::shared_ptr<SEP::float3DReg>data) {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   std::shared_ptr<SEP::float3DReg> temp0 =
     std::dynamic_pointer_cast<float3DReg>(model->clone());

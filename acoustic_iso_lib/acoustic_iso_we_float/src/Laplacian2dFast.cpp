@@ -78,7 +78,7 @@ Laplacian2dFast::Laplacian2dFast(const std::shared_ptr<float3DReg>model,
 void Laplacian2dFast::forward(const bool                         add,
                               const std::shared_ptr<SEP::float3DReg>model,
                               std::shared_ptr<SEP::float3DReg>      data) {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
 
@@ -656,7 +656,7 @@ void Laplacian2dFast::forward(const bool                         add,
 void Laplacian2dFast::adjoint(const bool                         add,
                               std::shared_ptr<SEP::float3DReg>      model,
                               const std::shared_ptr<SEP::float3DReg>data) {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
 

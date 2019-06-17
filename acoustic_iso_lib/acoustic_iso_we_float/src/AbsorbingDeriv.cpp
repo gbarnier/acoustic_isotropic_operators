@@ -18,7 +18,7 @@ void AbsorbingDeriv::forward(const bool                         add,
                              const std::shared_ptr<SEP::float2DReg>model,
                              std::shared_ptr<SEP::float2DReg>      data)
 {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
   const std::shared_ptr<float2D> m =
@@ -68,7 +68,7 @@ void AbsorbingDeriv::adjoint(const bool                         add,
                              const std::shared_ptr<SEP::float2DReg>model,
                              std::shared_ptr<SEP::float2DReg>      data)
 {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
   std::shared_ptr<float2D> m =
@@ -145,7 +145,7 @@ void AbsorbingDeriv_2DCube::forward(const bool                         add,
                                     const std::shared_ptr<SEP::float3DReg>model,
                                     std::shared_ptr<SEP::float3DReg>      data)
 {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
   const std::shared_ptr<float3D> m =
@@ -219,7 +219,7 @@ void AbsorbingDeriv_2DCube::adjoint(const bool                         add,
                                     const std::shared_ptr<SEP::float3DReg>model,
                                     std::shared_ptr<SEP::float3DReg>      data)
 {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
   std::shared_ptr<float3D> m =

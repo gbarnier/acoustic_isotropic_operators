@@ -28,7 +28,7 @@ void C4R_2DCube::forward(const bool                         add,
                          const std::shared_ptr<SEP::Vector>model,
                          std::shared_ptr<SEP::Vector>      data)
 {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
   int n1 =
     (std::dynamic_pointer_cast<float3DReg>(model))->getHyper()->getAxis(1).n;
   int n2 =
@@ -64,7 +64,7 @@ void C4R_2DCube::adjoint(const bool                         add,
                          std::shared_ptr<SEP::Vector>      model,
                          const std::shared_ptr<SEP::Vector>data)
 {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
   int n1 =
     (std::dynamic_pointer_cast<float3DReg>(model))->getHyper()->getAxis(1).n;
   int n2 =

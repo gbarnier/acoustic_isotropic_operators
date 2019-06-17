@@ -53,7 +53,7 @@ AcousticProp::AcousticProp(
 void AcousticProp::forward(const bool                         add,
                            const std::shared_ptr<SEP::Vector>model,
                            std::shared_ptr<SEP::Vector>      data) {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
 
@@ -135,7 +135,7 @@ void AcousticProp::forward(const bool                         add,
 void AcousticProp::adjoint(const bool                         add,
                            std::shared_ptr<SEP::Vector>      model,
                            const std::shared_ptr<SEP::Vector>data) {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
 

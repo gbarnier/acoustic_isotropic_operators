@@ -45,8 +45,8 @@ if (pybind11_FOUND)
   target_link_libraries(pyAcoustic_iso_float_tomo PRIVATE ACOUSTIC_ISO_FLOAT_TOMO_EXT ${LIBS})
   pybind11_add_module(pyAcoustic_iso_float_wemva MODULE pyAcoustic_iso_float_wemva.cpp)
   target_link_libraries(pyAcoustic_iso_float_wemva PRIVATE ACOUSTIC_ISO_FLOAT_WEMVA_EXT ${LIBS})
-  pybind11_add_module(pyAcoustic_iso_float_we MODULE pyAcoustic_iso_float_we.cpp)
-  target_link_libraries(pyAcoustic_iso_float_we PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
+  # pybind11_add_module(pyAcoustic_iso_float_we MODULE pyAcoustic_iso_float_we.cpp)
+  # target_link_libraries(pyAcoustic_iso_float_we PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
 
   # Installing library
   install( TARGETS pyAcoustic_iso_float_nl DESTINATION lib/python) # Module for non-linear operator
@@ -54,8 +54,11 @@ if (pybind11_FOUND)
   install( TARGETS pyAcoustic_iso_float_born_ext DESTINATION lib/python) # Module for Extended Born operator
   install( TARGETS pyAcoustic_iso_float_tomo DESTINATION lib/python) # Module for Extended Tomo operator
   install( TARGETS pyAcoustic_iso_float_wemva DESTINATION lib/python) # Module for Extended Wemva operator
+  install( TARGETS pyAcoustic_iso_float_we DESTINATION lib/python) # Module for non-linear operator
   install( FILES Acoustic_iso_float.py DESTINATION lib/python)
+  # install( FILES Acoustic_iso_float_we.py DESTINATION lib/python)
   install( FILES inversionUtils.py DESTINATION lib/python)
+
 
   # Installing Python executables
   install( FILES nonlinearPythonFloatMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
@@ -72,6 +75,8 @@ if (pybind11_FOUND)
   install( FILES SymesPseudoInvMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES SymesExtLsrtmMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES fwimeFwiObjMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  # install( FILES waveEquationPythonAcousticFloatMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  # install( FILES waveEqInvFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 
 else(pybind11_FOUND)
   MESSAGE("WARNING!Did not find pybid11. Not compiling ${PROJECT-NAME}")

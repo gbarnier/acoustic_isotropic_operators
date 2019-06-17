@@ -40,7 +40,7 @@ PadModel2d::PadModel2d(
 void PadModel2d::forward(const bool                         add,
                          const std::shared_ptr<SEP::float2DReg>model,
                          std::shared_ptr<SEP::float2DReg>      data) const {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
 
@@ -117,7 +117,7 @@ void PadModel2d::forward(const bool                         add,
 void PadModel2d::adjoint(const bool                         add,
                          std::shared_ptr<SEP::float2DReg>      model,
                          const std::shared_ptr<SEP::float2DReg>data) const {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
 

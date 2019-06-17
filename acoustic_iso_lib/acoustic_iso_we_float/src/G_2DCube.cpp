@@ -19,7 +19,7 @@ void G_2DCube::forward(const bool                         add,
                        const std::shared_ptr<SEP::Vector>model,
                        std::shared_ptr<SEP::Vector>      data)
 {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
   const std::shared_ptr<float3D> m =
@@ -93,7 +93,7 @@ void G_2DCube::adjoint(const bool                         add,
                        const std::shared_ptr<SEP::Vector>model,
                        std::shared_ptr<SEP::Vector>      data)
 {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
   std::shared_ptr<float3D> m =

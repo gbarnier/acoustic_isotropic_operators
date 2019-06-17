@@ -33,7 +33,7 @@ InterpSource::InterpSource(const std::shared_ptr<SEP::float1DReg>model,
 void InterpSource::forward(const bool                         add,
                            const std::shared_ptr<SEP::float1DReg>model,
                            std::shared_ptr<SEP::float1DReg>      data) {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
   const std::shared_ptr<float1D> m =
@@ -62,7 +62,7 @@ void InterpSource::forward(const bool                         add,
 void InterpSource::adjoint(const bool                         add,
                            std::shared_ptr<SEP::float1DReg>      model,
                            const std::shared_ptr<SEP::float1DReg>data) {
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
   std::shared_ptr<float1D> m =

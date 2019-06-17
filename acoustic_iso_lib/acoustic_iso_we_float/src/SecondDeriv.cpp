@@ -47,7 +47,7 @@ SecondDeriv::SecondDeriv(const std::shared_ptr<float3DReg>model,
 void SecondDeriv::forward(const bool                         add,
                           const std::shared_ptr<SEP::float3DReg>model,
                           std::shared_ptr<SEP::float3DReg>      data) const{
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
 
@@ -108,7 +108,7 @@ void SecondDeriv::forward(const bool                         add,
 void SecondDeriv::adjoint(const bool                         add,
                           std::shared_ptr<SEP::float3DReg>      model,
                           const std::shared_ptr<SEP::float3DReg>data) const{
-  assert(checkDomainRange(model, data, true));
+  assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
 

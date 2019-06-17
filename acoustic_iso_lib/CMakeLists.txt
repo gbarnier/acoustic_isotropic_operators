@@ -10,7 +10,9 @@ set(CMAKE_POSITION_INDEPENDENT_CODE True)
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 
 #Setting project name and required languages
-project(ACOUSTIC_ISOTROPIC_OPERATORS LANGUAGES CXX CUDA)
+# project(ACOUSTIC_ISOTROPIC_OPERATORS LANGUAGES CXX CUDA)
+project(ACOUSTIC_ISOTROPIC_OPERATORS LANGUAGES CXX)
+
 #Setting version
 set(ACOUSTIC_ISOTROPIC_OPERATORS_MAJOR_VERSION 0)
 set(ACOUSTIC_ISOTROPIC_OPERATORS_MINOR_VERSION 1)
@@ -47,13 +49,14 @@ find_package(Threads)
 find_package(TBB REQUIRED)
 
 # Acoustic isotropic operators (Double precision)
-add_subdirectory(acoustic_iso_double)
-add_subdirectory(acoustic_iso_float)
+# add_subdirectory(acoustic_iso_double)
+# add_subdirectory(acoustic_iso_float)
 add_subdirectory(acoustic_iso_we_float)
 
 # include folder for pyAcousticIsotropic library
-add_subdirectory(python/python_double)
-add_subdirectory(python/python_float)
+# add_subdirectory(python/python_double)
+# add_subdirectory(python/python_float)
+add_subdirectory(python/python_float_we)
 
 # include folder for Seismic utilities
 add_subdirectory(seis_utils/seis_utils_double/)
