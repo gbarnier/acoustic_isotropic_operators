@@ -30,8 +30,6 @@ if __name__ == '__main__':
 	# 2d spline
 	if (nDim==2):
 
-		print("toto1")
-
 		# Initialize 2d spline
 		model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSplineModule.bSpline2dInit(sys.argv)
 
@@ -56,22 +54,20 @@ if __name__ == '__main__':
 		print("-------------- Running Spline interpolation forward ---------------")
 		print("---------------------",nDim,"D B-Splines functions -----------------------")
 		print("-------------------------------------------------------------------\n")
-		print("Fwd 1")
+
 		# Read model (on coarse grid)
 		modelFile=parObject.getString("model")
-		print("Fwd 2")
 		model=genericIO.defaultIO.getVector(modelFile)
+
 		# Apply forward
 		startTime=time.time()
-		print("Fwd 3")
 		splineOp.forward(False,model,data)
 		print("Time for forward = ",time.time()-startTime)
+
 		# Write data
-		print("Fwd 4")
 		dataFile=parObject.getString("data")
-		print("Fwd 5")
 		genericIO.defaultIO.writeVector(dataFile,data)
-		print("Fwd 6")
+
 	else:
 
 		print("-------------------------------------------------------------------")

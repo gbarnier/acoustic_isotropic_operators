@@ -81,7 +81,7 @@ def buildSourceGeometry(parObject,vel):
 	sourcesVector=[]
 
 	for ishot in range(parObject.getInt("nShot")):
-		sourcesVector.append(deviceGpu(nzSource,ozSource,dzSource,nxSource,oxSource,dxSource,vel.getCpp(),parObject.getInt("nts"), parObject.getInt("dipole",0), parObject.getInt("zDipoleShift",1), parObject.getInt("xDipoleShift",0)))
+		sourcesVector.append(deviceGpu(nzSource,ozSource,dzSource,nxSource,oxSource,dxSource,vel.getCpp(),parObject.getInt("nts"), parObject.getInt("dipole",0), parObject.getInt("zDipoleShift",2), parObject.getInt("xDipoleShift",0)))
 		oxSource=oxSource+spacingShots # Shift source
 
 	return sourcesVector,sourceAxis
@@ -112,8 +112,9 @@ def buildSourceGeometryDipole(parObject,vel):
 
 	# Modify the dipole shift for the z-derivative in Symes' pseudo-inverse
 	zDipoleShift=2*parObject.getInt("SymesDzHalfStencil",1)
-	print("zDipoleShift Symes = ",zDipoleShift)
-	print("ozSource Symes = ",ozSource)
+	if (parObject.getInt("dipole",0)==0):
+		ozSource=ozSource-parObject.getInt("SymesDzHalfStencil",1)
+
 	for ishot in range(parObject.getInt("nShot")):
 		sourcesVector.append(deviceGpu(nzSource,ozSource,dzSource,nxSource,oxSource,dxSource,vel.getCpp(),parObject.getInt("nts"),1,zDipoleShift, parObject.getInt("xDipoleShift",0)))
 		oxSource=oxSource+spacingShots # Shift source
@@ -138,7 +139,7 @@ def buildReceiversGeometry(parObject,vel):
 	receiversVector=[]
 	nRecGeom=1; # Constant receivers' geometry
 	for iRec in range(nRecGeom):
-		receiversVector.append(deviceGpu(nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel.getCpp(),parObject.getInt("nts"), parObject.getInt("dipole",0), parObject.getInt("zDipoleShift",1), parObject.getInt("xDipoleShift",0)))
+		receiversVector.append(deviceGpu(nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel.getCpp(),parObject.getInt("nts"), parObject.getInt("dipole",0), parObject.getInt("zDipoleShift",2), parObject.getInt("xDipoleShift",0)))
 
 	return receiversVector,receiverAxis
 
@@ -155,7 +156,8 @@ def buildReceiversGeometryDipole(parObject,vel):
 
 	# Shift the source depth shallower to account for the Dz in Symes' formula and so that
 	# the resulting spatial derivative is on the same grid
-	ozReceiver=ozReceiver-parObject.getInt("SymesDzHalfStencil",1)
+	if (parObject.getInt("dipole",0)==0):
+		ozReceiver=ozReceiver-parObject.getInt("SymesDzHalfStencil",1)
 
 	dzReceiver=1
 	nxReceiver=parObject.getInt("nReceiver")
@@ -164,10 +166,9 @@ def buildReceiversGeometryDipole(parObject,vel):
 	receiverAxis=Hypercube.axis(n=nxReceiver,o=ox+oxReceiver*dx,d=dxReceiver*dx)
 	receiversVector=[]
 	nRecGeom=1; # Constant receivers' geometry
+
 	# Modify the dipole shift for the z-derivative in Symes' pseudo-inverse
 	zDipoleShift=2*parObject.getInt("SymesDzHalfStencil",1)
-	print("zDipoleShift Symes = ",zDipoleShift)
-	print("ozReceiver Symes = ",ozReceiver)
 	for iRec in range(nRecGeom):
 		receiversVector.append(deviceGpu(nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel.getCpp(),parObject.getInt("nts"),1,zDipoleShift,parObject.getInt("xDipoleShift",0)))
 
@@ -1329,4 +1330,97 @@ class SymesPseudoInvGpu(Op.Operator):
 
 	def setVel(self,vel):
 		self.BornExtOp.setVel(vel)
+		return
+
+################################ Symes' Wd + Born-extended #####################
+class SymesWdBornExtGpu(Op.Operator):
+	"""Wrapper encapsulating PYBIND11 module for Extended Born operator"""
+
+	def __init__(self,domain,range,velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector,dts,fat,taperEndTraceWidth):
+		# Domain = Seismic data
+		# Range = Extended image
+		self.setDomainRange(domain,range)
+		# Instanciate Born extended (with dipole)
+		self.BornExtOp=BornExtShotsGpu(range,domain,velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector)
+		# Instanciate 3rd time integral
+		self.timeIntegOp=timeIntegModule.timeInteg(domain,dts)
+		#Allocate temporary vectors
+		self.tmp1 = domain.clone() # Output for time integration
+		self.tmp2 = range.clone() # Output for Born extended
+		return
+
+	def forward(self,add,model,data):
+		# Apply time integral (x3)
+		self.timeIntegOp.forward(False,model,self.tmp1)
+		# Apply Born extended with dipole
+		self.BornExtOp.adjoint(False,self.tmp2,self.tmp1)
+		tmp2Nd = self.tmp2.getNdArray()
+		if(not add):
+			dataNd=data.getNdArray()
+			dataNd[:]=tmp2Nd[:]
+		else:
+			data.scaleAdd(self.tmp2)
+		return
+
+	def setVel(self,vel):
+		self.BornExtOp.setVel(vel)
+		return
+
+################################ Symes' Wd #####################################
+class SymesWdGpu(Op.Operator):
+        """Wrapper encapsulating PYBIND11 module for Wd"""
+
+        def __init__(self,domain,dts):
+                # Domain = Seismic data
+                # Range = Extended image
+                self.setDomainRange(domain,domain)
+                # Instanciate 3rd time integral
+                self.timeIntegOp=timeIntegModule.timeInteg(domain,dts)
+                return
+
+        def forward(self,add,model,data):
+                self.checkDomainRange(model,data)
+                # Apply time integral (x3)
+                self.timeIntegOp.forward(add,model,data)
+                return
+
+################################ Symes' Wm #####################################
+class SymesWmGpu(Op.Operator):
+	"""Wrapper encapsulating PYBIND11 module for Extended Born operator"""
+
+	def __init__(self,domain,range,velocity,fat):
+
+		# Domain = Seismic data
+		# Range = Extended image
+		self.setDomainRange(domain,range)
+
+		# Instanciate Symes z-derivative
+		self.SymesZGradOp=spatialDerivModule.SymesZGradPython(range,fat)
+
+		# Set velocity value
+		self.vel=velocity
+
+		#Allocate temporary vectors
+		self.tmp1 = domain.clone() #Output for time integration
+
+		return
+
+	def forward(self,add,model,data):
+
+		self.SymesZGradOp.forward(False,model,self.tmp1)
+		# Scale by 8*velocity^4
+		velNd = self.vel.getNdArray()
+		vel_tmp = np.expand_dims(velNd,axis=0)
+		tmp1Nd = self.tmp1.getNdArray()
+		tmp1Nd = tmp1Nd*8.0*vel_tmp*vel_tmp*vel_tmp*vel_tmp
+		if(not add):
+			# dataNd=data.getNdArray()
+			# dataNd[:]=tmp4Nd[:]
+			data.copy(self.tmp1)
+		else:
+			data.scaleAdd(self.tmp1)
+		return
+
+	def setVel(self,vel):
+		self.vel=vel
 		return

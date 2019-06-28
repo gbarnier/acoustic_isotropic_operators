@@ -38,10 +38,9 @@ if __name__ == '__main__':
 	reg=0
 	if (regType != "None"): reg=1
 	epsilonEval=parObject.getInt("epsilonEval",0)
-	gradientMask=parObject.getInt("gradientMask",0)
 
 	# Nonlinear solver
-	solverType=parObject.getString("solver","nlcg")
+	solverType=parObject.getString("solver")
 	stepper=parObject.getString("stepper","default")
 
 	# Initialize parameters for inversion
@@ -71,8 +70,8 @@ if __name__ == '__main__':
 	_,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
 
 	# Gradient mask
-	if (gradientMask==1):
-		vel,bufferUp,bufferDown,taperExp,fat,wbShift=maskGradientModule.maskGradientInit(sys.argv)
+	# if (gradientMask==1):
+	# 	vel,bufferUp,bufferDown,taperExp,fat,wbShift,manualGradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
 
 	############################# Read files ###################################
 	# Seismic source
@@ -95,9 +94,9 @@ if __name__ == '__main__':
 	# Born
 	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
 	BornInvOp=BornOp
-	if (gradientMask==1):
-		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift)
-		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
+	# if (gradientMask==1):
+	# 	maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift,manualGradientMaskFile)
+	# 	BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
 
 	# Conventional FWI
 	fwiOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornInvOp,BornOp.setVel)
@@ -136,6 +135,8 @@ if __name__ == '__main__':
 	if (maskGradientFile=="NoMaskGradientFile"):
 		maskGradient=None
 	else:
+		if(pyinfo): print("--- User provided a mask for the gradients ---")
+		inv_log.addToLog("--- User provided a mask for the gradients ---")
 		maskGradient=genericIO.defaultIO.getVector(maskGradientFile,ndims=2)
 
 	############################### Bounds #####################################

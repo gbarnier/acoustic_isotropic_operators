@@ -587,7 +587,6 @@ class bSpline3d(Op.Operator):
 			yDataAxis = yDataAxis.getCpp()
 
 		self.pyOp = pyInterpBSpline3d.interpBSpline3d(zOrder,xOrder,yOrder,zControlPoints,xControlPoints,yControlPoints,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
-
 		return
 
 	def forward(self,add,model,data):

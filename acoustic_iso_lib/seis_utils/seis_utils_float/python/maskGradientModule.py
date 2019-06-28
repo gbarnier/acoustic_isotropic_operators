@@ -10,8 +10,8 @@ def maskGradientInit(args):
 	io=genericIO.pyGenericIO.ioModes(args)
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
-	bufferUp=parObject.getFloat("bufferUp") # Taper width above water bottom [km]
-	bufferDown=parObject.getFloat("bufferDown") # Taper width below water bottom [km]
+	bufferUp=parObject.getFloat("bufferUp",0) # Taper width above water bottom [km]
+	bufferDown=parObject.getFloat("bufferDown",0) # Taper width below water bottom [km]
 	taperExp=parObject.getFloat("taperExp",2) # Taper exponent
 	fat=parObject.getInt("fat",5)
 	velFile=parObject.getString("vel","noVelFile")

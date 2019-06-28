@@ -3,6 +3,7 @@ import genericIO
 import SepVector
 import Hypercube
 import Acoustic_iso_float
+import pyVector as Vec
 import numpy as np
 import time
 import sys
@@ -20,16 +21,14 @@ if __name__ == '__main__':
 	print("-------------------- Single precision Python code -----------------")
 	print("-------------------------------------------------------------------\n")
 
-	# Check that model was provided
+	# Read wavelet
 	modelFile=parObject.getString("model","noModelFile")
 	if (modelFile == "noModelFile"):
 		print("**** ERROR: User did not provide model file ****\n")
 		quit()
-
-	# Read sources
 	model=genericIO.defaultIO.getVector(modelFile,ndims=3)
 
-	# Read velocity models
+	# Read Fwime inverted velocity models
 	velocityFwimeFile=parObject.getString("velocityFwime")
 	velocityFwime=genericIO.defaultIO.getVector(velocityFwimeFile,ndims=3)
 	velocityFwimeNd=velocityFwime.getNdArray()
@@ -53,6 +52,8 @@ if __name__ == '__main__':
 	objFunction=SepVector.getSepVector(Hypercube.hypercube(axes=[iterAxis]))
 	objFunctionNd=objFunction.getNdArray()
 
+	# dataPredSet=Vec.vectorSet()
+
 	for iIter in range(nIter):
 
 		print("iter #",iIter)
@@ -69,11 +70,16 @@ if __name__ == '__main__':
 		# Compute data difference
 		seismicData.scaleAdd(obsData,1,-1)
 
+		# if ():
+		# 	#
+		# 	dataPredSet.append(seismicData)
+
 		# Compute Fwi objective function
 		objFunctionNd[iIter]=0.5*seismicData.norm()*seismicData.norm()
 
 	# Write objective function value
 	dataFile=parObject.getString("data","noDataFile")
+	# dataPredSet.writeSet("predDataFile")
 	genericIO.defaultIO.writeVector(dataFile,objFunction)
 
 	print("-------------------------------------------------------------------")

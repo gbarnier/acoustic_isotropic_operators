@@ -67,7 +67,7 @@ if __name__ == '__main__':
 	# Gradient mask
 	if (gradientMask==1):
 		print("--- Using gradient masking ---")
-		vel,bufferUp,bufferDown,taperExp,fat,wbShift=maskGradientModule.maskGradientInit(sys.argv)
+		vel,bufferUp,bufferDown,taperExp,fat,wbShift=maskGradientModule.maskGradientInit(sys.argv)			
 
 	# Nonlinear modeling operator
 	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
