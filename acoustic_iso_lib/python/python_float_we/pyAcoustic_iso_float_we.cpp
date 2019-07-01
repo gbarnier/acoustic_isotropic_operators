@@ -6,6 +6,7 @@
 #include <pybind11/iostream.h>
 
 #include "WaveReconV2.h"
+#include "WaveReconV3.h"
 #include "PadModel2d.h"
 #include "PadModel3d.h"
 
@@ -37,14 +38,23 @@ PYBIND11_MODULE(pyAcoustic_iso_float_we, clsGeneric) {
       .def("dotTest",(bool (PadModel3d::*)(const bool, const float)) &PadModel3d::dotTest,"Dot-Product Test")
   ;
 
-  py::class_<WaveReconV2, std::shared_ptr<WaveReconV2>>(clsGeneric,"WaveReconV2")
-      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, int ,int,int,int,int,int,int>(), "Initialize a WaveReconV2")
+  // py::class_<WaveReconV2, std::shared_ptr<WaveReconV2>>(clsGeneric,"WaveReconV2")
+  //     .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, int ,int,int,int,int,int,int>(), "Initialize a WaveReconV2")
+  //
+  //     .def("forward", (void (WaveReconV2::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV2::forward, "Forward")
+  //
+  //     .def("adjoint", (void (WaveReconV2::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV2::adjoint, "Adjoint")
+  //
+  //     .def("dotTest",(bool (WaveReconV2::*)(const bool, const float)) &WaveReconV2::dotTest,"Dot-Product Test")
+  // ;
+  py::class_<WaveReconV3, std::shared_ptr<WaveReconV3>>(clsGeneric,"WaveReconV3")
+      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, int ,int,int,int,int,int,int>(), "Initialize a WaveReconV3")
 
-      .def("forward", (void (WaveReconV2::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV2::forward, "Forward")
+      .def("forward", (void (WaveReconV3::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV3::forward, "Forward")
 
-      .def("adjoint", (void (WaveReconV2::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV2::adjoint, "Adjoint")
+      .def("adjoint", (void (WaveReconV3::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV3::adjoint, "Adjoint")
 
-      .def("dotTest",(bool (WaveReconV2::*)(const bool, const float)) &WaveReconV2::dotTest,"Dot-Product Test")
+      .def("dotTest",(bool (WaveReconV3::*)(const bool, const float)) &WaveReconV3::dotTest,"Dot-Product Test")
   ;
 
 }

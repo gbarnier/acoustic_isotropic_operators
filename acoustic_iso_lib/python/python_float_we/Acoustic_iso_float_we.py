@@ -9,6 +9,77 @@ import SepVector
 import Hypercube
 import numpy as np
 
+class windowData(Op.Operator):
+	"""Wrapper encapsulating PYBIND11 module"""
+
+	def __init__(self,domain,f1,f2,f3,j1,j2,j3):
+		#Checking if getCpp is present
+		domainNd=domain.getNdArray()
+		axis0=Hypercube.axis(n=domain.getHyper().axes[0].n/j1,o=f1*domain.getHyper().axes[0].d-domain.getHyper().axes[0].o,d=j1*domain.getHyper().axes[0].d)
+		axis1=Hypercube.axis(n=domain.getHyper().axes[1].n/j2,o=f2*domain.getHyper().axes[1].d-domain.getHyper().axes[1].o,d=j2*domain.getHyper().axes[1].d)
+		axis2=Hypercube.axis(n=domain.getHyper().axes[2].n/j3,o=f3*domain.getHyper().axes[2].d-domain.getHyper().axes[2].o,d=j3*domain.getHyper().axes[2].d)
+		rangeHyper=Hypercube.hypercube(axes=[axis0,axis1,axis2])
+		range=SepVector.getSepVector(rangeHyper,storage="dataFloat")
+
+		self.setDomainRange(domain,range)
+		self.f1=f1
+		self.f2=f2
+		self.f3=f3
+		self.j1=j1
+		self.j2=j2
+		self.j3=j3
+		return
+
+	def forward(self,add,model,data):
+		self.checkDomainRange(model,data)
+		if(not add):
+			data.zero()
+		data.getNdArray()[:] = model.getNdArray()[f1::j1,f2::j2,f3::j3]
+
+		return
+
+	def adjoint(self,add,model,data):
+		self.checkDomainRange(model,data)
+		if(not add):
+			model.zero()
+		model.getNdArray()[f1::j1,f2::j2,f3::j3] = data.getNdArray()[:]
+		return
+class Mask3d(Op.Operator):
+	"""Wrapper encapsulating PYBIND11 module"""
+
+	def __init__(self,domain,min1,max1,min2,j1,j2,j3):
+		#Checking if getCpp is present
+		domainNd=domain.getNdArray()
+		axis0=Hypercube.axis(n=domain.getHyper().axes[0].n/j1,o=f1*domain.getHyper().axes[0].d-domain.getHyper().axes[0].o,d=j1*domain.getHyper().axes[0].d)
+		axis1=Hypercube.axis(n=domain.getHyper().axes[1].n/j2,o=f2*domain.getHyper().axes[1].d-domain.getHyper().axes[1].o,d=j2*domain.getHyper().axes[1].d)
+		axis2=Hypercube.axis(n=domain.getHyper().axes[2].n/j3,o=f3*domain.getHyper().axes[2].d-domain.getHyper().axes[2].o,d=j3*domain.getHyper().axes[2].d)
+		rangeHyper=Hypercube.hypercube(axes=[axis0,axis1,axis2])
+		range=SepVector.getSepVector(rangeHyper,storage="dataFloat")
+
+		self.setDomainRange(domain,range)
+		self.f1=f1
+		self.f2=f2
+		self.f3=f3
+		self.j1=j1
+		self.j2=j2
+		self.j3=j3
+		return
+
+	def forward(self,add,model,data):
+		self.checkDomainRange(model,data)
+		if(not add):
+			data.zero()
+		data.getNdArray()[:] = model.getNdArray()[f1::j1,f2::j2,f3::j3]
+
+		return
+
+	def adjoint(self,add,model,data):
+		self.checkDomainRange(model,data)
+		if(not add):
+			model.zero()
+		model.getNdArray()[f1::j1,f2::j2,f3::j3] = data.getNdArray()[:]
+		return
+
 def waveEquationOpInitFloat(args):
 	"""Function to correctly initialize wave equation operator
 	   The function will return the necessary variables for operator construction
@@ -51,11 +122,11 @@ def waveEquationOpInitFloat(args):
 	wavefieldAxis=Hypercube.axis(n=5)
 
 	# Allocate model
-	modelHyper=Hypercube.hypercube(axes=[timeAxis,zAxis,xAxis])
+	modelHyper=Hypercube.hypercube(axes=[zAxis,xAxis,timeAxis])
 	modelFloat=SepVector.getSepVector(modelHyper,storage="dataFloat")
 
 	# Allocate data
-	dataHyper=Hypercube.hypercube(axes=[timeAxis,zAxis,xAxis])
+	dataHyper=Hypercube.hypercube(axes=[zAxis,xAxis,timeAxis])
 	dataFloat=SepVector.getSepVector(dataHyper,storage="dataFloat")
 
 	# Initialize operator
@@ -67,6 +138,13 @@ def waveEquationOpInitFloat(args):
 		n2max=dataHyper.axes[1].n-7
 		n3min=6
 		n3max=dataHyper.axes[2].n-7
+	elif(boundCond==1):
+		n1min=0
+		n1max=dataHyper.axes[0].n
+		n2min=0
+		n2max=dataHyper.axes[1].n
+		n3min=0
+		n3max=dataHyper.axes[2].n
 	else:
 		padWfld=parObject.getInt("padWfld",0)
 		n1min=0
@@ -94,7 +172,7 @@ class waveEquationAcousticCpu(Op.Operator):
 			domain = domain.getCpp()
 		if("getCpp" in dir(range)):
 			range = range.getCpp()
-		self.pyOp = pyAcoustic_iso_float_we.WaveReconV2(domain,range,slsqFloat,n1min,n1max,n2min,n2max,n3min,n3max,boundaryCond)
+		self.pyOp = pyAcoustic_iso_float_we.WaveReconV3(domain,range,slsqFloat,n1min,n1max,n2min,n2max,n3min,n3max,boundaryCond)
 		return
 
 	def forward(self,add,model,data):

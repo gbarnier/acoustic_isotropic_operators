@@ -22,7 +22,7 @@ from sys_util import logger
 # Template for linearized waveform inversion workflow
 if __name__ == '__main__':
 
-	# Bullshit stuff
+	# io stuff
 	io=genericIO.pyGenericIO.ioModes(sys.argv)
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()

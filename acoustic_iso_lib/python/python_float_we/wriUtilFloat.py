@@ -8,10 +8,9 @@ import sys
 import os
 
 # operators
-import Elastic_iso_float_we
-import SpaceInterpMultiFloat
-import StaggerFloat
-import PadTruncateSourceFloat
+import Acoustic_iso_float_we
+import TruncateSpatialReg
+#import PadTruncateSourceFloat
 import pyOperator as Op
 
 
@@ -80,64 +79,114 @@ def forcing_term_op_init(args):
 	return PK_adj,priorData
 
 #
-def data_extraction_op_init(args):
+def data_extraction_reg_op_init(args):
 
 	# Bullshit stuff
 	io=genericIO.pyGenericIO.ioModes(args)
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
 
-	# Interp operator init
-	zCoord,xCoord,centerHyper = SpaceInterpMultiFloat.space_interp_multi_init_rec(args)
+	# Time Axis
+	nts=parObject.getInt("nts",-1)
+	ots=parObject.getFloat("ots",0.0)
+	dts=parObject.getFloat("dts",-1.0)
+	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
 
-	# Horizontal axis
-	nx=centerHyper.getAxis(2).n
-	dx=centerHyper.getAxis(2).d
-	ox=centerHyper.getAxis(2).o
+	# z Axis model
+	nz=parObject.getInt("nz",-1)
+	oz=parObject.getFloat("oz",-1.0)
+	dz=parObject.getFloat("dz",-1.0)
+	zAxis=Hypercube.axis(n=nz,o=oz,d=dz)
 
-	# Vertical axis
-	nz=centerHyper.getAxis(1).n
-	dz=centerHyper.getAxis(1).d
-	oz=centerHyper.getAxis(1).o
+	# x axis model
+	nx=parObject.getInt("nx",-1)
+	ox=parObject.getFloat("ox",-1.0)
+	dx=parObject.getFloat("dx",-1.0)
+	xAxis=Hypercube.axis(n=nx,o=ox,d=dx)
 
-	#interp operator instantiate
-	#check which rec injection interp method
-	recInterpMethod = parObject.getString("recInterpMethod","linear")
-	recInterpNumFilters = parObject.getInt("recInterpNumFilters",4)
-	nt = parObject.getInt("nts")
-	spaceInterpMultiOp = SpaceInterpMultiFloat.space_interp_multi(zCoord,xCoord,centerHyper,nt,recInterpMethod,recInterpNumFilters)
+	# Allocate model
+	modelHyper=Hypercube.hypercube(axes=[zAxis,xAxis,timeAxis])
+	modelFloat=SepVector.getSepVector(modelHyper,storage="dataFloat")
 
-	# pad truncate init
-	dts = parObject.getFloat("dts",0.0)
-	nExp = parObject.getInt("nExp")
-	tAxis=Hypercube.axis(n=nt,o=0.0,d=dts)
-	wfldAxis=Hypercube.axis(n=5,o=0.0,d=1)
-	regRecAxis=Hypercube.axis(n=spaceInterpMultiOp.getNDeviceReg(),o=0.0,d=1)
-	oxReceiver=parObject.getInt("oReceiver")-1+parObject.getInt("fat")
-	dxReceiver=parObject.getInt("dReceiver")
-	irregRecAxis=Hypercube.axis(n=spaceInterpMultiOp.getNDeviceIrreg(),o=ox+oxReceiver*dx,d=dxReceiver*dx)
-	regRecHyper=Hypercube.hypercube(axes=[regRecAxis,wfldAxis,tAxis])
-	irregRecHyper=Hypercube.hypercube(axes=[irregRecAxis,wfldAxis,tAxis])
-	regWfldHyper=Hypercube.hypercube(axes=[centerHyper.getAxis(1),centerHyper.getAxis(2),wfldAxis,tAxis])
+	# z Axis data
+	nzData=parObject.getInt("nzData",-1)
+	ozData=parObject.getFloat("ozData",-1.0)
+	dzData=parObject.getFloat("dzData",-1.0)
+	zAxisData=Hypercube.axis(n=nzData,o=ozData,d=dzData)
 
-	output = SepVector.getSepVector(irregRecHyper,storage="dataFloat")
-	padTruncateDummyModel = SepVector.getSepVector(regRecHyper,storage="dataFloat")
-	padTruncateDummyData = SepVector.getSepVector(regWfldHyper,storage="dataFloat")
-	recGridPositions = spaceInterpMultiOp.getRegPosUniqueVector()
-	padTruncateRecOp = PadTruncateSourceFloat.pad_truncate_source(padTruncateDummyModel,padTruncateDummyData,recGridPositions)
-	padTruncateRecOp = Op.Transpose(padTruncateRecOp)
+	# x axis data
+	nxData=parObject.getInt("nxData",-1)
+	oxData=parObject.getFloat("oxData",-1.0)
+	dxData=parObject.getFloat("dxData",-1.0)
+	xAxisData=Hypercube.axis(n=nxData,o=oxData,d=dxData)
 
-	#stagger op
-	staggerDummyModel = SepVector.getSepVector(padTruncateDummyData.getHyper(),storage="dataFloat")
-	input = SepVector.getSepVector(padTruncateDummyData.getHyper(),storage="dataFloat")
-	wavefieldStaggerOp=StaggerFloat.stagger_wfld(staggerDummyModel,input)
-	wavefieldStaggerOp=Op.Transpose(wavefieldStaggerOp)
+	# Allocate data
+	dataHyper=Hypercube.hypercube(axes=[zAxisData,xAxisData,timeAxis])
+	dataFloat = SepVector.getSepVector(dataHyper,storage="dataFloat")
 
-	#chain operators
-	spaceInterpMultiOp.setDomainRange(padTruncateDummyModel,output)
-	#spaceInterpMultiOp = Op.Transpose(spaceInterpMultiOp)
-	# P_adjS_adj = Op.ChainOperator(wavefieldStaggerOp,padTruncateRecOp)
-	KP_adj = Op.ChainOperator(P_adj,spaceInterpMultiOp)
+	# init op
+	op=TruncateSpatialReg.sampleDataReg(modelFloat,dataFloat)
 
 	#apply forward
-	return KP_adj
+	return modelFloat,dataFloat,op
+#
+# def data_extraction_op_init(args):
+#
+# 	# Bullshit stuff
+# 	io=genericIO.pyGenericIO.ioModes(args)
+# 	ioDef=io.getDefaultIO()
+# 	parObject=ioDef.getParamObj()
+#
+# 	# Interp operator init
+# 	zCoord,xCoord,centerHyper = SpaceInterpMulti.space_interp_init_rec(args)
+#
+# 	# Horizontal axis
+# 	nx=centerHyper.getAxis(2).n
+# 	dx=centerHyper.getAxis(2).d
+# 	ox=centerHyper.getAxis(2).o
+#
+# 	# Vertical axis
+# 	nz=centerHyper.getAxis(1).n
+# 	dz=centerHyper.getAxis(1).d
+# 	oz=centerHyper.getAxis(1).o
+#
+# 	#interp operator instantiate
+# 	#check which rec injection interp method
+# 	recInterpMethod = parObject.getString("recInterpMethod","linear")
+# 	recInterpNumFilters = parObject.getInt("recInterpNumFilters",4)
+# 	nt = parObject.getInt("nts")
+# 	spaceInterpOp = SpaceInterpFloat.space_interp(zCoord,xCoord,centerHyper,nt,recInterpMethod,recInterpNumFilters)
+#
+# 	# pad truncate init
+# 	dts = parObject.getFloat("dts",0.0)
+# 	nExp = parObject.getInt("nExp")
+# 	tAxis=Hypercube.axis(n=nt,o=0.0,d=dts)
+# 	regRecAxis=Hypercube.axis(n=spaceInterpMultiOp.getNDeviceReg(),o=0.0,d=1)
+# 	oxReceiver=parObject.getInt("oReceiver")-1+parObject.getInt("fat")
+# 	dxReceiver=parObject.getInt("dReceiver")
+# 	irregRecAxis=Hypercube.axis(n=spaceInterpMultiOp.getNDeviceIrreg(),o=ox+oxReceiver*dx,d=dxReceiver*dx)
+# 	regRecHyper=Hypercube.hypercube(axes=[regRecAxis,tAxis])
+# 	irregRecHyper=Hypercube.hypercube(axes=[irregRecAxis,tAxis])
+# 	regWfldHyper=Hypercube.hypercube(axes=[centerHyper.getAxis(1),centerHyper.getAxis(2),tAxis])
+#
+# 	output = SepVector.getSepVector(irregRecHyper,storage="dataFloat")
+# 	padTruncateDummyModel = SepVector.getSepVector(regRecHyper,storage="dataFloat")
+# 	padTruncateDummyData = SepVector.getSepVector(regWfldHyper,storage="dataFloat")
+# 	recGridPositions = spaceInterpMultiOp.getRegPosUniqueVector()
+# 	padTruncateRecOp = PadTruncateSourceFloat.pad_truncate_source(padTruncateDummyModel,padTruncateDummyData,recGridPositions)
+# 	padTruncateRecOp = Op.Transpose(padTruncateRecOp)
+#
+# 	# #stagger op
+# 	# staggerDummyModel = SepVector.getSepVector(padTruncateDummyData.getHyper(),storage="dataFloat")
+# 	# input = SepVector.getSepVector(padTruncateDummyData.getHyper(),storage="dataFloat")
+# 	# wavefieldStaggerOp=StaggerFloat.stagger_wfld(staggerDummyModel,input)
+# 	# wavefieldStaggerOp=Op.Transpose(wavefieldStaggerOp)
+#
+# 	#chain operators
+# 	spaceInterpMultiOp.setDomainRange(padTruncateDummyModel,output)
+# 	#spaceInterpMultiOp = Op.Transpose(spaceInterpMultiOp)
+# 	# P_adjS_adj = Op.ChainOperator(wavefieldStaggerOp,padTruncateRecOp)
+# 	KP_adj = Op.ChainOperator(P_adj,spaceInterpMultiOp)
+#
+# 	#apply forward
+# 	return KP_adj

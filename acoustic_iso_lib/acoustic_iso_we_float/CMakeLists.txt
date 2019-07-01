@@ -21,9 +21,11 @@ set(SOURCES
   # ${SRC_DIR}/C5.cpp
   # ${SRC_DIR}/C4.cpp
   ${SRC_DIR}/TruncateSpatial.cpp
+  ${SRC_DIR}/TruncateSpatialReg.cpp
   ${SRC_DIR}/SecondDeriv.cpp
   # ${SRC_DIR}/WaveRecon.cpp
   ${SRC_DIR}/WaveReconV2.cpp
+  ${SRC_DIR}/WaveReconV3.cpp
   ${SRC_DIR}/PadModel2d.cpp
   ${SRC_DIR}/PadModel3d.cpp
   ${SRC_DIR}/Mask3d.cpp
@@ -59,9 +61,11 @@ set(HEADERS
   # ${INC_DIR}/C5.h
   # ${INC_DIR}/C4.h
   ${INC_DIR}/TruncateSpatial.h
+  ${INC_DIR}/TruncateSpatialReg.h
   ${INC_DIR}/SecondDeriv.h
   # ${INC_DIR}/WaveRecon.h
   ${INC_DIR}/WaveReconV2.h
+  ${INC_DIR}/WaveReconV3.h
   ${INC_DIR}/PadModel2d.h
   ${INC_DIR}/PadModel3d.h
   ${INC_DIR}/Mask3d.h

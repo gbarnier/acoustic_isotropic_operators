@@ -6,7 +6,6 @@ import Hypercube
 import Acoustic_iso_float_we
 import numpy as np
 import time
-import StaggerFloat
 
 if __name__ == '__main__':
     # Initialize operator
