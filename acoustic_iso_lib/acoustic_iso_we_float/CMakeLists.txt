@@ -29,6 +29,7 @@ set(SOURCES
   ${SRC_DIR}/PadModel2d.cpp
   ${SRC_DIR}/PadModel3d.cpp
   ${SRC_DIR}/Mask3d.cpp
+  ${SRC_DIR}/spaceInterp.cpp
   # ${SRC_DIR}/Mask2d.cpp
   # ${SRC_DIR}/Gradio.cpp
   # ${SRC_DIR}/C2_2DCube.cpp
@@ -69,6 +70,7 @@ set(HEADERS
   ${INC_DIR}/PadModel2d.h
   ${INC_DIR}/PadModel3d.h
   ${INC_DIR}/Mask3d.h
+  ${INC_DIR}/spaceInterp.h
   # ${INC_DIR}/Mask2d.h
   # ${INC_DIR}/Gradio.h
   # ${INC_DIR}/C2_2DCube.h

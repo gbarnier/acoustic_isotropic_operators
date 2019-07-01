@@ -49,6 +49,8 @@ if (pybind11_FOUND)
   target_link_libraries(pyAcoustic_iso_float_we PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
   pybind11_add_module(pyTruncateSpatialReg MODULE pyTruncateSpatialReg.cpp)
   target_link_libraries(pyTruncateSpatialReg PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
+  pybind11_add_module(pySpaceInterpFloat MODULE pySpaceInterpFloat.cpp)
+  target_link_libraries(pySpaceInterpFloat PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
 
   # Installing library
   # install( TARGETS pyAcoustic_iso_float_nl DESTINATION lib/python) # Module for non-linear operator
@@ -58,11 +60,13 @@ if (pybind11_FOUND)
   # install( TARGETS pyAcoustic_iso_float_wemva DESTINATION lib/python) # Module for Extended Wemva operator
   install( TARGETS pyAcoustic_iso_float_we DESTINATION lib/python) # Module for non-linear operator
   install( TARGETS pyTruncateSpatialReg DESTINATION lib/python) # Module for non-linear operator
+  install( TARGETS pySpaceInterpFloat DESTINATION lib/python)
 
   # install( FILES Acoustic_iso_float.py DESTINATION lib/python)
   install( FILES Acoustic_iso_float_we.py DESTINATION lib/python)
   install( FILES TruncateSpatialReg.py DESTINATION lib/python)
   install( FILES wriUtilFloat.py DESTINATION lib/python)
+  install( FILES SpaceInterpFloat.py DESTINATION lib/python)
 
 
   # Installing Python executables
@@ -82,6 +86,7 @@ if (pybind11_FOUND)
   # install( FILES fwimeFwiObjMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES waveEquationPythonAcousticFloatMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES truncateSpatialMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES forcingTermMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES waveEqInvFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 
 else(pybind11_FOUND)

@@ -9,8 +9,8 @@ import Hypercube
 import numpy as np
 import sys
 
-def space_interp_multi_init_source(args):
-	"""Function to correctly initialize space interp for multiple component wflds
+def space_interp_init_source(args):
+	"""Function to correctly initialize space interp for single component wflds
 	   The function will return the necessary variables for operator construction
 	"""
 	# Bullshit stuff
@@ -19,11 +19,11 @@ def space_interp_multi_init_source(args):
 	parObject=ioDef.getParamObj()
 
 	# elatic params
-	vpParamFile=parObject.getString("vp", "noVpFile")
-	if (vpParamFile == "noElasticParamFile"):
+	slsq=parObject.getString("slsq", "noElasticParamFile")
+	if (slsq == "noElasticParamFile"):
 		print("**** ERROR: User did not provide elastic parameter file ****\n")
 		sys.exit()
-	vpParam=genericIO.defaultIO.getVector(vpParamFile)
+	vpParam=genericIO.defaultIO.getVector(slsq)
 	# vpParam=SepVector.getSepVector(vpParamFloat.getHyper(),storage="dataDouble")
 	# vpParamDoubleNp=vpParam.getNdArray()
 
@@ -75,7 +75,7 @@ def space_interp_multi_init_source(args):
 
 	return zCoordFloat,xCoordFloat,centerGridHyper
 
-def space_interp_multi_init_rec(args):
+def space_interp_init_rec(args):
 	"""Function to correctly initialize space interp for multiple component wflds
 	   The function will return the necessary variables for operator construction
 	"""
@@ -85,23 +85,23 @@ def space_interp_multi_init_rec(args):
 	parObject=ioDef.getParamObj()
 
 	# elatic params
-	vpParamFile=parObject.getString("vpParam", "noElasticParamFile")
-	if (vpParamFile == "noElasticParamFile"):
-		print("**** ERROR: User did not provide elastic parameter file ****\n")
+	vpFile=parObject.getString("vp", "noVpFile")
+	if (vpFile == "noVpFile"):
+		print("**** ERROR: User did not provide velocity file, vp ****\n")
 		sys.exit()
-	vpParam=genericIO.defaultIO.getVector(vpParamFile)
+	vp=genericIO.defaultIO.getVector(vpFile)
 	# vpParam=SepVector.getSepVector(vpParamFloat.getHyper(),storage="dataFloat")
 	# vpParamDoubleNp=vpParam.getNdArray()
 
 	# Horizontal axis
-	nx=vpParam.getHyper().axes[1].n
-	dx=vpParam.getHyper().axes[1].d
-	ox=vpParam.getHyper().axes[1].o
+	nx=vp.getHyper().axes[1].n
+	dx=vp.getHyper().axes[1].d
+	ox=vp.getHyper().axes[1].o
 
 	# vertical axis
-	nz=vpParam.getHyper().axes[0].n
-	dz=vpParam.getHyper().axes[0].d
-	oz=vpParam.getHyper().axes[0].o
+	nz=vp.getHyper().axes[0].n
+	dz=vp.getHyper().axes[0].d
+	oz=vp.getHyper().axes[0].o
 
 	# rec geometry
 	nzReceiver=parObject.getInt("nzReceiver")
@@ -114,8 +114,8 @@ def space_interp_multi_init_rec(args):
 	nRecGeom=1; # Constant receivers' geometry
 
 	##need a hypercube for centerGrid, x shifted, z shifted, and xz shifted grid
-	zAxis=Hypercube.axis(n=vpParam.getHyper().axes[0].n,o=vpParam.getHyper().axes[0].o,d=vpParam.getHyper().axes[0].d)
-	xAxis=Hypercube.axis(n=vpParam.getHyper().axes[1].n,o=vpParam.getHyper().axes[1].o,d=vpParam.getHyper().axes[1].d)
+	zAxis=Hypercube.axis(n=vp.getHyper().axes[0].n,o=vp.getHyper().axes[0].o,d=vp.getHyper().axes[0].d)
+	xAxis=Hypercube.axis(n=vp.getHyper().axes[1].n,o=vp.getHyper().axes[1].o,d=vp.getHyper().axes[1].d)
 
 	centerGridHyper=Hypercube.hypercube(axes=[zAxis,xAxis])
 

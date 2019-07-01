@@ -41,12 +41,11 @@ if __name__ == '__main__':
 	############################# Initialization ###############################
 	# Data extraction
 	if(pyinfo): print("--------------------------- Data extraction init --------------------------------")
-	dataSamplingOp = wriUtilFloat.data_extraction_op_init(sys.argv)
+	_,_,dataSamplingOp = wriUtilFloat.data_extraction_op_init(sys.argv)
 
 	# Wave equation op init
 	if(pyinfo): print("--------------------------- Wave equation op init --------------------------------")
-	modelFloat,dataFloat,elasticParamFloat,parObject = Elastic_iso_float_we.waveEquationOpInitFloat(sys.argv)
-	waveEquationElasticOp=Elastic_iso_float_we.waveEquationElasticGpu(modelFloat,dataFloat,elasticParamFloat,parObject)
+	modelFloat,dataFloat,slsqFloat,parObject,waveEquationAcousticOp = Acoustic_iso_float_we.waveEquationOpInitFloat(sys.argv)
 
 	# forcing term op
 	if(pyinfo): print("--------------------------- forcing term op init --------------------------------")
