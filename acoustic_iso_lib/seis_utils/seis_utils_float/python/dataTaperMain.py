@@ -13,7 +13,7 @@ if __name__ == '__main__':
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
 
-	# Read model (seismic data that you wihs to mute/taper)
+	# Read model (seismic data that you wish to mute/taper)
 	modelFile=parObject.getString("model")
 	model=genericIO.defaultIO.getVector(modelFile,ndims=3)
 
