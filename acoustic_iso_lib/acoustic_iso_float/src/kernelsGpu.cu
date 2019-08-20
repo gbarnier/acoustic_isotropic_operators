@@ -414,7 +414,7 @@ __global__ void imagingTimeTomoAdjGpu(float *dev_wavefieldIn, float *dev_timeSli
 	int ix = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
 	int iSpace = dev_nz * ix + iz; // 1D array index for the model on the global memory
 	int iWavefield = its * dev_nz * dev_nx + iSpace; // Index for source wavefield at its
-
+	// Put pragma unroll statement for speed up
 	for (int iExt = iExtMin; iExt < iExtMax; iExt++){
 
 		int iModelExt = iExt * dev_nz * dev_nx + iSpace; // Compute index for extended model

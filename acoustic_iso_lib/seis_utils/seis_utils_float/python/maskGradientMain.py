@@ -13,24 +13,23 @@ if __name__ == '__main__':
 	ioDef=io.getDefaultIO()
 	parObject=ioDef.getParamObj()
 
-	# Read model (seismic data that you wihs to mute/taper)
-	modelFile=parObject.getString("model")
-	model=genericIO.defaultIO.getVector(modelFile)
-
 	# Initialize operator
-	vel,bufferUp,bufferDown,taperExp,fat,wbShift=maskGradientModule.maskGradientInit(sys.argv)
+	vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
+
+	# Read model
+	modelFile=parObject.getString("model")
+	model=genericIO.defaultIO.getVector(modelFile,ndims=2)
 
 	# Instanciate operator
-	maskGradientOp=maskGradientModule.maskGradient(model,model,vel,bufferUp,bufferDown,taperExp,fat,wbShift)
+	maskGradientOp=maskGradientModule.maskGradient(vel,vel,vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
 
-	# Get tapering mask
-	maskFile=parObject.getString("mask","noMaskFile")
-	if (maskFile != "noMaskFile"):
-		taperMask=maskGradientOp.getMask()
-		genericIO.defaultIO.writeVector(maskFile,taperMask)
+	# Get tapering mask and write to output
+	maskFile=parObject.getString("mask")
+	mask=maskGradientOp.getMask()
+	genericIO.defaultIO.writeVector(maskFile,mask)
 
-	# Write data
+	# Apply forward operator and write output data
 	data=SepVector.getSepVector(model.getHyper())
-	maskGradientOp.forward(False,model,data)
+	maskGradientOp.adjoint(False,data,model)
 	dataFile=parObject.getString("data")
 	genericIO.defaultIO.writeVector(dataFile,data)

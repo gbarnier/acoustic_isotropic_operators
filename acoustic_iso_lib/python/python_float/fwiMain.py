@@ -13,6 +13,7 @@ import interpBSplineModule
 import dataTaperModule
 import spatialDerivModule
 import maskGradientModule
+import phaseOnlyXkModule
 
 # Solver library
 import pyOperator as pyOp
@@ -34,6 +35,8 @@ if __name__ == '__main__':
 	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
+	gradientMask=parObject.getInt("gradientMask",0)
+	dataNormalization=parObject.getInt("dataNormalization",0)
 	regType=parObject.getString("reg","None")
 	reg=0
 	if (regType != "None"): reg=1
@@ -70,8 +73,9 @@ if __name__ == '__main__':
 	_,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
 
 	# Gradient mask
-	# if (gradientMask==1):
-	# 	vel,bufferUp,bufferDown,taperExp,fat,wbShift,manualGradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
+	if (gradientMask==1):
+		print("--- Using gradient masking ---")
+		vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
 
 	############################# Read files ###################################
 	# Seismic source
@@ -94,13 +98,14 @@ if __name__ == '__main__':
 	# Born
 	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
 	BornInvOp=BornOp
-	# if (gradientMask==1):
-	# 	maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift,manualGradientMaskFile)
-	# 	BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
+
+	if (gradientMask==1):
+		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
+		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
+		gMask=maskGradientOp.getMask()
 
 	# Conventional FWI
-	fwiOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornInvOp,BornOp.setVel)
-	fwiInvOp=fwiOp
+	fwiInvOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornInvOp,BornOp.setVel)
 	modelInit=modelFineInit
 
 	# Spline
@@ -110,6 +115,7 @@ if __name__ == '__main__':
 		modelInit=modelCoarseInit
 		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
+		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiInvOp)
 
 	# Data taper
 	if (dataTaper==1):
@@ -120,24 +126,20 @@ if __name__ == '__main__':
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
 		dataTaperNlOp=pyOp.NonLinearOperator(dataTaperOp,dataTaperOp) # Create dataTaper nonlinear operator
+		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOp,dataTaperNlOp)
 
-	# Concatenate operators
-	if (spline==1 and dataTaper==0):
-		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiOp)
-	if (spline==0 and dataTaper==1):
-		fwiInvOp=pyOp.CombNonlinearOp(fwiOp,dataTaperNlOp)
-	if (spline==1 and dataTaper==1):
-		fwiInvOpTemp=pyOp.CombNonlinearOp(splineNlOp,fwiOp) # Combine spline and FWI
-		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOpTemp,dataTaperNlOp) # Combine everything
-
-	############################# Gradient mask ################################
-	maskGradientFile=parObject.getString("maskGradient","NoMaskGradientFile")
-	if (maskGradientFile=="NoMaskGradientFile"):
-		maskGradient=None
-	else:
-		if(pyinfo): print("--- User provided a mask for the gradients ---")
-		inv_log.addToLog("--- User provided a mask for the gradients ---")
-		maskGradient=genericIO.defaultIO.getVector(maskGradientFile,ndims=2)
+	# Data normalization
+	if (dataNormalization=="xukai"):
+		if(pyinfo): print("--- Using Xukai's trace normalization ---")
+		inv_log.addToLog("--- Using Xukai's trace normalization ---")
+		phaseOnlyXkOp=phaseOnlyXkModule.phaseOnlyXk(data,data) # Instanciate forward operator
+		phaseOnlyXkJacOp=phaseOnlyXkModule.phaseOnlyXkJac(data) # Instanciate Jacobian operator
+		phaseOnlyXkNlOp=pyOp.NonLinearOperator(phaseOnlyXkOp,phaseOnlyXkJacOp,phaseOnlyXkJacOp.setData) # Instanciate the nonlinear operator
+		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOp,phaseOnlyXkNlOp)
+		# Apply normalization to data
+		obsDataNormalized=data.clone()
+		phaseOnlyXkOp.forward(data,obsDataNormalized)
+		data=obsDataNormalized
 
 	############################### Bounds #####################################
 	minBoundVector,maxBoundVector=Acoustic_iso_float.createBoundVectors(parObject,modelInit)
@@ -153,7 +155,7 @@ if __name__ == '__main__':
 		if (regType=="id"):
 			if(pyinfo): print("--- Identity regularization ---")
 			inv_log.addToLog("--- Identity regularization ---")
-			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=maskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
+			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=gMask,minBound=minBoundVector,maxBound=maxBoundVector)
 
 		# Spatial gradient in z-direction
 		if (regType=="zGrad"):
@@ -162,7 +164,7 @@ if __name__ == '__main__':
 			fat=spatialDerivModule.zGradInit(sys.argv)
 			gradOp=spatialDerivModule.zGradPython(modelInit,modelInit,fat)
 			gradNlOp=pyOp.NonLinearOperator(gradOp,gradOp)
-			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=maskGradient,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
+			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=gMask,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
 
 		# Spatial gradient in x-direction
 		if (regType=="xGrad"):
@@ -171,7 +173,7 @@ if __name__ == '__main__':
 			fat=spatialDerivModule.xGradInit(sys.argv)
 			gradOp=spatialDerivModule.xGradPython(modelInit,modelInit,fat)
 			gradNlOp=pyOp.NonLinearOperator(gradOp,gradOp)
-			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=maskGradient,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
+			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=gMask,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
 
 		# Sum of spatial gradients in z and x-directions
 		if (regType=="zxGrad"):
@@ -180,7 +182,7 @@ if __name__ == '__main__':
 			fat=spatialDerivModule.zxGradInit(sys.argv)
 			gradOp=spatialDerivModule.zxGradPython(modelInit,modelInit,fat)
 			gradNlOp=pyOp.NonLinearOperator(gradOp,gradOp)
-			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=maskGradient,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
+			fwiProb=Prblm.ProblemL2NonLinearReg(modelInit,data,fwiInvOp,epsilon,grad_mask=gMask,reg_op=gradNlOp,minBound=minBoundVector,maxBound=maxBoundVector)
 
 		# Evaluate Epsilon
 		if (epsilonEval==1):
@@ -193,7 +195,7 @@ if __name__ == '__main__':
 
 	# No regularization
 	else:
-		fwiProb=Prblm.ProblemL2NonLinear(modelInit,data,fwiInvOp,grad_mask=maskGradient,minBound=minBoundVector,maxBound=maxBoundVector)
+		fwiProb=Prblm.ProblemL2NonLinear(modelInit,data,fwiInvOp,minBound=minBoundVector,maxBound=maxBoundVector)
 
 	############################# Solver #######################################
 	# Nonlinear conjugate gradient

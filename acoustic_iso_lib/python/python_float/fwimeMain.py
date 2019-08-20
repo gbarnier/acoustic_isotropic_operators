@@ -67,7 +67,7 @@ if __name__ == '__main__':
 	# Gradient mask
 	if (gradientMask==1):
 		print("--- Using gradient masking ---")
-		vel,bufferUp,bufferDown,taperExp,fat,wbShift=maskGradientModule.maskGradientInit(sys.argv)			
+		vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
 
 	# Nonlinear modeling operator
 	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
 	BornInvOp=BornOp
 	if (gradientMask==1):
-		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift)
+		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
 		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
 
 	# g nonlinear (same as conventional FWI operator)
