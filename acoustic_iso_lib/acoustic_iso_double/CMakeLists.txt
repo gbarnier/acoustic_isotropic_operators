@@ -3,6 +3,7 @@ project(ACOUSTIC_ISO_DOUBLE-lib)
 
 #Adding include files
 include_directories(include)
+include_directories(${CMAKE_BUILD_DIR}/../external/genericIO)
 
 #Header files to include during installation
 set(INC_DIR include)
