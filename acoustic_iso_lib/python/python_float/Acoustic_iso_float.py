@@ -64,25 +64,51 @@ def createBoundVectors(parObject,model):
 # Build sources geometry
 def buildSourceGeometry(parObject,vel):
 
-	# Horizontal axis
-	dx=vel.getHyper().axes[1].n
-	dx=vel.getHyper().axes[1].d
-	ox=vel.getHyper().axes[1].o
-
-	# Sources geometry
-	nzSource=1
-	ozSource=parObject.getInt("zSource")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
-	dzSource=1
-	nxSource=1
-	oxSource=parObject.getInt("xSource")-1+parObject.getInt("xPadMinus")+parObject.getInt("fat")
-	dxSource=1
-	spacingShots=parObject.getInt("spacingShots")
-	sourceAxis=Hypercube.axis(n=parObject.getInt("nShot"),o=ox+oxSource*dx,d=spacingShots*dx)
+	#Common parameters
+	sourceGeomFile = parObject.getString("sourceGeomFile","None")
+	nShot = parObject.getInt("nShot")
+	nts = parObject.getInt("nts")
+	dipole = parObject.getInt("dipole",0)
+	zDipoleShift = parObject.getInt("zDipoleShift",2)
+	xDipoleShift = parObject.getInt("xDipoleShift",0)
 	sourcesVector=[]
 
-	for ishot in range(parObject.getInt("nShot")):
-		sourcesVector.append(deviceGpu(nzSource,ozSource,dzSource,nxSource,oxSource,dxSource,vel.getCpp(),parObject.getInt("nts"), parObject.getInt("dipole",0), parObject.getInt("zDipoleShift",2), parObject.getInt("xDipoleShift",0)))
-		oxSource=oxSource+spacingShots # Shift source
+	#Reading source geometry from file
+	if(sourceGeomFile != "None"):
+		sourceGeomVector=genericIO.defaultIO.getVector(sourceGeomFile)
+		sourceGeomVectorNd = sourceGeomVector.getNdArray()
+		SourceAxis=Hypercube.axis(n=1,o=0.0,d=1.0)
+		zCoordFloat=SepVector.getSepVector(SourceAxis,storage="dataFloat")
+		xCoordFloat=SepVector.getSepVector(SourceAxis,storage="dataFloat")
+		#Check for consistency between number of shots and provided coordinates
+		if(nShot != sourceGeomVectorNd.shape[1]):
+			raise ValueError("ERROR! Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
+		#Setting source geometry
+		for ishot in range(nShot):
+			#Setting z and x position of the source for the given experiment
+			zCoordFloat.set(sourceGeomVectorNd[2,ishot])
+			xCoordFloat.set(sourceGeomVectorNd[0,ishot])
+			sourcesVector.append(deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, nts, dipole, zDipoleShift, xDipoleShift))
+
+	#Reading regular source geometry from parameters
+	else:
+		# Horizontal axis
+		dx=vel.getHyper().axes[1].n
+		dx=vel.getHyper().axes[1].d
+		ox=vel.getHyper().axes[1].o
+		# Sources geometry
+		nzSource=1
+		dzSource=1
+		nxSource=1
+		dxSource=1
+		ozSource=parObject.getInt("zSource")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
+		oxSource=parObject.getInt("xSource")-1+parObject.getInt("xPadMinus")+parObject.getInt("fat")
+		spacingShots=parObject.getInt("spacingShots")
+		sourceAxis=Hypercube.axis(n=nShot,o=ox+oxSource*dx,d=spacingShots*dx)
+		#Setting source geometry
+		for ishot in range(nShot):
+			sourcesVector.append(deviceGpu(nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift))
+			oxSource=oxSource+spacingShots # Shift source
 
 	return sourcesVector,sourceAxis
 

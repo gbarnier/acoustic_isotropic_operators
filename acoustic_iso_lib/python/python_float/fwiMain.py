@@ -36,7 +36,7 @@ if __name__ == '__main__':
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
 	gradientMask=parObject.getInt("gradientMask",0)
-	dataNormalization=parObject.getInt("dataNormalization",0)
+	dataNormalization=parObject.getString("dataNormalization","None")
 	regType=parObject.getString("reg","None")
 	reg=0
 	if (regType != "None"): reg=1
@@ -138,7 +138,7 @@ if __name__ == '__main__':
 		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOp,phaseOnlyXkNlOp)
 		# Apply normalization to data
 		obsDataNormalized=data.clone()
-		phaseOnlyXkOp.forward(data,obsDataNormalized)
+		phaseOnlyXkOp.forward(False,data,obsDataNormalized)
 		data=obsDataNormalized
 
 	############################### Bounds #####################################
