@@ -338,6 +338,7 @@ void BornShotsGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model, co
 }
 void BornShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DReg> model, const std::shared_ptr<float3DReg> data) {
 
+std::cerr<<"here0\n";
 	if (!add) model->scale(0.0);
 
 	// Variable declaration
@@ -352,12 +353,14 @@ void BornShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DReg> 
 	if (_receiversVector.size() == 1){constantRecGeom=1;}
 	else {constantRecGeom=0;}
 
+std::cerr<<"here1\n";
 	// Create vectors for each GPU
 	std::shared_ptr<SEP::hypercube> hyperModelSlice(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2)));
+std::cerr<<"here2\n";
 	std::shared_ptr<SEP::hypercube> hyperDataSlice(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2)));
+std::cerr<<"here3\n";
 	std::vector<std::shared_ptr<float2DReg>> modelSliceVector, dataSliceVector;
 	std::vector<std::shared_ptr<BornGpu>> BornObjectVector;
-
 	// Loop over GPUs
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
@@ -426,6 +429,7 @@ void BornShotsGpu::adjointWavefield(const bool add, std::shared_ptr<float2DReg> 
 			std::cout << "Finished propagation of shot# " << iShot << ", computed by gpu# " << iGpu << " - saving wavefields" << std::endl;
 			_srcWavefield = BornObjectVector[iGpu]->getSrcWavefield();
 			_secWavefield = BornObjectVector[iGpu]->getSecWavefield();
+			std::cerr << "sec wfld max: " << _secWavefield->max() << std::endl;	
 		}
 	}
 

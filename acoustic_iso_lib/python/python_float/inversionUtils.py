@@ -8,6 +8,53 @@ import sys
 import os
 import pyStopperBase as Stopper
 
+def inversionFullWRIInit(args):
+
+	# Bullshit stuff
+	io=genericIO.pyGenericIO.ioModes(args)
+	ioDef=io.getDefaultIO()
+	par=ioDef.getParamObj()
+
+	# Stopper
+	nIter=par.getInt("nIter")
+	nIter_p=par.getInt("nIter_p")
+	stop_p=Stopper.BasicStopper(nIter_p)
+	nIter_m=par.getInt("nIter_m")
+	stop_m=Stopper.BasicStopper(nIter_m)
+
+	# Inversion Folder
+	folder=par.getString("folder")
+	if (os.path.isdir(folder)==False): os.mkdir(folder)
+	prefix=par.getString("prefix","None")
+	if (prefix=="None"): prefix=folder
+	invPrefix=folder+"/"+prefix
+	logFile=invPrefix+"_logFile"
+
+	# Recording parameters
+	bufferSize_p=par.getInt("bufferSize_p",3)
+	if (bufferSize_p==0): bufferSize_p=None
+	iterSampling_p=par.getInt("iterSampling_p",1000)
+	bufferSize_m=par.getInt("bufferSize_m",3)
+	if (bufferSize_m==0): bufferSize_m=None
+	iterSampling_m=par.getInt("iterSampling_m",20)
+	restartFolder=par.getString("restartFolder","None")
+	flushMemory=par.getInt("flushMemory",0)
+
+	# Inversion components to save
+	saveObj_p=par.getInt("saveObj_p",1)
+	saveRes_p=par.getInt("saveRes_p",1)
+	saveGrad_p=par.getInt("saveGrad_p",1)
+	saveModel_p=par.getInt("saveModel_p",1)
+	saveObj_m=par.getInt("saveObj_m",1)
+	saveRes_m=par.getInt("saveRes_m",1)
+	saveGrad_m=par.getInt("saveGrad_m",1)
+	saveModel_m=par.getInt("saveModel_m",1)
+
+	# Info
+	info=par.getInt("info",1)
+
+	return nIter,stop_m,stop_p,logFile,saveObj_p,saveRes_p,saveGrad_p,saveModel_p,saveObj_m,saveRes_m,saveGrad_m,saveModel_m,invPrefix,bufferSize_p,iterSampling_p,bufferSize_m,iterSampling_m,restartFolder,flushMemory,info
+
 def inversionInit(args):
 
 	# Bullshit stuff

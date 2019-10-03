@@ -282,6 +282,11 @@ class nonlinearPropShotsGpu(Op.Operator):
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
+	def getWfld(self):
+		with pyAcoustic_iso_float_nl.ostream_redirect():
+			wfld = self.pyOp.getWfld()
+			wfld = SepVector.floatVector(fromCpp=wfld)
+		return wfld
 def nonlinearFwiOpInitFloat(args):
 	"""Function to correctly initialize a nonlinear operator where the model is velocity
 	   The function will return the necessary variables for operator construction
@@ -467,6 +472,17 @@ class BornShotsGpu(Op.Operator):
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
+	def getSrcWfld(self):
+		with pyAcoustic_iso_float_born.ostream_redirect():
+			wfld = self.pyOp.getSrcWfld()
+			wfld = SepVector.floatVector(fromCpp=wfld)
+		return wfld
+
+	def getSecWfld(self):
+		with pyAcoustic_iso_float_born.ostream_redirect():
+			wfld = self.pyOp.getSecWfld()
+			wfld = SepVector.floatVector(fromCpp=wfld)
+		return wfld
 ############################## Born extended ###################################
 def BornExtOpInitFloat(args):
 

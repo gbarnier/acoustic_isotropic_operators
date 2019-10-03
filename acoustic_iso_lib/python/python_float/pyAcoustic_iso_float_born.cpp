@@ -29,5 +29,7 @@ PYBIND11_MODULE(pyAcoustic_iso_float_born, clsGeneric) {
       .def("setVel",(void (BornShotsGpu::*)(std::shared_ptr<float2DReg>)) &BornShotsGpu::setVel,"Function to set background velocity")
 
       .def("dotTest",(bool (BornShotsGpu::*)(const bool, const float)) &BornShotsGpu::dotTest,"Dot-Product Test")
-  ;
+      .def("getSrcWfld",(std::shared_ptr<float3DReg>  (BornShotsGpu::*)()) &BornShotsGpu::getSrcWavefield,"Function to get src wfld")
+      .def("getSecWfld",(std::shared_ptr<float3DReg>  (BornShotsGpu::*)()) &BornShotsGpu::getSecWavefield,"Function to get adj wfld")
+;
 }

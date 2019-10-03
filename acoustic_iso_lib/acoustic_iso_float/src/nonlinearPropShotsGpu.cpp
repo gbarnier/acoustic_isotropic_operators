@@ -242,7 +242,7 @@ void nonlinearPropShotsGpu::forwardWavefield(const bool add, const std::shared_p
 		// Get the wavefield
 		if (iShot == _wavefieldShotNumber) {
 			_wavefield = propObjectVector[iGpu]->getWavefield();
-
+			std::cerr << "wfld max: " << _wavefield->max() << std::endl;	
 		}
 	}
 
