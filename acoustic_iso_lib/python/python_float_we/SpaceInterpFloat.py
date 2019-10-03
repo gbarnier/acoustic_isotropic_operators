@@ -20,37 +20,43 @@ def space_interp_init_source(args):
 
 	# elatic params
 	slsq=parObject.getString("slsq", "noElasticParamFile")
-	if (slsq == "noElasticParamFile"):
-		print("**** ERROR: User did not provide elastic parameter file ****\n")
-		sys.exit()
-	vpParam=genericIO.defaultIO.getVector(slsq)
-	# vpParam=SepVector.getSepVector(vpParamFloat.getHyper(),storage="dataDouble")
-	# vpParamDoubleNp=vpParam.getNdArray()
+	if (slsq != "noElasticParamFile"):
+		vpParam=genericIO.defaultIO.getVector(slsq)
 
-	# Horizontal axis
-	nx=vpParam.getHyper().axes[1].n
-	dx=vpParam.getHyper().axes[1].d
-	ox=vpParam.getHyper().axes[1].o
+		# Horizontal axis
+		nx=vpParam.getHyper().axes[1].n
+		dx=vpParam.getHyper().axes[1].d
+		ox=vpParam.getHyper().axes[1].o
 
-	# vertical axis
-	nz=vpParam.getHyper().axes[0].n
-	dz=vpParam.getHyper().axes[0].d
-	oz=vpParam.getHyper().axes[0].o
+		# vertical axis
+		nz=vpParam.getHyper().axes[0].n
+		dz=vpParam.getHyper().axes[0].d
+		oz=vpParam.getHyper().axes[0].o
+	else:
+		# z Axis
+		nz=parObject.getInt("nz",-1)
+		oz=parObject.getFloat("oz",-1.0)
+		dz=parObject.getFloat("dz",-1.0)
+
+		# x axis
+		nx=parObject.getInt("nx",-1)
+		ox=parObject.getFloat("ox",-1.0)
+		dx=parObject.getFloat("dx",-1.0)
 
 	# Sources geometry
 	nzSource=1
-	ozSource=parObject.getInt("zSource")-1+parObject.getInt("zPadMinus",0)+parObject.getInt("fat")
+	ozSource=parObject.getInt("zSource")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
 	dzSource=1
 	nxSource=1
-	oxSource=parObject.getInt("xSource")-1+parObject.getInt("xPadMinus",0)+parObject.getInt("fat")
+	oxSource=parObject.getInt("xSource")-1+parObject.getInt("xPadMinus")+parObject.getInt("fat")
 	dxSource=1
 	spacingShots=parObject.getInt("spacingShots")
 	nExp = parObject.getInt("nExp")
 	sourceAxis=Hypercube.axis(n=nExp,o=0,d=1)
 
 	##need a hypercube for centerGrid, x shifted, z shifted, and xz shifted grid
-	zAxis=Hypercube.axis(n=vpParam.getHyper().axes[0].n,o=vpParam.getHyper().axes[0].o,d=vpParam.getHyper().axes[0].d)
-	xAxis=Hypercube.axis(n=vpParam.getHyper().axes[1].n,o=vpParam.getHyper().axes[1].o,d=vpParam.getHyper().axes[1].d)
+	zAxis=Hypercube.axis(n=nz,o=oz,d=dz)
+	xAxis=Hypercube.axis(n=nx,o=ox,d=dx)
 
 	centerGridHyper=Hypercube.hypercube(axes=[zAxis,xAxis])
 
@@ -85,23 +91,29 @@ def space_interp_init_rec(args):
 	parObject=ioDef.getParamObj()
 
 	# elatic params
-	vpFile=parObject.getString("vp", "noVpFile")
-	if (vpFile == "noVpFile"):
-		print("**** ERROR: User did not provide velocity file, vp ****\n")
-		sys.exit()
-	vp=genericIO.defaultIO.getVector(vpFile)
-	# vpParam=SepVector.getSepVector(vpParamFloat.getHyper(),storage="dataFloat")
-	# vpParamDoubleNp=vpParam.getNdArray()
+	slsq=parObject.getString("slsq", "noElasticParamFile")
+	if (slsq != "noElasticParamFile"):
+		vpParam=genericIO.defaultIO.getVector(slsq)
 
-	# Horizontal axis
-	nx=vp.getHyper().axes[1].n
-	dx=vp.getHyper().axes[1].d
-	ox=vp.getHyper().axes[1].o
+		# Horizontal axis
+		nx=vpParam.getHyper().axes[1].n
+		dx=vpParam.getHyper().axes[1].d
+		ox=vpParam.getHyper().axes[1].o
 
-	# vertical axis
-	nz=vp.getHyper().axes[0].n
-	dz=vp.getHyper().axes[0].d
-	oz=vp.getHyper().axes[0].o
+		# vertical axis
+		nz=vpParam.getHyper().axes[0].n
+		dz=vpParam.getHyper().axes[0].d
+		oz=vpParam.getHyper().axes[0].o
+	else:
+		# z Axis
+		nz=parObject.getInt("nz",-1)
+		oz=parObject.getFloat("oz",-1.0)
+		dz=parObject.getFloat("dz",-1.0)
+
+		# x axis
+		nx=parObject.getInt("nx",-1)
+		ox=parObject.getFloat("ox",-1.0)
+		dx=parObject.getFloat("dx",-1.0)
 
 	# rec geometry
 	nzReceiver=parObject.getInt("nzReceiver")
@@ -114,8 +126,8 @@ def space_interp_init_rec(args):
 	nRecGeom=1; # Constant receivers' geometry
 
 	##need a hypercube for centerGrid, x shifted, z shifted, and xz shifted grid
-	zAxis=Hypercube.axis(n=vp.getHyper().axes[0].n,o=vp.getHyper().axes[0].o,d=vp.getHyper().axes[0].d)
-	xAxis=Hypercube.axis(n=vp.getHyper().axes[1].n,o=vp.getHyper().axes[1].o,d=vp.getHyper().axes[1].d)
+	zAxis=Hypercube.axis(n=nz,o=oz,d=dz)
+	xAxis=Hypercube.axis(n=nx,o=ox,d=dx)
 
 	centerGridHyper=Hypercube.hypercube(axes=[zAxis,xAxis])
 
@@ -133,10 +145,10 @@ def space_interp_init_rec(args):
 	zCoordDMat=zCoordFloat.getNdArray()
 
 	for irecz in range(nzReceiver):
-		for irecx in range(nzReceiver):
+		for irecx in range(nxReceiver):
 			#Setting z and x position of the source for the given experiment
-			zCoordDMat[irecz*nxReceiver + irecx]= oz + ozReceiver*dz + dzReceiver*dz*irecz
-			xCoordDMat[irecz*nxReceiver + irecx]= ox + oxReceiver*dx + dxReceiver*dx*irecx
+			zCoordDMat[irecx*nzReceiver + irecz]= oz + ozReceiver*dz + dzReceiver*dz*irecz
+			xCoordDMat[irecx*nzReceiver + irecz]= ox + oxReceiver*dx + dxReceiver*dx*irecx
 
 	return zCoordFloat,xCoordFloat,centerGridHyper
 

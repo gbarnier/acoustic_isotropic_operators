@@ -54,7 +54,7 @@ if (pybind11_FOUND)
   install( TARGETS pyAcoustic_iso_float_born_ext DESTINATION lib/python) # Module for Extended Born operator
   install( TARGETS pyAcoustic_iso_float_tomo DESTINATION lib/python) # Module for Extended Tomo operator
   install( TARGETS pyAcoustic_iso_float_wemva DESTINATION lib/python) # Module for Extended Wemva operator
-  install( TARGETS pyAcoustic_iso_float_we DESTINATION lib/python) # Module for non-linear operator
+  #install( TARGETS pyAcoustic_iso_float_we DESTINATION lib/python) # Module for non-linear operator
   install( FILES Acoustic_iso_float.py DESTINATION lib/python)
   # install( FILES Acoustic_iso_float_we.py DESTINATION lib/python)
   install( FILES inversionUtils.py DESTINATION lib/python)

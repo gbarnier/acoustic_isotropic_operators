@@ -260,7 +260,8 @@ void spaceInterp::convertIrregToReg() {
 
 void spaceInterp::forward(const bool add, const std::shared_ptr<float2DReg> signalReg, std::shared_ptr<float2DReg> signalIrreg) const {
 
-	assert(signalReg->getHyper()->getAxis(2).n == signalIrreg->getHyper()->getAxis(3).n); //same nt
+	
+	assert(signalReg->getHyper()->getAxis(2).n == signalIrreg->getHyper()->getAxis(2).n); //same nt
 	assert(signalReg->getHyper()->getAxis(2).n ==_nt); //correct nt
 	assert(signalReg->getHyper()->getAxis(1).n ==_nDeviceReg); //correct number of regular grid components
 	assert(signalIrreg->getHyper()->getAxis(1).n ==_nDeviceIrreg); //correct number of irregular grid components
@@ -276,10 +277,6 @@ void spaceInterp::forward(const bool add, const std::shared_ptr<float2DReg> sign
 				int i1 = iDevice * _nFiltTotal + ifilt;
 				int i2 = _indexMap.find(_gridPointIndex[i1])->second;
 					(*d)[it][iDevice] += _weight[i1] * (*m)[it][i2];
-					(*d)[it][iDevice] += _weight[i1] * (*m)[it][i2];
-					(*d)[it][iDevice] += _weight[i1] * (*m)[it][i2];
-					(*d)[it][iDevice] += _weight[i1] * (*m)[it][i2];
-					(*d)[it][iDevice] += _weight[i1] * (*m)[it][i2];
 			}
 		}
 	}
@@ -287,7 +284,8 @@ void spaceInterp::forward(const bool add, const std::shared_ptr<float2DReg> sign
 
 void spaceInterp::adjoint(const bool add, std::shared_ptr<float2DReg> signalReg, const std::shared_ptr<float2DReg> signalIrreg) const {
 
-	assert(signalReg->getHyper()->getAxis(2).n == signalIrreg->getHyper()->getAxis(3).n); //same nt
+
+	assert(signalReg->getHyper()->getAxis(2).n == signalIrreg->getHyper()->getAxis(2).n); //same nt
 	assert(signalReg->getHyper()->getAxis(2).n ==_nt); //correct nt
 	assert(signalReg->getHyper()->getAxis(1).n ==_nDeviceReg); //correct number of regular grid components
 	assert(signalIrreg->getHyper()->getAxis(1).n ==_nDeviceIrreg); //correct number of irregular grid components
@@ -302,10 +300,6 @@ void spaceInterp::adjoint(const bool add, std::shared_ptr<float2DReg> signalReg,
 			for (int ifilt = 0; ifilt < _nFiltTotal; ifilt++){ // Loop over neighboring points on regular grid
 				int i1 = iDevice * _nFiltTotal + ifilt;  // Grid point index
 				int i2 = _indexMap.find(_gridPointIndex[i1])->second; // Get trace number for signalReg
-					(*m)[it][i2] += _weight[i1] * (*d)[it][iDevice];
-					(*m)[it][i2] += _weight[i1] * (*d)[it][iDevice];
-					(*m)[it][i2] += _weight[i1] * (*d)[it][iDevice];
-					(*m)[it][i2] += _weight[i1] * (*d)[it][iDevice];
 					(*m)[it][i2] += _weight[i1] * (*d)[it][iDevice];
 			}
 		}

@@ -166,6 +166,7 @@ void initNonlinearGpu(float dz, float dx, int nz, int nx, int nts, float dts, in
 		float arg = M_PI / (1.0 * minPad) * 1.0 * (minPad-iFilter+FAT);
 		arg = alphaCos + (1.0-alphaCos) * cos(arg);
 		cosDampingCoeff[iFilter-FAT] = arg;
+		//std::cerr << "index: " << iFilter-FAT << " coeff: " << arg << std::endl;
 	}
 
 	// Check that the block size is consistent between parfile and "varDeclare.h"

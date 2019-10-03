@@ -15,11 +15,6 @@ using namespace SEP;
 class Laplacian2d : public Operator<SEP::float3DReg, SEP::float3DReg> {
   public:
 
-    /**
-       2d lapl
-     */
-    // Laplacian2d(const std::shared_ptr<SEP::float2DReg>model,
-    //             const std::shared_ptr<SEP::float2DReg>data);
 
     /**
        2d lapl of each slice of fast axis
@@ -30,19 +25,20 @@ class Laplacian2d : public Operator<SEP::float3DReg, SEP::float3DReg> {
     /**
        lapl(model) -> data
      */
-    virtual void forward(const bool                         add,
+    void forward(const bool                         add,
                          const std::shared_ptr<SEP::float3DReg>model,
                          std::shared_ptr<SEP::float3DReg>      data) const ;
 
     /**
        lapl(data) -> model
      */
-    virtual void adjoint(const bool                         add,
+    void adjoint(const bool                         add,
                          std::shared_ptr<SEP::float3DReg>      model,
                          const std::shared_ptr<SEP::float3DReg>data) const ;
 
   private:
 
+  int n1,n2,n3;
     float _da, _db;                                                   // spatial
                                                                       // sampling
                                                                       // of two
@@ -50,6 +46,6 @@ class Laplacian2d : public Operator<SEP::float3DReg, SEP::float3DReg> {
     bool _3d;                                                         // 3d flag
     float C0z, C1z, C2z, C3z, C4z, C5z, C0x, C1x, C2x, C3x, C4x, C5x; // lapl
                                                                       // coeff
-    int _bufferSize = 5;
+    int _laplOrder= 5;
     std::shared_ptr<SEP::float3DReg>buffer;
   };

@@ -40,16 +40,17 @@ TruncateSpatialReg::TruncateSpatialReg(const std::shared_ptr<SEP::float3DReg>mod
 
   for (int i2d = 0; i2d < n2d; i2d++) {
     float fx = o2d + (float)i2d * d2d;
-    int ixm = (fx-o2m)/d2m;
-    float fxm = ixm*(float)d2m+o2m;
-    //std::cerr << "ix:" << i2d << " fx:" << fx << " ixm:" << ixm << " fxm:" << fxm << std::endl;
+    float ixm = ((float)fx-(float)o2m)/(float)d2m;
+    float fxm = ixm*(float)d2m+(float)o2m;
+    //std::cerr << "fx:" << fx << " o2m:" << o2m << " d2m:" << d2m << " fx-o2m:" << fx-o2m << " (fx-o2m)/d2m:" << (fx-o2m)/d2m << std::endl;
+    //std::cerr << "ix:" << i2d << " fx:" << fx << " ixm:" << ixm << " fxm:" << fxm << std::endl << std::endl;
     assert(ixm >= 0); //assert data in in domain of model
     assert(fx-fxm < 0.000001); //assert they fall on same grid
   }
 
   for (int i1d = 0; i1d < n1d; i1d++) {
     float fz = o1d + i1d * d1d;
-    int izm = (fz-o1m)/d1m;
+    float izm = (fz-o1m)/d1m;
     float fzm = izm*d1m+o1m;
     //std::cerr << "iz:" << i1d << " fz:" << fz << " izm:" << izm << " fzm:" << fzm << std::endl;
     assert(izm >= 0); //assert data in in domain of model

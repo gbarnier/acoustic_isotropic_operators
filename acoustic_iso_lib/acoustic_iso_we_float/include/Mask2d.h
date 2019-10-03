@@ -6,8 +6,8 @@
  #pragma once
  #include <operator.h>
  #include <float2DReg.h>
-namespace waveform {
-class Mask2d : public Operator {
+using namespace SEP;
+class Mask2d : public Operator<SEP::float2DReg, SEP::float2DReg> {
 public:
 
   // regular grid
@@ -20,13 +20,13 @@ public:
     int                                    n2max,
     int                                    maskType = 0);
 
-  virtual void forward(const bool                         add,
-                       const std::shared_ptr<SEP::Vector>model,
-                       std::shared_ptr<SEP::Vector>      data);
+  void forward(const bool                         add,
+                       const std::shared_ptr<SEP::float2DReg>model,
+                       std::shared_ptr<SEP::float2DReg>      data) const;
 
-  virtual void adjoint(const bool                         add,
-                       std::shared_ptr<SEP::Vector>      model,
-                       const std::shared_ptr<SEP::Vector>data);
+  void adjoint(const bool                         add,
+                       std::shared_ptr<SEP::float2DReg>      model,
+                       const std::shared_ptr<SEP::float2DReg>data) const;
 
 private:
 
@@ -34,4 +34,3 @@ private:
   int _maskType;
   std::shared_ptr<float2D>_mask;
 };
-}

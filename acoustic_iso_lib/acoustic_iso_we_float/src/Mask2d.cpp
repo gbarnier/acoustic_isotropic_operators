@@ -1,7 +1,5 @@
 #include <Mask2d.h>
 #include <math.h>
-using namespace giee;
-using namespace waveform;
 using namespace SEP;
 
 Mask2d::Mask2d(
@@ -94,8 +92,8 @@ Mask2d::Mask2d(
 
 // forward
 void Mask2d::forward(const bool                         add,
-                     const std::shared_ptr<SEP::Vector>model,
-                     std::shared_ptr<SEP::Vector>      data) {
+                     const std::shared_ptr<SEP::float2DReg>model,
+                     std::shared_ptr<SEP::float2DReg>      data) const {
   assert(checkDomainRange(model, data));
 
   if (!add) data->scale(0.);
@@ -119,8 +117,8 @@ void Mask2d::forward(const bool                         add,
 
 // adjoint
 void Mask2d::adjoint(const bool                         add,
-                     std::shared_ptr<SEP::Vector>      model,
-                     const std::shared_ptr<SEP::Vector>data) {
+                     std::shared_ptr<SEP::float2DReg>      model,
+                     const std::shared_ptr<SEP::float2DReg>data) const {
   assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);

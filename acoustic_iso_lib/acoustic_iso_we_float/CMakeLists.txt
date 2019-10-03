@@ -6,6 +6,11 @@ include_directories(include)
 
 set(SRC_DIR src)
 set(SOURCES
+    ${SRC_DIR}/waveEquationAcousticGpu.cpp
+  # ${SRC_DIR}/kernelsGpuWaveEquationAcoustic.cu
+    ${SRC_DIR}/waveEquationAcousticGpuFunctions.cu
+  # ${SRC_DIR}/cudaError.cu
+    ${SRC_DIR}/fdParamAcousticWaveEquation.cpp
   # ${SRC_DIR}/PadSource.cpp
   # ${SRC_DIR}/PadRec.cpp
   # ${SRC_DIR}/InterpSource.cpp
@@ -23,15 +28,30 @@ set(SOURCES
   ${SRC_DIR}/TruncateSpatial.cpp
   ${SRC_DIR}/TruncateSpatialReg.cpp
   ${SRC_DIR}/SecondDeriv.cpp
+  ${SRC_DIR}/SecondDeriv_V2.cpp
   # ${SRC_DIR}/WaveRecon.cpp
   ${SRC_DIR}/WaveReconV2.cpp
   ${SRC_DIR}/WaveReconV3.cpp
+  ${SRC_DIR}/WaveReconV4.cpp
+  ${SRC_DIR}/WaveReconV5.cpp
+  ${SRC_DIR}/WaveReconV6.cpp
+  ${SRC_DIR}/WaveReconV7.cpp
+  ${SRC_DIR}/WaveReconV8.cpp
+  ${SRC_DIR}/WaveReconV9.cpp
+  ${SRC_DIR}/WaveReconV10.cpp
+  ${SRC_DIR}/SphericalSpreadingScale.cpp
+  ${SRC_DIR}/GF.cpp
   ${SRC_DIR}/PadModel2d.cpp
   ${SRC_DIR}/PadModel3d.cpp
   ${SRC_DIR}/Mask3d.cpp
+  ${SRC_DIR}/CausalMask.cpp
   ${SRC_DIR}/spaceInterp.cpp
-  # ${SRC_DIR}/Mask2d.cpp
-  # ${SRC_DIR}/Gradio.cpp
+  ${SRC_DIR}/padTruncateSource.cpp
+  ${SRC_DIR}/tpowWfld.cpp
+  ${SRC_DIR}/Mask2d.cpp
+  ${SRC_DIR}/Gradio.cpp
+  ${SRC_DIR}/SampleWfld.cpp
+  ${SRC_DIR}/Smooth2d.cpp
   # ${SRC_DIR}/C2_2DCube.cpp
   # ${SRC_DIR}/G_2DCube.cpp
   # ${SRC_DIR}/C5_2DCube.cpp
@@ -47,6 +67,13 @@ set(SOURCES
 
 set(INC_DIR include)
 set(HEADERS
+   ${INC_DIR}/waveEquationAcousticGpu.h
+   ${SRC_DIR}/kernelsGpuWaveEquationAcoustic.cu
+   ${SRC_DIR}/waveEquationAcousticGpuFunctions.cu
+   ${SRC_DIR}/cudaErrors.cu
+   ${INC_DIR}/varDeclareWaveEquation.h
+   ${INC_DIR}/waveEquationAcousticGpuFunctions.h
+   ${INC_DIR}/fdParamAcousticWaveEquation.h
   # ${INC_DIR}/PadSource.h
   # ${INC_DIR}/PadRec.h
   # ${INC_DIR}/InterpSource.h
@@ -64,15 +91,30 @@ set(HEADERS
   ${INC_DIR}/TruncateSpatial.h
   ${INC_DIR}/TruncateSpatialReg.h
   ${INC_DIR}/SecondDeriv.h
+  ${INC_DIR}/SecondDeriv_V2.h
   # ${INC_DIR}/WaveRecon.h
   ${INC_DIR}/WaveReconV2.h
   ${INC_DIR}/WaveReconV3.h
+  ${INC_DIR}/WaveReconV4.h
+  ${INC_DIR}/WaveReconV5.h
+  ${INC_DIR}/WaveReconV6.h
+  ${INC_DIR}/WaveReconV7.h
+  ${INC_DIR}/WaveReconV8.h
+  ${INC_DIR}/WaveReconV9.h
+  ${INC_DIR}/WaveReconV10.h
+  ${INC_DIR}/SphericalSpreadingScale.h
+  ${INC_DIR}/GF.h
   ${INC_DIR}/PadModel2d.h
   ${INC_DIR}/PadModel3d.h
   ${INC_DIR}/Mask3d.h
+  ${INC_DIR}/CausalMask.h
   ${INC_DIR}/spaceInterp.h
-  # ${INC_DIR}/Mask2d.h
-  # ${INC_DIR}/Gradio.h
+  ${INC_DIR}/padTruncateSource.h
+  ${INC_DIR}/tpowWfld.h
+  ${INC_DIR}/Mask2d.h
+  ${INC_DIR}/Gradio.h
+  ${INC_DIR}/SampleWfld.h
+  ${INC_DIR}/Smooth2d.h
   # ${INC_DIR}/C2_2DCube.h
   # ${INC_DIR}/G_2DCube.h
   # ${INC_DIR}/C5_2DCube.h
