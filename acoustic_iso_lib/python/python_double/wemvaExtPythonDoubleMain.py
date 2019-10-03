@@ -13,7 +13,7 @@ if __name__ == '__main__':
     modelDouble,dataDouble,velDouble,parObject,sourcesVector,sourcesSignalsVector,receiversVector,wemvaDataDouble=Acoustic_iso_double.wemvaExtOpInitDouble(sys.argv)
 
     # Construct Born operator object
-    wemvaExtOp=Acoustic_iso_double.wemvaExtShotsGpu(modelDouble,dataDouble,velDouble,parObject,sourcesVector,sourcesSignalsVector,receiversVector,wemvaDataDouble)
+    wemvaExtOp=Acoustic_iso_double.wemvaExtShotsGpu(modelDouble,dataDouble,velDouble,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,wemvaDataDouble)
 
     # Launch forward modeling
     if (parObject.getInt("adj", 0) == 0):
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
         print("-------------------------------------------------------------------")
         print("---------------- Running Python wemva extended adjoint ------------")
-        print("-------------------- Double precision Python code -----------------")        
+        print("-------------------- Double precision Python code -----------------")
         print("-------------------------------------------------------------------\n")
 
         # Check that data was provided

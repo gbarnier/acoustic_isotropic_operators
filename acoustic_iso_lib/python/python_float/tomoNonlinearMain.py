@@ -25,10 +25,9 @@ from sys_util import logger
 # Template for FWI workflow
 if __name__ == '__main__':
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+
 	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
@@ -84,10 +83,10 @@ if __name__ == '__main__':
 
 	############################# Instanciation ################################
 	# Born extended for tomo nonlinear inversion
-	BornExtTomoInvOp=Acoustic_iso_float.BornExtTomoInvShotsGpu(modelFineInit,data,reflectivity,wavelet,parObject,sourcesVector,receiversVector)
+	BornExtTomoInvOp=Acoustic_iso_float.BornExtTomoInvShotsGpu(modelFineInit,data,reflectivity,wavelet,parObject.param,sourcesVector,receiversVector)
 
 	# Tomo extended
-	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivity)
+	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,modelFineInit,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivity)
 	tomoInvOp=tomoExtOp
 	if (gradientMask==1):
 		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat)

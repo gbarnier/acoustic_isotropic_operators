@@ -13,7 +13,7 @@ if __name__ == '__main__':
     modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityFloat=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv)
 
     # Construct Born operator object
-    tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityFloat)
+    tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFloat,dataFloat,velFloat,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityFloat)
 
     # Forward
     if (parObject.getInt("adj", 0) == 0):
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
         print("-------------------------------------------------------------------")
         print("---------------- Running Python tomo extended adjoint -------------")
-        print("-------------------- Single precision Python code -----------------")                
+        print("-------------------- Single precision Python code -----------------")
         print("-------------------------------------------------------------------\n")
 
         # Check that data was provided

@@ -27,10 +27,9 @@ from sys_util import logger
 # Template for Wemva workflow
 if __name__ == '__main__':
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+
 	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)
 	defocusOp=parObject.getString("defocusOp","dso")
@@ -82,10 +81,10 @@ if __name__ == '__main__':
 
 	############################# Instanciation ################################
 	# Nonlinear wemva (Ext Born adjoint)
-	wemvaNonlinearOp=Acoustic_iso_float.wemvaNonlinearShotsGpu(modelFineInit,image,parObject,sourcesVector,sourcesSignalsVector,receiversVector,seismicData)
+	wemvaNonlinearOp=Acoustic_iso_float.wemvaNonlinearShotsGpu(modelFineInit,image,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,seismicData)
 
 	# Wemva
-	wemvaExtOp=Acoustic_iso_float.wemvaExtShotsGpu(modelFineInit,image,velocity,parObject,sourcesVector,sourcesSignalsVector,receiversVector,seismicDataWemva)
+	wemvaExtOp=Acoustic_iso_float.wemvaExtShotsGpu(modelFineInit,image,velocity,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,seismicDataWemva)
 	wemvaExtInvOp=wemvaExtOp
 	if (gradientMask==1):
 		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,velocity,bufferUp,bufferDown,taperExp,fat,wbShift)

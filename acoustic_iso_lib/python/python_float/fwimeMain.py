@@ -29,10 +29,8 @@ import inversionUtils
 # Template for FWIME workflow
 if __name__ == '__main__':
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Auxiliary operators
 	spline=parObject.getInt("spline")
@@ -124,10 +122,10 @@ if __name__ == '__main__':
 
 	############################# Instanciation of g ###########################
 	# Nonlinear
-	nonlinearFwdOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector)
+	nonlinearFwdOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,data,wavelet,parObject.param,sourcesVector,receiversVector)
 
 	# Born
-	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
 	BornInvOp=BornOp
 	if (gradientMask==1):
 		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
@@ -148,13 +146,13 @@ if __name__ == '__main__':
 
 	################ Instanciation of variable projection operator #############
 	# Born extended
-	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(reflectivityExtInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(reflectivityExtInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
 	BornExtInvOp=BornExtOp
 	if (spline==1):
 		BornExtOp.add_spline(splineOp)
 
 	# Tomo
-	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExtInit)
+	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExtInit)
 	tomoExtInvOp=tomoExtOp
 
 	# Concatenate operators

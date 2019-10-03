@@ -3,7 +3,7 @@ project(ACOUSTIC_ISO_DOUBLE-lib)
 
 #Adding include files
 include_directories(include)
-include_directories(${CMAKE_BUILD_DIR}/../external/genericIO)
+# include_directories(${CMAKE_BUILD_DIR}/../external/ioLibs/external/genericIO/external/sepVector/lib/)
 
 #Header files to include during installation
 set(INC_DIR include)
@@ -77,35 +77,43 @@ link_directories(${Generic-cpp_BINARY_DIR}
 				 ${SEPlib_LIBDIR}
 )
 
+#Setting io libraries
+set(LIBS genericCpp sepVector sep3d sep)
+
 #Compiling the project library
 add_library(ACOUSTIC_ISO_DOUBLE_NL ${SOURCE_NL})
+target_link_libraries(ACOUSTIC_ISO_DOUBLE_NL ${LIBS} OpenMP::OpenMP_CXX)
 add_library(ACOUSTIC_ISO_DOUBLE_BORN ${SOURCE_BORN})
+target_link_libraries(ACOUSTIC_ISO_DOUBLE_BORN ${LIBS} OpenMP::OpenMP_CXX)
 add_library(ACOUSTIC_ISO_DOUBLE_BORN_EXT ${SOURCE_BORN_EXT})
+target_link_libraries(ACOUSTIC_ISO_DOUBLE_BORN_EXT ${LIBS} OpenMP::OpenMP_CXX)
 add_library(ACOUSTIC_ISO_DOUBLE_TOMO_EXT ${SOURCE_TOMO_EXT})
+target_link_libraries(ACOUSTIC_ISO_DOUBLE_TOMO_EXT ${LIBS} OpenMP::OpenMP_CXX)
 add_library(ACOUSTIC_ISO_DOUBLE_WEMVA_EXT ${SOURCE_WEMVA_EXT})
+target_link_libraries(ACOUSTIC_ISO_DOUBLE_WEMVA_EXT ${LIBS} OpenMP::OpenMP_CXX)
 
 # Compiling the project executables
 # Non-linear operator
 add_executable(nonlinearPropShotsDoubleGpuMain ${SRC_DIR}/nonlinearPropShotsDoubleGpuMain.cpp)
-target_link_libraries(nonlinearPropShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_NL genericCpp OpenMP::OpenMP_CXX)
+target_link_libraries(nonlinearPropShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_NL)
 
 # Born operator
 add_executable(BornShotsDoubleGpuMain ${SRC_DIR}/BornShotsDoubleGpuMain.cpp)
-target_link_libraries(BornShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_BORN genericCpp OpenMP::OpenMP_CXX)
+target_link_libraries(BornShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_BORN)
 
 # Extended Born operator
 add_executable(BornExtShotsDoubleGpuMain ${SRC_DIR}/BornExtShotsDoubleGpuMain.cpp)
-target_link_libraries(BornExtShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_BORN_EXT genericCpp OpenMP::OpenMP_CXX)
+target_link_libraries(BornExtShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_BORN_EXT)
 
 #Extended Tomo operator
 add_executable(tomoExtShotsDoubleGpuMain ${SRC_DIR}/tomoExtShotsDoubleGpuMain.cpp)
-target_link_libraries(tomoExtShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_TOMO_EXT genericCpp OpenMP::OpenMP_CXX)
+target_link_libraries(tomoExtShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_TOMO_EXT)
 #Extended Tomo operator
 add_executable(wemvaExtShotsDoubleGpuMain ${SRC_DIR}/wemvaExtShotsDoubleGpuMain.cpp)
-target_link_libraries(wemvaExtShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_WEMVA_EXT genericCpp OpenMP::OpenMP_CXX)
+target_link_libraries(wemvaExtShotsDoubleGpuMain ACOUSTIC_ISO_DOUBLE_WEMVA_EXT)
 # Model padding program for GPU
 add_executable(padFileDoubleGpuMain ${SRC_DIR}/padFileDoubleGpuMain.cpp)
-target_link_libraries(padFileDoubleGpuMain genericCpp OpenMP::OpenMP_CXX)
+target_link_libraries(padFileDoubleGpuMain ${LIBS} OpenMP::OpenMP_CXX)
 
 #Adding libray and header files to install destination
 install(TARGETS ACOUSTIC_ISO_DOUBLE_NL DESTINATION lib)

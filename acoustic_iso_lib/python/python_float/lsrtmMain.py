@@ -24,10 +24,9 @@ from sys_util import logger
 # Template for linearized waveform inversion workflow
 if __name__ == '__main__':
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+
 	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
@@ -77,7 +76,7 @@ if __name__ == '__main__':
 
 	############################# Instanciation ################################
 	# Born
-	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
 	invOp=BornOp
 
 	# Spline

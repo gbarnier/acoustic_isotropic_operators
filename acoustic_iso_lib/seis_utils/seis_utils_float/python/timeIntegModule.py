@@ -9,9 +9,9 @@ import numpy as np
 # Derivative in the z-direction
 def timeIntegInit(args):
 
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+	
 	dts=parObject.getFloat("dts")
 	return dts
 

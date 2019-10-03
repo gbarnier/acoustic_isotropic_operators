@@ -27,10 +27,9 @@ from sys_util import logger
 # Template for linearized waveform inversion workflow
 if __name__ == '__main__':
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+
 	pyinfo=parObject.getInt("pyinfo",1)
 	dataTaper=parObject.getInt("dataTaper",0)
 
@@ -74,7 +73,7 @@ if __name__ == '__main__':
 
 	############################# Instanciation ################################
 	# Born extended
-	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(model,seismicData,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(model,seismicData,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
 
 	# Construct Born operator object
 	SymesPseudoInvOp=Acoustic_iso_float.SymesPseudoInvGpu(seismicData,model,vel,parObject,sourcesVectorDipole,sourcesSignalsVector,receiversVectorDipole,dts,fat,taperEndTraceWidth)

@@ -7,11 +7,9 @@ import sys
 
 if __name__ == '__main__':
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
-
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+	
 	# Read true model
 	modelFile=parObject.getString("model")
 	model=genericIO.defaultIO.getVector(modelFile,ndims=2)

@@ -27,19 +27,9 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-#Adding genericIO submodule
-# execute_process(COMMAND git submodule add http://cees-gitlab.Stanford.EDU/bob/genericIO.git external/genericIO WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-#Updating genericIO library
-  execute_process(COMMAND git submodule update --init --recursive --remote external/genericIO WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-  add_subdirectory(external/genericIO)
-  include_directories(${CMAKE_CURRENT_BINARY_DIR}/external/genericIO)
-  include_directories(${CMAKE_CURRENT_BINARY_DIR}/external/genericIO/external/sepVector)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/lib)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/sepVector/lib)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/sepVector/external/hypercube/lib)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/buffers/external/json)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/genericIO/external/buffers/lib)
-
+#Adding ioLibs submodule
+  execute_process(COMMAND git submodule update --init --recursive -- external/ioLibs WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  add_subdirectory(external/ioLibs)
 
 # Finding multithread libraries
 find_package(Threads)
@@ -57,9 +47,6 @@ add_subdirectory(python/python_float)
 # include folder for Seismic utilities
 add_subdirectory(seis_utils/seis_utils_double/)
 add_subdirectory(seis_utils/seis_utils_float/)
-
-# include folder for pySolver
-add_subdirectory(external/python-solver/GenericSolver/)
 
 include(InstallRequiredSystemLibraries)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")

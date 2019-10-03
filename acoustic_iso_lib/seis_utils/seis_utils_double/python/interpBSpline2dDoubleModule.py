@@ -54,10 +54,8 @@ def generateSplineMesh1d(positions,sampling,mesh,tolerance):
 # Create an initializer
 def bSpline2dDoubleInit(args):
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Interpolation parameters
 	zOrder=parObject.getInt("zOrder",3)

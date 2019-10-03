@@ -9,9 +9,9 @@ import numpy as np
 # Derivative in the z-direction
 def zGradInit(args):
 
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+
 	fat=parObject.getInt("fat",5)
 	return fat
 
@@ -44,9 +44,9 @@ class zGradPython(Op.Operator):
 # Derivative in the x-direction
 def xGradInit(args):
 
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+
 	fat=parObject.getInt("fat",5)
 	return fat
 
@@ -79,9 +79,9 @@ class xGradPython(Op.Operator):
 # Derivative in the zx-direction
 def zxGradInit(args):
 
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+
 	fat=parObject.getInt("fat",5)
 	return fat
 
@@ -114,9 +114,9 @@ class zxGradPython(Op.Operator):
 # Laplacian operator
 def LaplacianInit(args):
 
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+
 	fat=parObject.getInt("fat",5)
 	return fat
 
@@ -149,9 +149,9 @@ class LaplacianPython(Op.Operator):
 # Derivative in the z-direction for extended images (for Symes' preconditioning method)
 def SymesZGradInit(args):
 
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+	
 	fat=parObject.getInt("fat",5)
 	return fat
 

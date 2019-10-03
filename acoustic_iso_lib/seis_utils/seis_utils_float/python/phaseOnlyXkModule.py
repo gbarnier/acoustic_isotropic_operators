@@ -42,10 +42,8 @@ class phaseOnlyXk(Op.Operator):
 ################################################################################
 def phaseOnlyXkJacInit(args):
 
-	# Incompressible bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Allocate and read predicted data f(m) (i.e, the "background" data)
 	predDataFile=parObject.getString("predData")

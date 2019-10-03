@@ -14,7 +14,7 @@ if __name__ == '__main__':
 	modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,dts,fat,taperEndTraceWidth=Acoustic_iso_float.SymesPseudoInvInit(sys.argv)
 
 	# Construct Born operator object
-	SymesPseudoInvOp=Acoustic_iso_float.SymesPseudoInvGpu(modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,dts,fat,taperEndTraceWidth)
+	SymesPseudoInvOp=Acoustic_iso_float.SymesPseudoInvGpu(modelFloat,dataFloat,velFloat,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,dts,fat,taperEndTraceWidth)
 
 	print("-------------------------------------------------------------------")
 	print("------------------- Running Symes' pseudo inverse -----------------")

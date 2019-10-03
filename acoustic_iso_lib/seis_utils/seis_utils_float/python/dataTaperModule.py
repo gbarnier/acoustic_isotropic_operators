@@ -9,10 +9,9 @@ import numpy as np
 
 def dataTaperInit(args):
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+	
 	offset=parObject.getInt("offset",0)
 	time=parObject.getInt("time",0)
 	t0=parObject.getFloat("t0",0)
