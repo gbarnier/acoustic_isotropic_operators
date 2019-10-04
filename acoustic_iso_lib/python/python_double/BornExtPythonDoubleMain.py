@@ -13,7 +13,7 @@ if __name__ == '__main__':
     modelDouble,dataDouble,velDouble,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_double.BornExtOpInitDouble(sys.argv)
 
     # Construct Born operator object
-    BornExtOp=Acoustic_iso_double.BornExtShotsGpu(modelDouble,dataDouble,velDouble,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+    BornExtOp=Acoustic_iso_double.BornExtShotsGpu(modelDouble,dataDouble,velDouble,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
 
     # Launch forward modeling
     if (parObject.getInt("adj",0) == 0):

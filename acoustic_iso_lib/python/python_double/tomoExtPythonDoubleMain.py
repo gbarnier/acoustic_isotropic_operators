@@ -13,7 +13,7 @@ if __name__ == '__main__':
     modelDouble,dataDouble,velDouble,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityDouble=Acoustic_iso_double.tomoExtOpInitDouble(sys.argv)
 
     # Construct Born operator object
-    tomoExtOp=Acoustic_iso_double.tomoExtShotsGpu(modelDouble,dataDouble,velDouble,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityDouble)
+    tomoExtOp=Acoustic_iso_double.tomoExtShotsGpu(modelDouble,dataDouble,velDouble,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityDouble)
 
     # Launch forward modeling
     if (parObject.getInt("adj", 0) == 0):
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
         print("-------------------------------------------------------------------")
         print("---------------- Running Python tomo extended adjoint -------------")
-        print("-------------------- Double precision Python code -----------------")        
+        print("-------------------- Double precision Python code -----------------")
         print("-------------------------------------------------------------------\n")
 
         # Check that data was provided

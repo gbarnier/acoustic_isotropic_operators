@@ -13,7 +13,7 @@ if __name__ == '__main__':
     modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,wemvaDataFloat=Acoustic_iso_float.wemvaExtOpInitFloat(sys.argv)
 
     # Construct Born operator object
-    wemvaExtOp=Acoustic_iso_float.wemvaExtShotsGpu(modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,wemvaDataFloat)
+    wemvaExtOp=Acoustic_iso_float.wemvaExtShotsGpu(modelFloat,dataFloat,velFloat,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,wemvaDataFloat)
 
     # Launch forward modeling
     if (parObject.getInt("adj", 0) == 0):

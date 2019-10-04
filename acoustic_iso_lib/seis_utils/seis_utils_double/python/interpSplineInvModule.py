@@ -10,10 +10,8 @@ import math
 # Create an initializer
 def bSpline2dInit(args):
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Interpolation parameters
 	zOrder=parObject.getInt("zOrder",3)

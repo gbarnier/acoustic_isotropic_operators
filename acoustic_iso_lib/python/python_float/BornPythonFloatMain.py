@@ -13,7 +13,7 @@ if __name__ == '__main__':
     modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornOpInitFloat(sys.argv)
 
     # Construct Born operator object
-    bornOp=Acoustic_iso_float.BornShotsGpu(modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+    bornOp=Acoustic_iso_float.BornShotsGpu(modelFloat,dataFloat,velFloat,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
 
     # Forward
     if (parObject.getInt("adj",0) == 0):

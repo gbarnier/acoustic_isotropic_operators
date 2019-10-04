@@ -34,20 +34,24 @@ link_directories(${Generic-cpp_BINARY_DIR}
 				 ${SEPlib_LIBDIR}
 )
 
+#Setting io libraries
+set(LIBS genericCpp sepVector sep3d sep)
+
 # Compiling the project library
 add_library(SEIS_UTILS_FLOAT_LIB ${SOURCE_NL})
+target_link_libraries(SEIS_UTILS_FLOAT_LIB ${LIBS} OpenMP::OpenMP_CXX)
 
 # Compare data
 add_executable(dataCompMain ${SRC_DIR}/dataCompMain.cpp)
-target_link_libraries(dataCompMain SEIS_UTILS_FLOAT_LIB genericCpp OpenMP::OpenMP_CXX)
+target_link_libraries(dataCompMain SEIS_UTILS_FLOAT_LIB)
 
 # Build initial model for models with salt
 add_executable(saltModelMain ${SRC_DIR}/saltModelMain.cpp)
-target_link_libraries(saltModelMain SEIS_UTILS_FLOAT_LIB genericCpp OpenMP::OpenMP_CXX)
+target_link_libraries(saltModelMain SEIS_UTILS_FLOAT_LIB)
 
 # Spatial derivatives
 add_executable(zGradJunkMain ${SRC_DIR}/zGradJunkMain.cpp)
-target_link_libraries(zGradJunkMain genericCpp OpenMP::OpenMP_CXX)
+target_link_libraries(zGradJunkMain ${LIBS} OpenMP::OpenMP_CXX)
 
 #Adding libray and header files to install destination
 install(TARGETS SEIS_UTILS_FLOAT_LIB DESTINATION lib)

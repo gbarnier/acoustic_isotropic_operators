@@ -10,10 +10,9 @@ import time
 
 if __name__ == '__main__':
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+	
 	adj=parObject.getInt("adj",0)
 
 	nz,nx,nExt,fat,zeroShift=dsoInvGpuModule.dsoInvGpuInit(sys.argv)

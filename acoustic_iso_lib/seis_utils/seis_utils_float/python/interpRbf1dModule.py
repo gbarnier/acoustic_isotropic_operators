@@ -50,10 +50,9 @@ def generateSplineMesh1d(positions,sampling,mesh,tolerance):
 
 def interpRbf1dInit(args):
 
-	# Bullshit parameters
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+	
 	epsilon=parObject.getFloat("epsilon")
 	fat=parObject.getInt("fat",5)
 	scaling=parObject.getInt("scaling",1)

@@ -28,15 +28,14 @@ from sys_util import logger
 # Template for FWI workflow
 if __name__ == '__main__':
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
+
 	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
 	gradientMask=parObject.getInt("gradientMask",0)
-	dataNormalization=parObject.getInt("dataNormalization",0)
+	dataNormalization=parObject.getString("dataNormalization","None")
 	regType=parObject.getString("reg","None")
 	reg=0
 	if (regType != "None"): reg=1
@@ -93,10 +92,10 @@ if __name__ == '__main__':
 
 	############################# Instanciation ################################
 	# Nonlinear
-	nonlinearFwiOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector)
+	nonlinearFwiOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,data,wavelet,parObject.param,sourcesVector,receiversVector)
 
 	# Born
-	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
 	BornInvOp=BornOp
 
 	if (gradientMask==1):
@@ -138,7 +137,7 @@ if __name__ == '__main__':
 		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOp,phaseOnlyXkNlOp)
 		# Apply normalization to data
 		obsDataNormalized=data.clone()
-		phaseOnlyXkOp.forward(data,obsDataNormalized)
+		phaseOnlyXkOp.forward(False,data,obsDataNormalized)
 		data=obsDataNormalized
 
 	############################### Bounds #####################################

@@ -13,7 +13,7 @@ if __name__ == '__main__':
     modelDouble,dataDouble,velDouble,parObject,sourcesVector,receiversVector=Acoustic_iso_double.nonlinearOpInitDouble(sys.argv)
 
     # Construct nonlinear operator object
-    nonlinearOp=Acoustic_iso_double.nonlinearPropShotsGpu(modelDouble,dataDouble,velDouble,parObject,sourcesVector,receiversVector)
+    nonlinearOp=Acoustic_iso_double.nonlinearPropShotsGpu(modelDouble,dataDouble,velDouble,parObject.param,sourcesVector,receiversVector)
 
     # Forward
     if (parObject.getInt("adj",0) == 0):

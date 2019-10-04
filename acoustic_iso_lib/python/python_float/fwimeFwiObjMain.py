@@ -14,7 +14,7 @@ if __name__ == '__main__':
 	model,seismicData,velFloat,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv)
 
 	# Construct nonlinear operator object
-	nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(model,seismicData,velFloat,parObject,sourcesVector,receiversVector)
+	nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(model,seismicData,velFloat,parObject.param,sourcesVector,receiversVector)
 
 	print("-------------------------------------------------------------------")
 	print("------------- Generating Fwi objective function from FWIME --------")

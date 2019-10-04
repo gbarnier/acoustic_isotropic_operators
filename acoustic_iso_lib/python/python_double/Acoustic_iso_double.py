@@ -66,10 +66,8 @@ def nonlinearOpInitDouble(args):
 	"""Function to correctly initialize nonlinear operator
 	   The function will return the necessary variables for operator construction
 	"""
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Allocate and read velocity
 	velFile=parObject.getString("vel","noVelFile")
@@ -216,10 +214,8 @@ def BornOpInitDouble(args):
 	   The function will return the necessary variables for operator construction
 	"""
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Velocity model
 	velFile=parObject.getString("vel","noVelFile")
@@ -338,10 +334,8 @@ class BornShotsGpu(Op.Operator):
 # ############################# Born extended ####################################
 def BornExtOpInitDouble(args):
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Velocity model
 	velFile=parObject.getString("vel", "noVelFile")
@@ -496,10 +490,8 @@ class BornExtShotsGpu(Op.Operator):
 # ################################### Tomo #######################################
 def tomoExtOpInitDouble(args):
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Velocity model
 	velFile=parObject.getString("vel", "noVelFile")
@@ -664,10 +656,8 @@ class tomoExtShotsGpu(Op.Operator):
 # ################################### Wemva ######################################
 def wemvaExtOpInitDouble(args):
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Velocity model
 	velFile=parObject.getString("vel", "noVelFile")

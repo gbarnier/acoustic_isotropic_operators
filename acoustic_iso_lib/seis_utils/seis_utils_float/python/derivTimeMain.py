@@ -21,9 +21,7 @@ if __name__ == '__main__':
 		quit(0)
 
 	# IO object
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	# Get input and output filenames
 	inputFile=parObject.getString("input","noInput")

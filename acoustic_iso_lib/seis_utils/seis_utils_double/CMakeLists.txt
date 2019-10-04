@@ -28,13 +28,17 @@ link_directories(${Generic-cpp_BINARY_DIR}
 				 ${SEPlib_LIBDIR}
 )
 
+#Setting io libraries
+set(LIBS genericCpp sepVector sep3d sep)
+
 #Compiling the project library
 add_library(SEIS_UTILS_DOUBLE_LIB ${SOURCE_NL})
+target_link_libraries(SEIS_UTILS_DOUBLE_LIB ${LIBS} OpenMP::OpenMP_CXX)
 # Compiling the project executables (if any)
 
 # Data muting program
 # add_executable(dataTaperDoubleMain ${SRC_DIR}/dataTaperDoubleMain.cpp)
-# target_link_libraries(dataTaperDoubleMain genericCpp OpenMP::OpenMP_CXX)
+# target_link_libraries(dataTaperDoubleMain ${LIBS} OpenMP::OpenMP_CXX)
 
 #Adding libray and header files to install destination
 install(TARGETS SEIS_UTILS_DOUBLE_LIB DESTINATION lib)

@@ -9,10 +9,8 @@ import sys
 
 if __name__ == '__main__':
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	# IO object
+	parObject=genericIO.io(params=sys.argv)
 
 	# Initialize spline operator
 	model1Double,data1Double,order,splineMesh,dataAxis,nParam,scaling,tolerance,fat=interpBSpline1dDoubleModule.bSpline1dDoubleInit(sys.argv)
