@@ -20,15 +20,13 @@ import pyStopperBase as Stopper
 import inversionUtils
 import wriUtilFloat
 import TpowWfld
-import Mask3d 
+import Mask3d
 from sys_util import logger
 
 if __name__ == '__main__':
 
 	# io stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 	pyinfo=parObject.getInt("pyinfo",1)
 	epsilonEval=parObject.getInt("epsilonEval",0)
 	# Initialize parameters for inversion
@@ -63,7 +61,7 @@ if __name__ == '__main__':
 		priorTmp=genericIO.defaultIO.getVector(fullPrior)
 		prior=priorTmp.clone()
 		mask3dOp.forward(0,priorTmp,prior)
-		
+
 	# Data extraction
 	if(pyinfo): print("--------------------------- Data extraction init --------------------------------")
 	sampleFullWfld = parObject.getInt("sampleFullWfld",0)
@@ -121,13 +119,13 @@ if __name__ == '__main__':
 		inv_log.addToLog("--- Epsilon evaluation ---")
 		#epsilon=invProb.estimate_epsilon(True)*parObject.getFloat("epsScale",1.0)
 		#invProb.epsilon=epsilon
-		
+
 		#make first data residual
 		K_resid = SepVector.getSepVector(dataSamplingOp.getRange().getHyper(),storage="dataFloat")
 		K_resid.scaleAdd(dataFloat,0,-1)
 		dataSamplingOp.forward(1,modelInit,K_resid)
 
-		#make first model residual 
+		#make first model residual
 		A_resid = SepVector.getSepVector(waveEquationAcousticOp.getRange().getHyper(),storage="dataFloat")
 		A_resid.scaleAdd(prior,0,-1)
 		waveEquationAcousticOp.forward(1,modelInit,A_resid)
@@ -144,7 +142,7 @@ if __name__ == '__main__':
 		epsilon = parObject.getFloat("epsScale",1.0)*math.sqrt(K_resid.dot(K_resid)/A_resid.dot(A_resid))
 	else:
 		epsilon=parObject.getFloat("epsScale",1.0)*parObject.getFloat("eps",1.0)
-		
+
 
 	if(pyinfo): print("--- Epsilon value: ",epsilon," ---")
 	inv_log.addToLog("--- Epsilon value: %s ---"%(epsilon))

@@ -19,8 +19,8 @@ import pyStopperBase as Stopper
 import inversionUtils
 import wriUtilFloat
 import TpowWfld
-import Mask3d 
-import Mask2d 
+import Mask3d
+import Mask2d
 import Acoustic_iso_float_gradio
 import spatialDerivModule
 import SphericalSpreadingScale
@@ -29,9 +29,7 @@ from sys_util import logger
 if __name__ == '__main__':
 
 	# io stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 	pyinfo=parObject.getInt("pyinfo",1)
 	epsilonEval=parObject.getInt("epsilonEval",0)
 	regType=parObject.getString("reg","None")
@@ -80,7 +78,7 @@ if __name__ == '__main__':
 	print("f' shape: ", dataFloat.getNdArray().shape)
 
 	############################# Regularization ###############################
-	# Read min/max bound 
+	# Read min/max bound
 	minBound=parObject.getFloat("minBound", -1)
 	maxBound=parObject.getFloat("maxBound", -1)
 	minBoundVector = modelInit.clone()
@@ -128,7 +126,7 @@ if __name__ == '__main__':
 		#check for preconditioning
 		tpow=parObject.getFloat("tpowPrecond",0.0)
 		if(tpow != 0.0):
-			if(pyinfo): print("--- Preconditioning w/ wfld stack ---") 
+			if(pyinfo): print("--- Preconditioning w/ wfld stack ---")
 			inv_log.addToLog("--- Preconditioning w/ wfld stack ---")
 			sphericalTpow= SphericalSpreadingScale.spherical_spreading_scale_wfld(modelInit,modelInit,pressureData)
 			invProb=Prblm.ProblemL2LinearReg(modelInit,dataFloat,gradioOp,epsilon,minBound=minBoundVector,maxBound=maxBoundVector,reg_op=regOp,prec=sphericalTpow)
@@ -136,7 +134,7 @@ if __name__ == '__main__':
 			if(pyinfo): print("--- No preconditioning ---")
 			inv_log.addToLog("--- No preconditioning ---")
 			invProb=Prblm.ProblemL2LinearReg(modelInit,dataFloat,gradioOp,epsilon,minBound=minBoundVector,maxBound=maxBoundVector,reg_op=regOp)
-	
+
 
 		# Evaluate Epsilon
 		if (epsilonEval==1):
@@ -154,7 +152,7 @@ if __name__ == '__main__':
 		#check for preconditioning
 		tpow=parObject.getFloat("tpowPrecond",0.0)
 		if(tpow != 0.0):
-			if(pyinfo): print("--- Preconditioning w/ wfld stack ---") 
+			if(pyinfo): print("--- Preconditioning w/ wfld stack ---")
 			inv_log.addToLog("--- Preconditioning w/ wfld stack ---")
 			sphericalTpow= SphericalSpreadingScale.spherical_spreading_scale_wfld(modelInit,modelInit,pressureData)
 			invProb=Prblm.ProblemL2Linear(modelInit,dataFloat,gradioOp,minBoundVector,maxBoundVector,prec=sphericalTpow)

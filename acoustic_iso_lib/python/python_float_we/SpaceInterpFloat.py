@@ -14,9 +14,7 @@ def space_interp_init_source(args):
 	   The function will return the necessary variables for operator construction
 	"""
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	# elatic params
 	slsq=parObject.getString("slsq", "noElasticParamFile")
@@ -86,9 +84,7 @@ def space_interp_init_rec(args):
 	   The function will return the necessary variables for operator construction
 	"""
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	# elatic params
 	slsq=parObject.getString("slsq", "noElasticParamFile")

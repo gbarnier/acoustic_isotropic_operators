@@ -8,7 +8,7 @@ import sys
 import os
 
 # Modeling operators
-import Mask3d 
+import Mask3d
 
 # Solver library
 import pyOperator as pyOp
@@ -19,13 +19,11 @@ from sys_util import logger
 if __name__ == '__main__':
 
 	# io stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 	pyinfo=parObject.getInt("pyinfo",1)
 
 
-	# get params 
+	# get params
 	modelFile=parObject.getString("model","noModelFile")
 	dataFile=parObject.getString("data","noDataFile")
 	vel_max=parObject.getFloat("vel_max",-1)
@@ -35,7 +33,7 @@ if __name__ == '__main__':
 	if(vel_max==-1 or t_min==-1 or source_ix==-1 or source_iz==-1):
 		print("**** ERROR: User did not provide one of the min/max parameters ****\n")
 		quit()
-	
+
 
 
 	# Forward
@@ -105,5 +103,3 @@ if __name__ == '__main__':
 
 		#write model to disk
 		genericIO.defaultIO.writeVector(modelFile,modelFloat)
-
-

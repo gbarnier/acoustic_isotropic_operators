@@ -4,21 +4,19 @@ import genericIO
 import SepVector
 import Hypercube
 import Acoustic_iso_float_we
-import Mask3d 
+import Mask3d
 import pyOperator as pyOp
 import numpy as np
 import time
 
 if __name__ == '__main__':
-    io=genericIO.pyGenericIO.ioModes(sys.argv)
-    ioDef=io.getDefaultIO()
-    parObject=ioDef.getParamObj()
+    parObject=genericIO.io(params=sys.argv)
     # Initialize operator
     modelFloat,dataFloat,slsqFloat,parObject,tempWaveEquationOp = Acoustic_iso_float_we.waveEquationOpInitFloat(sys.argv)
     timeMask=0;
 
     maskWidth=parObject.getInt("maskWidth",0)
-	
+
     mask3dOp = Mask3d.mask3d(modelFloat,modelFloat,maskWidth,modelFloat.getHyper().axes[0].n-maskWidth,maskWidth,modelFloat.getHyper().axes[1].n-maskWidth,0,modelFloat.getHyper().axes[2].n-timeMask,0)
     waveEquationAcousticOp = pyOp.ChainOperator(tempWaveEquationOp,mask3dOp)
 
@@ -28,7 +26,7 @@ if __name__ == '__main__':
     print("p shape: ", modelFloat.getNdArray().shape)
     print("Am range: ", waveEquationAcousticOp.getRange().getNdArray().shape)
     print("f shape: ", dataFloat.getNdArray().shape)
-      
+
     #run dot product
     if (parObject.getInt("dp",0)==1):
         tempWaveEquationOp.dotTest(verb=True)
@@ -55,7 +53,7 @@ if __name__ == '__main__':
 
         #run Nonlinear forward without wavefield saving
         waveEquationAcousticOp.forward(False,modelFloat,dataFloat)
-      
+
         #write data to disk
         genericIO.defaultIO.writeVector(dataFile,dataFloat)
 

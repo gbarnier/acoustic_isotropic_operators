@@ -15,9 +15,7 @@ import wriUtilFloat
 if __name__ == '__main__':
 
 	# io stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 	pyinfo=parObject.getInt("pyinfo",1)
 
 	if(pyinfo): print("-------------------------------------------------------------------")
@@ -25,7 +23,7 @@ if __name__ == '__main__':
 	if(pyinfo): print("-------------------------------------------------------------------\n")
 
 
-	# get params 
+	# get params
 	modelFile=parObject.getString("model","noModelFile")
 	dataFile=parObject.getString("data","noDataFile")
 

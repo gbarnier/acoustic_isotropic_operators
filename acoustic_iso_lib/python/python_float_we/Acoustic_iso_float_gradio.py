@@ -12,16 +12,14 @@ import numpy as np
 import pyOperator as pyOp
 import wriUtilFloat
 import Laplacian2d
-import Mask3d 
+import Mask3d
 
 def gradioOpInitFloat(args):
 	"""Function to correctly initialize wave equation operator
 	   The function will return the necessary variables for operator construction
 	"""
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	# Time Axis
 	nts=parObject.getInt("nts",-1)
@@ -50,7 +48,7 @@ def gradioOpInitFloat(args):
 	dataFloatInit=SepVector.getSepVector(dataHyper,storage="dataFloat")
 	dataFloatInit.scale(0.0)
 
-	# Read In pressure data 
+	# Read In pressure data
 	pressureDataFile=parObject.getString("pressureData", "noPressureData")
 	if (pressureDataFile == "noPressureData"):
 		print("**** WARNING: User did not provide pressureData file. Using zero wfld ****\n")
@@ -68,7 +66,7 @@ def gradioOpInitFloat(args):
 		print("full prior")
 		priorTmp=genericIO.defaultIO.getVector(fullPrior)
 		prior=priorTmp.clone()
-	
+
 	# calculate data
 	laplPressureData = pressureDataInit.clone()
 	laplOp = Laplacian2d.laplacian2d(pressureDataInit,laplPressureData)
@@ -80,7 +78,7 @@ def gradioOpInitFloat(args):
 	dataFloatInit.scaleAdd(prior,1,1)
 	dataFloatInit.scaleAdd(laplPressureData,1,1)
 
-	#init mask op 
+	#init mask op
 	maskWidthSpace = parObject.getInt("maskWidth",15)
 	mask3dOp= Mask3d.mask3d(dataFloatInit,dataFloatInit,maskWidthSpace,dataFloatInit.getHyper().axes[0].n-maskWidthSpace,maskWidthSpace,dataFloatInit.getHyper().axes[1].n-maskWidthSpace,0,dataFloatInit.getHyper().axes[2].n,0)
 	mask3dOpPrep= Mask3d.mask3d(dataFloatInit,dataFloatInit,maskWidthSpace,dataFloatInit.getHyper().axes[0].n-maskWidthSpace,maskWidthSpace,dataFloatInit.getHyper().axes[1].n-maskWidthSpace,0,dataFloatInit.getHyper().axes[2].n,0)
@@ -90,7 +88,7 @@ def gradioOpInitFloat(args):
 	pressureData = pressureDataInit.clone()
 	mask3dOpPrep.forward(0,pressureDataInit,pressureData)
 
-	#init op 
+	#init op
 	basicOp=gradio(modelFloat,dataFloat,pressureData)
 	op = pyOp.ChainOperator(basicOp,mask3dOp)
 	# Outputs
@@ -101,9 +99,7 @@ def gradioOpInitFloat_givenPressure(pressureData,args):
 	   The function will return the necessary variables for operator construction
 	"""
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args[:])
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	# Time Axis
 	nts=parObject.getInt("nts",-1)
@@ -132,8 +128,8 @@ def gradioOpInitFloat_givenPressure(pressureData,args):
 	dataFloatInit=SepVector.getSepVector(dataHyper,storage="dataFloat")
 	dataFloatInit.scale(0.0)
 
-	# Read In pressure data 
-	pressureDataInit = pressureData 
+	# Read In pressure data
+	pressureDataInit = pressureData
 
 	# Read in wavelet and make forcing term
 	fullPrior = parObject.getString("fullPrior","none")
@@ -145,7 +141,7 @@ def gradioOpInitFloat_givenPressure(pressureData,args):
 		print("full prior")
 		priorTmp=genericIO.defaultIO.getVector(fullPrior)
 		prior=priorTmp.clone()
-	
+
 	# calculate data
 	laplPressureData = pressureDataInit.clone()
 	laplOp = Laplacian2d.laplacian2d(pressureDataInit,laplPressureData)
@@ -157,7 +153,7 @@ def gradioOpInitFloat_givenPressure(pressureData,args):
 	dataFloatInit.scaleAdd(prior,1,1)
 	dataFloatInit.scaleAdd(laplPressureData,1,1)
 
-	#init mask op 
+	#init mask op
 	maskWidthSpace = parObject.getInt("maskWidth",15)
 	mask3dOp= Mask3d.mask3d(dataFloatInit,dataFloatInit,maskWidthSpace,dataFloatInit.getHyper().axes[0].n-maskWidthSpace,maskWidthSpace,dataFloatInit.getHyper().axes[1].n-maskWidthSpace,0,dataFloatInit.getHyper().axes[2].n,0)
 	mask3dOpPrep= Mask3d.mask3d(dataFloatInit,dataFloatInit,maskWidthSpace,dataFloatInit.getHyper().axes[0].n-maskWidthSpace,maskWidthSpace,dataFloatInit.getHyper().axes[1].n-maskWidthSpace,0,dataFloatInit.getHyper().axes[2].n,0)
@@ -167,7 +163,7 @@ def gradioOpInitFloat_givenPressure(pressureData,args):
 	pressureData = pressureDataInit.clone()
 	mask3dOpPrep.forward(0,pressureDataInit,pressureData)
 
-	#init op 
+	#init op
 	basicOp=gradio(modelFloat,dataFloat,pressureData)
 	op = pyOp.ChainOperator(basicOp,mask3dOp)
 	# Outputs
@@ -175,16 +171,14 @@ def gradioOpInitFloat_givenPressure(pressureData,args):
 
 def update_data(newPressureData,args):
 
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	pressureDataInit=newPressureData
 
 	# Read in wavelet and make forcing term
 	_,priorTmp= wriUtilFloat.forcing_term_op_init_m(args)
 	prior=priorTmp.clone()
-	
+
 	# calculate data
 	laplPressureData = pressureDataInit.clone()
 	laplOp = Laplacian2d.laplacian2d(pressureDataInit,laplPressureData)
@@ -197,7 +191,7 @@ def update_data(newPressureData,args):
 	dataFloatInit.scaleAdd(prior,1,1)
 	dataFloatInit.scaleAdd(laplPressureData,1,1)
 
-	#init mask op 
+	#init mask op
 	maskWidthSpace = parObject.getInt("maskWidth",0)
 	mask3dOp= Mask3d.mask3d(dataFloatInit,dataFloatInit,maskWidthSpace,dataFloatInit.getHyper().axes[0].n-maskWidthSpace,maskWidthSpace,dataFloatInit.getHyper().axes[1].n-maskWidthSpace,0,dataFloatInit.getHyper().axes[2].n,0)
 	mask3dOpPrep= Mask3d.mask3d(dataFloatInit,dataFloatInit,maskWidthSpace,dataFloatInit.getHyper().axes[0].n-maskWidthSpace,maskWidthSpace,dataFloatInit.getHyper().axes[1].n-maskWidthSpace,0,dataFloatInit.getHyper().axes[2].n,0)
@@ -256,6 +250,3 @@ class gradio(Op.Operator):
 		with pyGradio.ostream_redirect():
 			self.pyOp.set_wfld(new_wfld)
 		return
-
-
-

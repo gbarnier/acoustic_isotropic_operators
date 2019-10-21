@@ -16,23 +16,21 @@ import Acoustic_iso_float_gradio
 # Solver library
 import pyOperator as pyOp
 import pyLCGsolver as LCG
-import pyLCGsolver_timer as LCG_timer
 import pyProblem as Prblm
 import pyStopperBase as Stopper
 import inversionUtils
 import wriUtilFloat
 import TpowWfld
-import Mask3d 
-import Mask2d 
+import Mask3d
+import Mask2d
 import spatialDerivModule
 from sys_util import logger
 
 if __name__ == '__main__':
 
 	# io stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
+
 	pyinfo=parObject.getInt("pyinfo",1)
 	epsilonEval=parObject.getInt("epsilonEval",0)
 	# Initialize parameters for inversion
@@ -70,7 +68,7 @@ if __name__ == '__main__':
 	gradioOp = tempGradioOp
 
 	#chain operators with mask
-	if(pyinfo): 
+	if(pyinfo):
 		print("*** domain and range checks *** ")
 		print("* Kp - d * ")
 		print("K domain: ", dataSamplingOp.getDomain().getNdArray().shape)
@@ -127,7 +125,7 @@ if __name__ == '__main__':
 	############################# Observed Data ###############################
 	p_dataFile=parObject.getString("data")
 	p_dataFloat=genericIO.defaultIO.getVector(p_dataFile)
-	
+
 	################################ DP Test ###################################
 	if (parObject.getInt("dp",0)==1):
 		if(pyinfo): print("\n------------------------- DP Tests ------------------------------")
@@ -153,13 +151,13 @@ if __name__ == '__main__':
 		if(pyinfo): print("--- Epsilon evaluation ---")
 		inv_log.addToLog("--- Epsilon evaluation ---")
 
-		epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)	
+		epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
 	#	#make first data residual
 	#	K_resid = SepVector.getSepVector(dataSamplingOp.getRange().getHyper(),storage="dataFloat")
 	#	K_resid.scaleAdd(p_dataFloat,0,-1)
 	#	dataSamplingOp.forward(1,current_p_model,K_resid)
 
-	#	#make first model residual 
+	#	#make first model residual
 	#	A_resid = SepVector.getSepVector(waveEquationAcousticOp.getRange().getHyper(),storage="dataFloat")
 	#	A_resid.scaleAdd(prior,0,-1)
 	#	waveEquationAcousticOp.forward(1,current_p_model,A_resid)
@@ -218,7 +216,7 @@ if __name__ == '__main__':
 			fat=spatialDerivModule.zxGradInit(sys.argv)
 			tempGradOp=spatialDerivModule.zxGradPython(current_m_model,current_m_model,fat)
 			regOp_m = pyOp.ChainOperator(tempGradOp,mask2dOp)
-	else: 
+	else:
 		epsilon_m=0
 		regOp_m=None
 		if(pyinfo): print("--- No regularization of m inversion ---")
@@ -250,7 +248,7 @@ if __name__ == '__main__':
 	# m inv
 	precond_m=parObject.getString("precondOp_m","None")
 	if(precond_m == "stack"):
-		if(pyinfo): print("--- Preconditioning w/ wfld stack ---") 
+		if(pyinfo): print("--- Preconditioning w/ wfld stack ---")
 		inv_log.addToLog("--- Preconditioning w/ wfld stack ---")
 		precondOp_m = SphericalSpreadingScale.spherical_spreading_scale_wfld(modelInit,modelInit,pressureData)
 	else:
@@ -267,13 +265,13 @@ if __name__ == '__main__':
 	#	print("ERROR: specified restart at iteration ",restartIter,", but previous iteration does not exist")
 	#	print("\tLooking for file: ",p_prefix+"_iter"+str(restartIter-1)+"_inv_mod.H")
 	#	exit()
-	if(restartIter==-1): 
+	if(restartIter==-1):
 		print("no restart")
 		pFinished=parObject.getInt("pFinished",0)
 		restartIter=0
 	else:
 		pFinished=parObject.getInt("pFinished",0)
-		if(pFinished==1): 
+		if(pFinished==1):
 			current_p_model=genericIO.defaultIO.getVector(p_prefix+"_iter"+str(restartIter)+"_inv_mod.H")
 		else:
 			current_p_model=genericIO.defaultIO.getVector(p_prefix+"_iter"+str(restartIter-1)+"_inv_mod.H")
@@ -283,31 +281,31 @@ if __name__ == '__main__':
 	for iteration in range(restartIter,nIter):
 		if(pyinfo): print("\n---------------------- Running Iteration ",iteration," ---------------------------")
 		inv_log.addToLog("\n---------------------- Running Iteration "+str(iteration)+" ---------------------------")
-	
-		if(pFinished==0):	
+
+		if(pFinished==0):
 			# minimize ||Kp-d||+e^2/2||A(m)p-f|| w.r.t. p
 			# update m
 			waveEquationAcousticOp.update_slsq(current_m_model)
 			#re-evaluate epsilon
 			if(parObject.getInt("reEvalEpsilon",0)!=0):
-				epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)	
+				epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
 				print("--------------- Re-evalute epsilon to: ",epsilon_p," -------------")
 				inv_log.addToLog("\n---------------   Re-evalute epsilon to: "+str(epsilon_p)+" ----------------------")
 			elif(parObject.getFloat("reScaleEpsilon",0)!=0 and iteration!=0 ):
 				scale = parObject.getFloat("reScaleEpsilon",0)
-				epsilon_p = epsilon_p * scale 
+				epsilon_p = epsilon_p * scale
 				print("--------------- Re-scale epsilon by ",scale,". Epsiilon is now: ",epsilon_p," -------------")
 				inv_log.addToLog("--------------- Re-scale epsilon by "+str(scale)+". Epsiilon is now: "+str(epsilon_p)+" -------------")
-			# reinit L2 problem with new initial p 
+			# reinit L2 problem with new initial p
 			p_invProb=Prblm.ProblemL2LinearReg(current_p_model,p_dataFloat,dataSamplingOp,epsilon_p,reg_op=waveEquationAcousticOp,prior_model=prior,prec=precondOp_p)
 			# update prefix and solver defaults
 			p_prefix_cur=p_prefix+"_iter"+str(iteration)
 			p_LCGsolver.setDefaults(save_obj=saveObj_p,save_res=saveRes_p,save_grad=saveGrad_p,save_model=saveModel_p,prefix=p_prefix_cur,iter_buffer_size=bufferSize_p,iter_sampling=iterSampling_p,flush_memory=flushMemory)
 			# run LCG solver
 			p_LCGsolver.run(p_invProb,verbose=True)
-			# update current p model 
+			# update current p model
 			current_p_model=p_LCGsolver.inv_model
-		pFinished=0 
+		pFinished=0
 		# minimize ||A(p)m-f|| w.r.t. m
 		# update p and f
 		#m_dataFloat,_ = Acoustic_iso_float_gradio.update_data(current_p_model,sys.argv) #f is actaully f+Lapl(p) so we need to update
@@ -315,8 +313,9 @@ if __name__ == '__main__':
 		# create new gradioOp
 		_,m_dataFloat,pressureData,gradioOp= Acoustic_iso_float_gradio.gradioOpInitFloat_givenPressure(current_p_model,sys.argv)
 		#update prec
-		# reinit L2 problem with new initial m 
-		m_invProb=Prblm.ProblemL2LinearReg(current_m_model,m_dataFloat,gradioOp,epsilon_m,minBound=minBoundVector,maxBound=maxBoundVector,reg_op=regOp_m,prec=precondOp_m,grad_edit_python_op=gradEditOp)
+		# reinit L2 problem with new initial m
+		# m_invProb=Prblm.ProblemL2LinearReg(current_m_model,m_dataFloat,gradioOp,epsilon_m,minBound=minBoundVector,maxBound=maxBoundVector,reg_op=regOp_m,prec=precondOp_m,grad_edit_python_op=gradEditOp)
+		m_invProb=Prblm.ProblemL2LinearReg(current_m_model,m_dataFloat,gradioOp,epsilon_m,minBound=minBoundVector,maxBound=maxBoundVector,reg_op=regOp_m,prec=precondOp_m)
 		# update prefix and solver defaults
 		m_prefix_cur=m_prefix+"_iter"+str(iteration)
 		m_LCGsolver.setDefaults(save_obj=saveObj_m,save_res=saveRes_m,save_grad=saveGrad_m,save_model=saveModel_m,prefix=m_prefix_cur,iter_buffer_size=bufferSize_m,iter_sampling=iterSampling_m,flush_memory=flushMemory)
@@ -324,10 +323,7 @@ if __name__ == '__main__':
 		m_LCGsolver.run(m_invProb,verbose=True)
 		#update current m model
 		current_m_model=m_LCGsolver.inv_model
-		
+
 	if(pyinfo): print("-------------------------------------------------------------------")
 	if(pyinfo): print("--------------------------- All done ------------------------------")
 	if(pyinfo): print("-------------------------------------------------------------------\n")
- 
-
-

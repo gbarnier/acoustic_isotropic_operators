@@ -19,13 +19,11 @@ from sys_util import logger
 if __name__ == '__main__':
 
 	# io stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 	pyinfo=parObject.getInt("pyinfo",1)
 
 
-	# get params 
+	# get params
 	modelFile=parObject.getString("model","noModelFile")
 	dataFile=parObject.getString("data","noDataFile")
 	n1d=parObject.getInt("n1d",-1)
@@ -37,7 +35,7 @@ if __name__ == '__main__':
 	if(n1d==-1 or n2d==-1 or o1d==-1 or o2d==-1 or d1d==-1 or d2d==-1):
 		print("**** ERROR: User did not provide one of the min/max parameters ****\n")
 		quit()
-	
+
 
 
 	# Forward
@@ -107,4 +105,3 @@ if __name__ == '__main__':
 
 		#write model to disk
 		genericIO.defaultIO.writeVector(modelFile,modelFloat)
-

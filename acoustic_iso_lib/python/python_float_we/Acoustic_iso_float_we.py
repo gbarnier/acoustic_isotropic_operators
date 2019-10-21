@@ -87,9 +87,7 @@ def waveEquationOpInitFloat(args):
 	   The function will return the necessary variables for operator construction
 	"""
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	# Time Axis
 	nts=parObject.getInt("nts",-1)
@@ -149,9 +147,7 @@ def waveEquationOpInitFloat(args):
 #	   The function will return the necessary variables for operator construction
 #	"""
 #	# Bullshit stuff
-#	io=genericIO.pyGenericIO.ioModes(args)
-#	ioDef=io.getDefaultIO()
-#	parObject=ioDef.getParamObj()
+#	parObject=genericIO.io(params=sys.argv)
 #
 #	# elatic params
 #	slsq=parObject.getString("slsq", "noElasticParamFile")
@@ -334,7 +330,7 @@ class waveEquationAcousticCpu(Op.Operator):
 		with pyAcoustic_iso_float_we.ostream_redirect():
 			self.pyOp.set_slsq(new_slsq)
 		return
-		
+
 	def dotTestCpp(self,verb=False,maxError=.00001):
 		"""Method to call the Cpp class dot-product test"""
 		with pyAcoustic_iso_float_we.ostream_redirect():

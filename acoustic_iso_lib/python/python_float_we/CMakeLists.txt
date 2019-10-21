@@ -115,6 +115,7 @@ if (pybind11_FOUND)
   install( FILES GF.py DESTINATION lib/python)
   install( FILES SecondDeriv.py DESTINATION lib/python)
   install( FILES wri_gradient_script.py DESTINATION lib/python)
+  install( FILES fft_wfld.py DESTINATION lib/python)
 
   # Installing Python executables
   # install( FILES nonlinearPythonFloatMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
@@ -148,9 +149,11 @@ if (pybind11_FOUND)
   install( FILES sphericalSpreadingScaleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES gfMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES wri_fullVp.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES wri_fullVp_freq.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES wri_gradient_script.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES fwi_gradient_script.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES gradEditTest.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES fftWfldMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 
 
 else(pybind11_FOUND)

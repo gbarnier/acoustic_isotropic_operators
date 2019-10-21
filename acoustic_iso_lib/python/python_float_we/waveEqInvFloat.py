@@ -11,7 +11,7 @@ import os
 import Acoustic_iso_float_we
 import wriUtilFloat
 import SampleWfld
-import Mask3d 
+import Mask3d
 import TpowWfld
 
 # Solver library
@@ -26,9 +26,7 @@ from sys_util import logger
 if __name__ == '__main__':
 
 	####################### initialize genericIO classes #######################
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 	pyinfo=parObject.getInt("pyinfo",1)
 	epsilonEval=parObject.getInt("epsilonEval",0)
 	# Initialize parameters for inversion
@@ -68,7 +66,7 @@ if __name__ == '__main__':
 		prior=priorTmp.clone()
 		prior.scale(0.0)
 		mask3dOp.forward(0,priorTmp,prior)
-		
+
 	else:
 		print("full prior")
 		prior=genericIO.defaultIO.getVector(fullPrior)
@@ -80,7 +78,7 @@ if __name__ == '__main__':
 	print("p shape: ", modelInit.getNdArray().shape)
 	print("Am range: ", waveEquationAcousticOp.getRange().getNdArray().shape)
 	print("f shape: ", dataFloat.getNdArray().shape)
-	
+
 	################################ DP Test ###################################
 	if (parObject.getInt("dp",0)==1):
 		if(pyinfo): print("--------------------------- Performing DP Test --------------------------------")

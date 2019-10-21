@@ -14,11 +14,55 @@ import TruncateSpatialReg
 import SpaceInterpFloat
 import PadTruncateSource
 import SampleWfld
-import GF 
+import GF
 import SphericalSpreadingScale
 import pyOperator as Op
 import scipy as sp
 import scipy.ndimage
+import fft_wfld
+
+def fft_wfld_init(args):
+
+	# Bullshit stuff
+	parObject=genericIO.io(params=sys.argv)
+
+	# Time and freq Axes
+	nts=parObject.getInt("nts",-1)
+	ots=parObject.getFloat("ots",0.0)
+	dts=parObject.getFloat("dts",-1.0)
+	if(nts%2 != 0):
+		nw = int(nts/2+1)
+	else:
+		nw = int((nts+1)/2)
+	dw = 1./((nts-1)*dts)
+	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+	wAxis=Hypercube.axis(n=nw,o=ots,d=dw)
+
+	# z Axis model
+	nz=parObject.getInt("nz",-1)
+	oz=parObject.getFloat("oz",-1.0)
+	dz=parObject.getFloat("dz",-1.0)
+	zAxis=Hypercube.axis(n=nz,o=oz,d=dz)
+
+	# x axis model
+	nx=parObject.getInt("nx",-1)
+	ox=parObject.getFloat("ox",-1.0)
+	dx=parObject.getFloat("dx",-1.0)
+	xAxis=Hypercube.axis(n=nx,o=ox,d=dx)
+
+	# Allocate data
+	dataHyper=Hypercube.hypercube(axes=[zAxis,xAxis,timeAxis])
+	dataFloat=SepVector.getSepVector(dataHyper,storage="dataFloat")
+
+	# Allocate model
+	modelHyper=Hypercube.hypercube(axes=[zAxis,xAxis,wAxis])
+	modelFloat=SepVector.getSepVector(modelHyper,storage="dataComplex")
+
+	# init op
+	op = fft_wfld.fft_wfld(modelFloat,dataFloat)
+
+	#apply forward
+	return modelFloat,dataFloat,op
 
 def grad_edit_mora(gradNdArray):
 	sigma_y=1
@@ -45,7 +89,7 @@ def evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquati
 	K_resid.scaleAdd(p_dataFloat,0,-1)
 	dataSamplingOp.forward(1,current_p_model,K_resid)
 
-	#make first model residual 
+	#make first model residual
 	A_resid = SepVector.getSepVector(waveEquationAcousticOp.getRange().getHyper(),storage="dataFloat")
 	A_resid.scaleAdd(prior,0,-1)
 	waveEquationAcousticOp.forward(1,current_p_model,A_resid)
@@ -65,9 +109,7 @@ def evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquati
 def forcing_term_op_init_p(args):
 
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	# Interp operator init
 	zCoord,xCoord,centerHyper = SpaceInterpFloat.space_interp_init_source(args)
@@ -131,9 +173,7 @@ def forcing_term_op_init_p(args):
 def forcing_term_op_init_m(args):
 
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	# Interp operator init
 	zCoord,xCoord,centerHyper = SpaceInterpFloat.space_interp_init_source(args)
@@ -197,9 +237,7 @@ def forcing_term_op_init_m(args):
 def spherical_spreading_op_init(args):
 
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	#get source locations
 	zCoordSou,xCoordSou,centerHyper = SpaceInterpFloat.space_interp_init_source(args)
@@ -245,9 +283,7 @@ def spherical_spreading_op_init(args):
 def greens_function_op_init(args):
 
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	#get source locations
 	zCoordSou,xCoordSou,centerHyper = SpaceInterpFloat.space_interp_init_source(args)
@@ -284,13 +320,13 @@ def greens_function_op_init(args):
 		print("**** ERROR: User did not provide slsq file, slsq ****\n")
 		sys.exit()
 	slsq=genericIO.defaultIO.getVector(slsqFile)
-	slsqNdArray = slsq.getNdArray() 
+	slsqNdArray = slsq.getNdArray()
 	slsqNonzero = slsqNdArray[slsqNdArray>0]
 	minslsq = slsqNonzero.min()
 	maxvel = math.sqrt(1/minslsq)
 	print("maxvel: ", maxvel)
 
-	
+
 	tstart=parObject.getFloat("t_start", 0.0)
 
 	# init op
@@ -301,9 +337,7 @@ def greens_function_op_init(args):
 def wfld_extraction_reg_op_init(args):
 
 	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	#get source locations
 	zCoordSou,xCoordSou,centerHyper = SpaceInterpFloat.space_interp_init_source(args)
@@ -346,7 +380,7 @@ def wfld_extraction_reg_op_init(args):
 	maxvel = math.sqrt(1/minslsq)
 	print("maxvel: ", maxvel)
 
-	
+
 	tstart=parObject.getFloat("t_start", 0.0)
 
 	# init op
@@ -358,9 +392,7 @@ def wfld_extraction_reg_op_init(args):
 def data_extraction_reg_op_init(args):
 
 	# IO stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	# Time Axis
 	nts=parObject.getInt("nts",-1)
@@ -409,9 +441,7 @@ def data_extraction_reg_op_init(args):
 def data_extraction_op_init(args):
 
  	# Bullshit stuff
- 	io=genericIO.pyGenericIO.ioModes(args)
- 	ioDef=io.getDefaultIO()
- 	parObject=ioDef.getParamObj()
+ 	parObject=genericIO.io(params=sys.argv)
 
  	# Interp operator init
  	zCoord,xCoord,centerHyper = SpaceInterpFloat.space_interp_init_rec(args)

@@ -21,8 +21,8 @@ import pyStopperBase as Stopper
 import inversionUtils
 import wriUtilFloat
 import TpowWfld
-import Mask3d 
-import Mask2d 
+import Mask3d
+import Mask2d
 import spatialDerivModule
 import SecondDeriv
 
@@ -30,9 +30,7 @@ import SecondDeriv
 if __name__ == '__main__':
 
 	# io stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	print("-------------------------------------------------------------------")
 	print("------------------ Full Waveform Inversion Gradient Script --------------")
@@ -79,31 +77,25 @@ if __name__ == '__main__':
 	born_adjWfld=bornOp.getSecWfld()
 	############################ Compute cross correlation < B*^(-1)(KA^(-1)f-d) , A^(-1)f > #####
 	ccWfld = born_adjWfld.clone()
-	ccWfldNdArray = ccWfld.getNdArray() 
+	ccWfldNdArray = ccWfld.getNdArray()
 	ccWfldNdArray[:,:,:] = np.multiply(born_adjWfld.getNdArray(),secondDerivWfld.getNdArray())
 
 	############################ Integrate cross correlation < d2p/dt2 , A(p)m-f > #####
 	ccIntWfld = ccWfld.clone()
 	ccIntWfld.getNdArray()[:,:,:]=ccWfld.getNdArray()[:,:,:]
 	for it in np.arange(1,parObject.getInt("nts",-1)):
-		ccIntWfld.getNdArray()[it,:,:] += ccIntWfld.getNdArray()[it-1,:,:]	
+		ccIntWfld.getNdArray()[it,:,:] += ccIntWfld.getNdArray()[it-1,:,:]
 
 	################################ Output Results ##################################
 	prefix=parObject.getString("prefix","dummyPrefix")
-	# A^(-1)f : fwd nonlinear wfld 
+	# A^(-1)f : fwd nonlinear wfld
 	genericIO.defaultIO.writeVector(prefix+"_fwd_wfld.H",secondDerivWfld)
 
 	# B*^(r-i1)(KA^(-1)f - d) : adj wfld
 	genericIO.defaultIO.writeVector(prefix+"_adj_wfld.H",born_adjWfld)
 
-	# < B*^(-1)(KA^(-1)f-d) , A^(-1)f > 
+	# < B*^(-1)(KA^(-1)f-d) , A^(-1)f >
 	genericIO.defaultIO.writeVector(prefix+"_cc_wfld.H",ccWfld)
 
-	# summation < B*^(-1)(KA^(-1)f-d) , A^(-1)f > 
+	# summation < B*^(-1)(KA^(-1)f-d) , A^(-1)f >
 	genericIO.defaultIO.writeVector(prefix+"_ccInt_wfld.H",ccIntWfld)
-
-
-
-
-
-

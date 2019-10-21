@@ -22,8 +22,8 @@ import pyStopperBase as Stopper
 import inversionUtils
 import wriUtilFloat
 import TpowWfld
-import Mask3d 
-import Mask2d 
+import Mask3d
+import Mask2d
 import spatialDerivModule
 import SecondDeriv
 
@@ -31,9 +31,7 @@ import SecondDeriv
 if __name__ == '__main__':
 
 	# io stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
 	print("-------------------------------------------------------------------")
 	print("------------------ Full Wavefield Reconstruction Inversion Gradient Script --------------")
@@ -56,33 +54,28 @@ if __name__ == '__main__':
 	############################ Compute d2p/dt2 wfld ################################
 	secondDerivWfld = pressureData.clone()
 	secondDerivOp.forward(0,pressureData,secondDerivWfld) # d2p/dt2
-	
+
 	############################ Compute cross correlation < d2p/dt2 , A(p)m-f > #####
 	ccWfld = pressureData.clone()
-	ccWfldNdArray = ccWfld.getNdArray() 
+	ccWfldNdArray = ccWfld.getNdArray()
 	ccWfldNdArray[:,:,:] = np.multiply(residualWfld.getNdArray(),secondDerivWfld.getNdArray())
 
 	############################ Integrate cross correlation < d2p/dt2 , A(p)m-f > #####
 	ccIntWfld = ccWfld.clone()
 	ccIntWfld.getNdArray()[:,:,:]=ccWfld.getNdArray()[:,:,:]
 	for it in np.arange(1,parObject.getInt("nts",-1)):
-		ccIntWfld.getNdArray()[it,:,:] += ccIntWfld.getNdArray()[it-1,:,:]	
+		ccIntWfld.getNdArray()[it,:,:] += ccIntWfld.getNdArray()[it-1,:,:]
 
 	################################ Output Results ##################################
 	prefix=parObject.getString("prefix","dummyPrefix")
-	# second time derivative 
+	# second time derivative
 	genericIO.defaultIO.writeVector(prefix+"_dt2_wfld.H",secondDerivWfld)
 
 	# A(p)m - f
 	genericIO.defaultIO.writeVector(prefix+"_res_wfld.H",residualWfld)
 
-	# < d2p/dt2 , A(p)m-f > 
+	# < d2p/dt2 , A(p)m-f >
 	genericIO.defaultIO.writeVector(prefix+"_cc_wfld.H",ccWfld)
 
-	# summation < d2p/dt2 , A(p)m-f > 
+	# summation < d2p/dt2 , A(p)m-f >
 	genericIO.defaultIO.writeVector(prefix+"_ccInt_wfld.H",ccIntWfld)
-
-
-
-
-

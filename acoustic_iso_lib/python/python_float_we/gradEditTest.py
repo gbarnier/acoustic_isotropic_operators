@@ -18,11 +18,9 @@ import wriUtilFloat
 if __name__ == '__main__':
 
 	# io stuff
-	io=genericIO.pyGenericIO.ioModes(sys.argv)
-	ioDef=io.getDefaultIO()
-	parObject=ioDef.getParamObj()
+	parObject=genericIO.io(params=sys.argv)
 
-	# get params 
+	# get params
 	gradInFile=parObject.getString("gradIn","noModelFile")
 	gradOutFile=parObject.getString("gradOut","noDataFile")
 
