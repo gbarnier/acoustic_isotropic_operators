@@ -126,16 +126,18 @@ set(HEADERS
   # ${INC_DIR}/G.h
   # ${INC_DIR}/AcousticProp.h
   # ${INC_DIR}/AcousticPropABC.h
-  )
+)
 
-  #SEP LIBRARY DIRECTORIES
-  link_directories(${Generic-cpp_BINARY_DIR}
-  				 ${hypercube_BINARY_DIR}
-  				 ${buffers-lib_BINARY_DIR}
-  				 ${json_BINARY_DIR}
-  				 ${sepVector-lib_BINARY_DIR}
-  				 ${SEPlib_LIBDIR}
-  )
+#SEP LIBRARY DIRECTORIES
+link_directories(${Generic-cpp_BINARY_DIR}
+				 ${hypercube_BINARY_DIR}
+				 ${buffers-lib_BINARY_DIR}
+				 ${json_BINARY_DIR}
+				 ${sepVector-lib_BINARY_DIR}
+				 ${SEPlib_LIBDIR}
+)
+#Setting io libraries
+set(LIBS genericCpp sepVector sep3d sep)
 
 
 set(LIBS genericCpp sepVector sep3d sep)
