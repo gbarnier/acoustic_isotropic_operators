@@ -8,8 +8,8 @@ import numpy as np
 def maskGradientInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
-	
+	parObject=genericIO.io(params=args)
+
 	# Check if user directly provides the mask for the gradient
 	gradientMaskFile=parObject.getString("gradientMaskFile","noGradientMaskFile")
 

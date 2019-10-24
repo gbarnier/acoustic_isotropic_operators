@@ -10,7 +10,7 @@ import numpy as np
 def zGradInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	fat=parObject.getInt("fat",5)
 	return fat
@@ -45,7 +45,7 @@ class zGradPython(Op.Operator):
 def xGradInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	fat=parObject.getInt("fat",5)
 	return fat
@@ -80,7 +80,7 @@ class xGradPython(Op.Operator):
 def zxGradInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	fat=parObject.getInt("fat",5)
 	return fat
@@ -115,7 +115,7 @@ class zxGradPython(Op.Operator):
 def LaplacianInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	fat=parObject.getInt("fat",5)
 	return fat
@@ -150,8 +150,8 @@ class LaplacianPython(Op.Operator):
 def SymesZGradInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
-	
+	parObject=genericIO.io(params=args)
+
 	fat=parObject.getInt("fat",5)
 	return fat
 

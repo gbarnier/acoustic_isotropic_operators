@@ -10,10 +10,8 @@ import pyStopperBase as Stopper
 
 def inversionFullWRIInit(args):
 
-	# Bullshit stuff
-	io=genericIO.pyGenericIO.ioModes(args)
-	ioDef=io.getDefaultIO()
-	par=ioDef.getParamObj()
+	# IO object
+	par=genericIO.io(params=args)
 
 	# Stopper
 	nIter=par.getInt("nIter")
@@ -58,7 +56,7 @@ def inversionFullWRIInit(args):
 def inversionInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Stopper
 	nIter=par.getInt("nIter")
@@ -93,7 +91,7 @@ def inversionInit(args):
 def inversionVpInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	################################# Nonlinear ################################
 	# Usual shits

@@ -57,7 +57,7 @@ def generateSplineMesh1d(positions,sampling,sub,mesh,tolerance,nDataNf):
 def bSpline1dInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Interpolation parameters
 	zOrder=parObject.getInt("zOrder",3)
@@ -183,7 +183,7 @@ class bSpline1d(Op.Operator):
 def bSpline2dInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Interpolation parameters
 	zOrder=parObject.getInt("zOrder",3)
@@ -381,7 +381,7 @@ class bSpline2d(Op.Operator):
 def bSpline3dInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Interpolation parameters
 	zOrder=parObject.getInt("zOrder",3)
