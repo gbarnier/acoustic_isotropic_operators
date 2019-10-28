@@ -33,7 +33,9 @@ if __name__ == '__main__':
 		print("-------------------------------------------------------------------\n")
 
 		# Read  model
-		modelFloat=genericIO.defaultIO.getVector(modelFile,storage='dataComplex')
+		modelFloat=genericIO.defaultIO.getVector(modelFile,storage="complex")
+
+		print(modelFloat.getNdArray().dtype)
 
 		# Time and freq Axes
 		nw=modelFloat.getHyper().getAxis(3).n
@@ -41,7 +43,7 @@ if __name__ == '__main__':
 		dw=modelFloat.getHyper().getAxis(3).d
 		nt = 2*(nw-1)
 		ot=0
-		dt = 1./((nw-1)*dw)
+		dt = 1./((nt-1)*dw)
 		timeAxis=Hypercube.axis(n=nt,o=ot,d=dt)
 		dataHyper=Hypercube.hypercube(axes=[modelFloat.getHyper().getAxis(1),modelFloat.getHyper().getAxis(2),timeAxis])
 
@@ -85,9 +87,9 @@ if __name__ == '__main__':
 		dt=dataFloat.getHyper().getAxis(3).d
 		#odd
 		if(nt%2 != 0):
-			nw = int(nt/2+1)
-		else:
 			nw = int((nt+1)/2)
+		else:
+			nw = int(nt/2+1)
 		ow=0
 		dw = 1./((nt-1)*dt)
 		freqAxis=Hypercube.axis(n=nw,o=ow,d=dw)
@@ -116,4 +118,5 @@ if __name__ == '__main__':
 		fft_wfld_op.adjoint(False,modelFloat,dataFloat)
 
 		#write model to disk
+		print(modelFloat.getNdArray().dtype)
 		genericIO.defaultIO.writeVector(modelFile,modelFloat)

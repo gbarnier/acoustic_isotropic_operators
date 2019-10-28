@@ -117,8 +117,8 @@ if __name__ == '__main__':
 			current_p_model=genericIO.defaultIO.getVector(initial_p_model_file,storage='dataComplex')
 		elif (initial_p_model_file_format=="time"):
 			if(pyinfo): print("Initial wavefield provided in time domain (will convert to freq): ", initial_p_model_file)
-			current_p_model_time=genericIO.defaultIO.getVector(initial_p_model_file,storage='dataFloat')
-			current_p_model=p_modelFloat_fft.cloneSpace()
+			current_p_model_time=genericIO.defaultIO.getVector(initial_p_model_file,storage='float')
+			current_p_model=SepVector.getSepVector(p_modelFloat_fft.getHyper(),storage="dataComplex")
 			current_p_model.zero()
 			print('here')
 			FFTop.adjoint(False,current_p_model,current_p_model_time)

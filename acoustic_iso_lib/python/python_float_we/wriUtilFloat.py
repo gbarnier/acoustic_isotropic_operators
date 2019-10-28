@@ -30,10 +30,11 @@ def fft_wfld_init(args):
 	nts=parObject.getInt("nts",-1)
 	ots=parObject.getFloat("ots",0.0)
 	dts=parObject.getFloat("dts",-1.0)
+	#odd
 	if(nts%2 != 0):
-		nw = int(nts/2+1)
-	else:
 		nw = int((nts+1)/2)
+	else:
+		nw = int(nts/2+1)
 	dw = 1./((nts-1)*dts)
 	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
 	wAxis=Hypercube.axis(n=nw,o=ots,d=dw)
