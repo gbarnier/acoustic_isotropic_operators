@@ -67,7 +67,7 @@ def nonlinearOpInitDouble(args):
 	   The function will return the necessary variables for operator construction
 	"""
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Allocate and read velocity
 	velFile=parObject.getString("vel","noVelFile")
@@ -215,7 +215,7 @@ def BornOpInitDouble(args):
 	"""
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Velocity model
 	velFile=parObject.getString("vel","noVelFile")
@@ -335,7 +335,7 @@ class BornShotsGpu(Op.Operator):
 def BornExtOpInitDouble(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Velocity model
 	velFile=parObject.getString("vel", "noVelFile")
@@ -491,7 +491,7 @@ class BornExtShotsGpu(Op.Operator):
 def tomoExtOpInitDouble(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Velocity model
 	velFile=parObject.getString("vel", "noVelFile")
@@ -657,7 +657,7 @@ class tomoExtShotsGpu(Op.Operator):
 def wemvaExtOpInitDouble(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Velocity model
 	velFile=parObject.getString("vel", "noVelFile")

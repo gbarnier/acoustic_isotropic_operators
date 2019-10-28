@@ -9,8 +9,8 @@ import numpy as np
 def dsoInvGpuInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
-	
+	parObject=genericIO.io(params=args)
+
 	nz=parObject.getInt("nz")
 	nx=parObject.getInt("nx")
 	nExt=parObject.getInt("nExt")

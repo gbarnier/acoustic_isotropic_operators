@@ -11,7 +11,7 @@ import math
 def bSpline2dInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Interpolation parameters
 	zOrder=parObject.getInt("zOrder",3)

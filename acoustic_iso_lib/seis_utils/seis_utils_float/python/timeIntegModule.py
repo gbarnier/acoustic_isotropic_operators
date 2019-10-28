@@ -10,8 +10,8 @@ import numpy as np
 def timeIntegInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
-	
+	parObject=genericIO.io(params=args)
+
 	dts=parObject.getFloat("dts")
 	return dts
 

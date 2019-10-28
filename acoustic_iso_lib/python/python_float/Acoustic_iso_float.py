@@ -206,7 +206,7 @@ def nonlinearOpInitFloat(args):
 	   The function will return the necessary variables for operator construction
 	"""
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Allocate and read velocity
 	velFile=parObject.getString("vel","noVelFile")
@@ -316,7 +316,7 @@ def nonlinearFwiOpInitFloat(args):
 	   The function will return the necessary variables for operator construction
 	"""
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Allocate and read starting model
 	modelStartFile=parObject.getString("vel")
@@ -387,7 +387,7 @@ def BornOpInitFloat(args):
 	"""
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Velocity model
 	velFile=parObject.getString("vel")
@@ -507,7 +507,7 @@ class BornShotsGpu(Op.Operator):
 def BornExtOpInitFloat(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Velocity model
 	velFile=parObject.getString("vel", "noVelFile")
@@ -675,7 +675,7 @@ class BornExtShotsGpu(Op.Operator):
 def BornExtTomoInvOpInitFloat(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Velocity model
 	modelStartFile=parObject.getString("vel")
@@ -764,7 +764,7 @@ class BornExtTomoInvShotsGpu(Op.Operator):
 def tomoExtOpInitFloat(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Velocity model
 	velFile=parObject.getString("vel", "noVelFile")
@@ -927,7 +927,7 @@ class tomoExtShotsGpu(Op.Operator):
 def wemvaExtOpInitFloat(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Velocity model
 	velFile=parObject.getString("vel", "noVelFile")
@@ -1097,7 +1097,7 @@ class wemvaExtShotsGpu(Op.Operator):
 def wemvaNonlinearOpInitFloat(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	# Model (velocity)
 	modelFile=parObject.getString("vel", "noVelFile")
@@ -1236,7 +1236,7 @@ class wemvaNonlinearShotsGpu(Op.Operator):
 def SymesPseudoInvInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 
 	############################## Born extended ###############################
 	# Velocity model
