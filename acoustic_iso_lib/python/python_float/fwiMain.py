@@ -116,6 +116,18 @@ if __name__ == '__main__':
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
 		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiInvOp)
 
+	# Data normalization
+	if (dataNormalization=="xukai"):
+		if(pyinfo): print("--- Using Xukai's trace normalization ---")
+		inv_log.addToLog("--- Using Xukai's trace normalization ---")
+		phaseOnlyXkOp=phaseOnlyXkModule.phaseOnlyXk(data,data) # Instanciate forward operator
+		phaseOnlyXkJacOp=phaseOnlyXkModule.phaseOnlyXkJac(data) # Instanciate Jacobian operator
+		phaseOnlyXkNlOp=pyOp.NonLinearOperator(phaseOnlyXkOp,phaseOnlyXkJacOp,phaseOnlyXkJacOp.setData) # Instanciate the nonlinear operator
+		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOp,phaseOnlyXkNlOp)
+		obsDataNormalized=data.clone() # Apply normalization to data
+		phaseOnlyXkOp.forward(False,data,obsDataNormalized)
+		data=obsDataNormalized
+
 	# Data taper
 	if (dataTaper==1):
 		if(pyinfo): print("--- Using data tapering ---")
@@ -126,19 +138,6 @@ if __name__ == '__main__':
 		data=dataTapered
 		dataTaperNlOp=pyOp.NonLinearOperator(dataTaperOp,dataTaperOp) # Create dataTaper nonlinear operator
 		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOp,dataTaperNlOp)
-
-	# Data normalization
-	if (dataNormalization=="xukai"):
-		if(pyinfo): print("--- Using Xukai's trace normalization ---")
-		inv_log.addToLog("--- Using Xukai's trace normalization ---")
-		phaseOnlyXkOp=phaseOnlyXkModule.phaseOnlyXk(data,data) # Instanciate forward operator
-		phaseOnlyXkJacOp=phaseOnlyXkModule.phaseOnlyXkJac(data) # Instanciate Jacobian operator
-		phaseOnlyXkNlOp=pyOp.NonLinearOperator(phaseOnlyXkOp,phaseOnlyXkJacOp,phaseOnlyXkJacOp.setData) # Instanciate the nonlinear operator
-		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOp,phaseOnlyXkNlOp)
-		# Apply normalization to data
-		obsDataNormalized=data.clone()
-		phaseOnlyXkOp.forward(False,data,obsDataNormalized)
-		data=obsDataNormalized
 
 	############################### Bounds #####################################
 	minBoundVector,maxBoundVector=Acoustic_iso_float.createBoundVectors(parObject,modelInit)
