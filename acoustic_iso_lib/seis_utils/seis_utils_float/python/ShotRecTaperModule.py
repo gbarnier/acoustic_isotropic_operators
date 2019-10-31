@@ -9,7 +9,7 @@ def ShotRecTaperInit(args):
 	   Useful function to read necessary parameters for constructor
 	"""
 	# IO object
-	parObject=genericIO.io(params=sys.argv)
+	parObject=genericIO.io(params=args)
 	
 	taperShotWidth=parObject.getFloat("taperShotWidth",0.0) # Extension of the shot dampening
 	taperRecWidth=parObject.getFloat("taperRecWidth",0.0) # Extension of the receiver dampening
