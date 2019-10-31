@@ -43,10 +43,6 @@ if __name__ == '__main__':
 	inv_log.addToLog("------------------ Full Wavefield Reconstruction Inversion --------------")
 
 	############################# Initialize Operators ###############################
-	#init masking ops
-	#timeMask=0;
-	#maskWidth=parObject.getInt("maskWidth",0)
-	#mask3dOp = Mask3d.mask3d(modelFloat,modelFloat,maskWidth,modelFloat.getHyper().axes[0].n-maskWidth,maskWidth,modelFloat.getHyper().axes[1].n-maskWidth,0,modelFloat.getHyper().axes[2].n-timeMask,0)
 	#init F
 	p_modelFloat_fft,_,FFTop = wriUtilFloat.fft_wfld_init(sys.argv)
 	#FFTop = pyOp.Transpose(FFTop)
@@ -262,15 +258,15 @@ if __name__ == '__main__':
 	############################# Evaluate epsilon ###############################
 	#need to set earth model in wave equation operator
 	waveEquationAcousticOp.op2.update_slsq(current_m_model)
-		# Evaluate Epsilon for p inversion
-		if (epsilonEval==1):
-			if(pyinfo): print("--- Epsilon evaluation ---")
-			inv_log.addToLog("--- Epsilon evaluation ---")
-			epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
-		else:
-			epsilon_p=parObject.getFloat("eps_p_scale",1.0)*parObject.getFloat("eps_p",1.0)
-		if(pyinfo): print("--- Epsilon value: ",epsilon_p," ---")
-		inv_log.addToLog("--- Epsilon value: %s ---"%(epsilon_p))
+	# Evaluate Epsilon for p inversion
+	if (epsilonEval==1):
+		if(pyinfo): print("--- Epsilon evaluation ---")
+		inv_log.addToLog("--- Epsilon evaluation ---")
+		epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
+	else:
+		epsilon_p=parObject.getFloat("eps_p_scale",1.0)*parObject.getFloat("eps_p",1.0)
+	if(pyinfo): print("--- Epsilon value: ",epsilon_p," ---")
+	inv_log.addToLog("--- Epsilon value: %s ---"%(epsilon_p))
 
 	# for number of outer loops
 	for iteration in range(restartIter,nIter):
