@@ -56,7 +56,7 @@ def inversionFullWRIInit(args):
 def inversionInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=args)
+	par=genericIO.io(params=args)
 
 	# Stopper
 	nIter=par.getInt("nIter")
@@ -91,7 +91,7 @@ def inversionInit(args):
 def inversionVpInit(args):
 
 	# IO object
-	parObject=genericIO.io(params=args)
+	par=genericIO.io(params=args)
 
 	################################# Nonlinear ################################
 	# Usual shits

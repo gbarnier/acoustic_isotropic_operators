@@ -4,7 +4,6 @@ import SepVector
 import Hypercube
 import numpy as np
 import interpBSplineModule
-# import matplotlib.pyplot as plt
 import sys
 import time
 
@@ -12,7 +11,7 @@ if __name__ == '__main__':
 
 	# IO object
 	parObject=genericIO.io(params=sys.argv)
-	
+
 	nDim=parObject.getInt("nDim")
 	adj=parObject.getInt("adj",0)
 	param=parObject.getInt("meshOut",0) # Set to 1 if you want to write the mesh vectors and other interpolation parameters
@@ -32,7 +31,7 @@ if __name__ == '__main__':
 		# Initialize 2d spline
 		model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSplineModule.bSpline2dInit(sys.argv)
 
-		# Construc 2d spline operator
+		# Construct 2d spline operator
 		splineOp=interpBSplineModule.bSpline2d(model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 
 
