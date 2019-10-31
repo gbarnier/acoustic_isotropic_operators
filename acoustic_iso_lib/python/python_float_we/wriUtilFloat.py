@@ -85,26 +85,57 @@ def grad_edit_diving(gradNdArray):
 	return gradNdArrayOut
 
 def evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject):
+	start=time.time()
+	prev_time=time.time()
 	#make first data residual
 	K_resid = SepVector.getSepVector(dataSamplingOp.getRange().getHyper(),storage="dataFloat")
 	K_resid.scaleAdd(p_dataFloat,0,-1)
+	k_resid_setup_time=time.time()-prev_time
+	prev_time=time.time()
+
 	dataSamplingOp.forward(1,current_p_model,K_resid)
+	dataSamplingOp_forward_time=time.time()-prev_time
+	prev_time=time.time()
 
 	#make first model residual
 	A_resid = SepVector.getSepVector(waveEquationAcousticOp.getRange().getHyper(),storage="dataFloat")
 	A_resid.scaleAdd(prior,0,-1)
+	A_resid_setup_time=time.time()-prev_time
+	prev_time=time.time()
+
 	waveEquationAcousticOp.forward(1,current_p_model,A_resid)
+	waveEquationAcousticOp_forward_time=time.time()-prev_time
+	prev_time=time.time()
 
 	if(current_p_model.norm()!=0):
 		#update model
-		modelOne = SepVector.getSepVector(current_p_model.getHyper(),storage="dataFloat")
-		modelOne.scale(0.0)
+		if (isinstance(current_p_model,SepVector.complexVector)):
+			modelOne = SepVector.getSepVector(current_p_model.getHyper(),storage='dataComplex')
+		else:
+			modelOne = SepVector.getSepVector(current_p_model.getHyper(),storage='dataFloat')
+		modelOne.zero()
+		scale_modelOne_time=time.time()-prev_time
+		prev_time=time.time()
+
 		dataSamplingOp.adjoint(1,modelOne,K_resid)
+		dataSamplingOp_adjoint_time=time.time()-prev_time
+		prev_time=time.time()
+
 		waveEquationAcousticOp.adjoint(1,modelOne,A_resid)
+		waveEquationAcousticOp_adjoint_time=time.time()-prev_time
+		prev_time=time.time()
+
 		dataSamplingOp.forward(1,modelOne,K_resid)
 		waveEquationAcousticOp.forward(1,modelOne,A_resid)
 
 	epsilon_p = parObject.getFloat("eps_p_scale",1.0)*math.sqrt(K_resid.dot(K_resid)/A_resid.dot(A_resid))
+
+	print('k_resid_setup_time: ',k_resid_setup_time)
+	print('dataSamplingOp_forward_time: ',dataSamplingOp_forward_time)
+	print('waveEquationAcousticOp_forward_time: ',waveEquationAcousticOp_forward_time)
+	print('scale_modelOne_time: ',scale_modelOne_time)
+	print('dataSamplingOp_adjoint_time: ',dataSamplingOp_adjoint_time)
+	print('waveEquationAcousticOp_adjoint_time: ',waveEquationAcousticOp_adjoint_time)
 	return epsilon_p
 
 def forcing_term_op_init_p(args):

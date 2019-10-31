@@ -32,13 +32,10 @@ class fft_wfld(Op.Operator):
 	# p(z,x,t) -> p(z,x,w)
 	def adjoint(self,add,model,data):
 		self.checkDomainRange(model,data)
-		print('here1')
 		if(not add): model.zero()
-		print('here2')
 
 		model_nd = model.getNdArray()
 		data_nd = data.getNdArray()
-		print('here3')
 		model_nd[:] += np.fft.rfft(data_nd, axis=0)/math.sqrt(self.nt)
 
 		return

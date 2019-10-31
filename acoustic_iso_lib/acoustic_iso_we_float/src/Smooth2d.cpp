@@ -54,7 +54,6 @@ void Smooth2d::forward(const bool                         add,
         (*b)[ix+_nfilt2][iz+_nfilt1] = (*m)[ix][iz];
       }
     }
-std::cerr << "here0\n";
    //#pragma omp parallel for collapse(2)
   for (int i2 = 0; i2 < n2; i2++) {
     for (int i1 = 0 ; i1 < n1; i1++) {
@@ -63,10 +62,9 @@ std::cerr << "here0\n";
         	  (*d)[i2][i1] += (*b)[i2+_nfilt2+if2][i1+_nfilt1+if1];
           }
         }
-        (*d)[i2][i1] = (*d)[i2][i1]/(2*_nfilt1*2*_nfilt2); 
+        (*d)[i2][i1] = (*d)[i2][i1]/(2*_nfilt1*2*_nfilt2);
     }
   }
-std::cerr << "here1\n";
 }
 
 // adjoint
@@ -104,8 +102,7 @@ void Smooth2d::adjoint(const bool                         add,
         	  (*m)[i2][i1] += (*b)[i2+_nfilt2+if2][i1+_nfilt1+if1];
           }
         }
-        (*m)[i2][i1] = (*m)[i2][i1]/(2*_nfilt1*2*_nfilt2); 
+        (*m)[i2][i1] = (*m)[i2][i1]/(2*_nfilt1*2*_nfilt2);
     }
   }
 }
-
