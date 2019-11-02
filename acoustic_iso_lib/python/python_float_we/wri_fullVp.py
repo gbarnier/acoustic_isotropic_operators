@@ -257,14 +257,10 @@ if __name__ == '__main__':
 		precondOp_m = None
 
 	############################# Begin Inversion ###############################
-	if(pyinfo): print("\n--------------------------- Running --------------------------------")
+	if(pyinfo): print("\n--------------------------- Checking restart --------------------------------")
 
-	# for number of outer loops
+	# check restart
 	restartIter=parObject.getInt("restartIter",-1)
-	#if(restartIter!=-1 and os.path.isfile(p_prefix+"_iter"+str(restartIter-1)+"_inv_mod.H")!=1):
-	#	print("ERROR: specified restart at iteration ",restartIter,", but previous iteration does not exist")
-	#	print("\tLooking for file: ",p_prefix+"_iter"+str(restartIter-1)+"_inv_mod.H")
-	#	exit()
 	if(restartIter==-1):
 		print("no restart")
 		pFinished=parObject.getInt("pFinished",0)
@@ -278,6 +274,20 @@ if __name__ == '__main__':
 		if(restartIter!=0):
 			current_m_model=genericIO.defaultIO.getVector(m_prefix+"_iter"+str(restartIter-1)+"_inv_mod.H")
 		print("restarting at iteration ",restartIter,". Wavefield already reconstructed=",pFinished)
+
+	############################# Evaluate epsilon ###############################
+	#need to set earth model in wave equation operator
+	waveEquationAcousticOp.update_slsq(current_m_model)
+	# Evaluate Epsilon for p inversion
+	if (epsilonEval==1):
+		if(pyinfo): print("--- Epsilon evaluation ---")
+		inv_log.addToLog("--- Epsilon evaluation ---")
+		epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
+	else:
+		epsilon_p=parObject.getFloat("eps_p_scale",1.0)*parObject.getFloat("eps_p",1.0)
+	if(pyinfo): print("--- Epsilon value: ",epsilon_p," ---")
+	inv_log.addToLog("--- Epsilon value: %s ---"%(epsilon_p))
+
 	for iteration in range(restartIter,nIter):
 		if(pyinfo): print("\n---------------------- Running Iteration ",iteration," ---------------------------")
 		inv_log.addToLog("\n---------------------- Running Iteration "+str(iteration)+" ---------------------------")

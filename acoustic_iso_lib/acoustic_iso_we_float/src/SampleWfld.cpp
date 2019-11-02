@@ -21,7 +21,7 @@ SampleWfld::SampleWfld(const std::shared_ptr<SEP::float3DReg>model,const std::sh
   _d3 = data->getHyper()->getAxis(3).d;
   _max_vel=max_vel;
 
-  // model and data should have same axis 
+  // model and data should have same axis
   assert(_n1 == model->getHyper()->getAxis(1).n);
   assert(_n2 == model->getHyper()->getAxis(2).n);
   assert(_n3 == model->getHyper()->getAxis(3).n);
@@ -34,26 +34,25 @@ SampleWfld::SampleWfld(const std::shared_ptr<SEP::float3DReg>model,const std::sh
 
   _mask.reset(new float3DReg(_n1,_n2,_n3));
   _mask->set(0.0);
- 
+
   int num_sources= xCoordSou->getHyper()->getAxis(1).n;
   int num_recs = xCoordRec->getHyper()->getAxis(1).n;
 
-std::cerr << "here0\n";
+
   //set rec grid points to 1 for all time
   for(int i_r = 0; i_r< num_recs; i_r++){
-    float ir_x = (*xCoordRec->_mat)[i_r];	
-    float ir_z = (*zCoordRec->_mat)[i_r];	
-    float ir_x_temp = (ir_x - _o2)/_d2; 
-    float ir_z_temp = (ir_z - _o1)/_d1; 
+    float ir_x = (*xCoordRec->_mat)[i_r];
+    float ir_z = (*zCoordRec->_mat)[i_r];
+    float ir_x_temp = (ir_x - _o2)/_d2;
+    float ir_z_temp = (ir_z - _o1)/_d1;
     int ix = ir_x_temp; // x-coordinate on regular grid
     int iz = ir_z_temp; // z-coordinate on regular grid
     //std::cerr << "\nirec: " << i_r << "\nir_x: " << ir_x << " ix: " << ix << "\nir_z: " << ir_z << " iz: " << iz << std::endl;
     for (int i3 = 0; i3 < _n3; i3++) {
       //std::cerr << "i3: " << i3 << std::endl;
-      (*_mask->_mat)[i3][ix][iz] = 1;   
+      (*_mask->_mat)[i3][ix][iz] = 1;
     }
   }
-std::cerr << "here1\n";
 
   //make mask expanding from sources
     for (int i2 = 0; i2 < _n2; i2++) {
@@ -62,10 +61,10 @@ std::cerr << "here1\n";
 	float i_x = _o2 + (float)i2 * _d2;
 	float i_z = _o1 + (float)i1 * _d1;
         float min_dist = -1;
-        //loop over all sources 
+        //loop over all sources
 	for(int i_s = 0; i_s< num_sources; i_s++){
-		float is_x = (*xCoordSou->_mat)[i_s];	
-		float is_z = (*zCoordSou->_mat)[i_s];	
+		float is_x = (*xCoordSou->_mat)[i_s];
+		float is_z = (*zCoordSou->_mat)[i_s];
 		float cur_dist = pow((is_x - i_x)*(is_x - i_x) + (is_z - i_z)*(is_z - i_z),0.5);
 		if(cur_dist < min_dist || min_dist < 0) min_dist = cur_dist;
 	}
@@ -79,7 +78,7 @@ std::cerr << "here1\n";
 	}
       }
     }
-  
+
 
   // set domain and range
   setDomainRange(model, data);
@@ -158,7 +157,7 @@ void SampleWfld::adjoint(const bool                         add,
  //     }
  //   }
  // }
- 
+
 
 }
 SampleWfldTime::SampleWfldTime(const std::shared_ptr<SEP::float3DReg>model,
@@ -219,6 +218,6 @@ void SampleWfldTime::adjoint(const bool                         add,
         if(i3 < _tmin) (*m)[i3][i2][i1] += (*d)[i3][i2][i1];
         else  (*m)[i3][i2][i1] += 0.0;
   }}}
- 
+
 
 }

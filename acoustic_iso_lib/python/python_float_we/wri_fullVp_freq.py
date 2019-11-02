@@ -43,16 +43,12 @@ if __name__ == '__main__':
 	inv_log.addToLog("------------------ Full Wavefield Reconstruction Inversion --------------")
 
 	############################# Initialize Operators ###############################
-	#init masking ops
-	#timeMask=0;
-	#maskWidth=parObject.getInt("maskWidth",0)
-	#mask3dOp = Mask3d.mask3d(modelFloat,modelFloat,maskWidth,modelFloat.getHyper().axes[0].n-maskWidth,maskWidth,modelFloat.getHyper().axes[1].n-maskWidth,0,modelFloat.getHyper().axes[2].n-timeMask,0)
 	#init F
 	p_modelFloat_fft,_,FFTop = wriUtilFloat.fft_wfld_init(sys.argv)
 	#FFTop = pyOp.Transpose(FFTop)
 
 	#init A(m)
-	p_modelFloat,_,slsqFloat,parObject,tempWaveEquationOp = Acoustic_iso_float_we.waveEquationOpInitFloat(sys.argv)
+	_,_,slsqFloat,parObject,tempWaveEquationOp = Acoustic_iso_float_we.waveEquationOpInitFloat(sys.argv)
 #	waveEquationAcousticOp = pyOp.ChainOperator(tempWaveEquationOp,mask3dOp)
 	waveEquationAcousticOp = pyOp.ChainOperator(FFTop,tempWaveEquationOp)
 
@@ -109,12 +105,16 @@ if __name__ == '__main__':
 	if (initial_p_model_file=="None"):
 		if(pyinfo): print("No initial wavefield provided... using zero wavefield")
 		current_p_model=p_modelFloat_fft.cloneSpace()
+		current_p_model_time=dataSamplingOp.getDomain().cloneSpace()
 		current_p_model.zero(0.0)
+		current_p_model_time.zero()
 	else:
 		initial_p_model_file_format=parObject.getString("initial_p_model_format","freq")
 		if (initial_p_model_file_format=="freq"):
 			if(pyinfo): print("Initial wavefield provided in freq domain: ", initial_p_model_file)
 			current_p_model=genericIO.defaultIO.getVector(initial_p_model_file,storage='dataComplex')
+			current_p_model_time=dataSamplingOp.getDomain().cloneSpace()
+			current_p_model_time.zero()
 		elif (initial_p_model_file_format=="time"):
 			if(pyinfo): print("Initial wavefield provided in time domain (will convert to freq): ", initial_p_model_file)
 			current_p_model_time=genericIO.defaultIO.getVector(initial_p_model_file,storage='float')
@@ -157,37 +157,6 @@ if __name__ == '__main__':
 			gradioOp.dotTest(1)
 
 	############################# Regularization ###############################
-	# Evaluate Epsilon for p inversion
-	if (epsilonEval==1):
-		if(pyinfo): print("--- Epsilon evaluation ---")
-		inv_log.addToLog("--- Epsilon evaluation ---")
-
-		epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
-	#	#make first data residual
-	#	K_resid = SepVector.getSepVector(dataSamplingOp.getRange().getHyper(),storage="dataFloat")
-	#	K_resid.scaleAdd(p_dataFloat,0,-1)
-	#	dataSamplingOp.forward(1,current_p_model,K_resid)
-
-	#	#make first model residual
-	#	A_resid = SepVector.getSepVector(waveEquationAcousticOp.getRange().getHyper(),storage="dataFloat")
-	#	A_resid.scaleAdd(prior,0,-1)
-	#	waveEquationAcousticOp.forward(1,current_p_model,A_resid)
-
-	#	if(current_p_model.norm()!=0):
-	#		#update model
-	#		modelOne = SepVector.getSepVector(current_p_model.getHyper(),storage="dataFloat")
-	#		modelOne.scale(0.0)
-	#		dataSamplingOp.adjoint(1,modelOne,K_resid)
-	#		waveEquationAcousticOp.adjoint(1,modelOne,A_resid)
-	#		dataSamplingOp.forward(1,modelOne,K_resid)
-	#		waveEquationAcousticOp.forward(1,modelOne,A_resid)
-
-	#	epsilon_p = parObject.getFloat("eps_p_scale",1.0)*math.sqrt(K_resid.dot(K_resid)/A_resid.dot(A_resid))
-	else:
-		epsilon_p=parObject.getFloat("eps_p_scale",1.0)*parObject.getFloat("eps_p",1.0)
-	if(pyinfo): print("--- Epsilon value: ",epsilon_p," ---")
-	inv_log.addToLog("--- Epsilon value: %s ---"%(epsilon_p))
-
 	# regularization of m inversion
 	minBound=parObject.getFloat("minBound", -100)
 	maxBound=parObject.getFloat("maxBound", 100)
@@ -268,14 +237,10 @@ if __name__ == '__main__':
 		precondOp_m = None
 
 	############################# Begin Inversion ###############################
-	if(pyinfo): print("\n--------------------------- Running --------------------------------")
+	if(pyinfo): print("\n--------------------------- Checking restart --------------------------------")
 
-	# for number of outer loops
+	# check restart
 	restartIter=parObject.getInt("restartIter",-1)
-	#if(restartIter!=-1 and os.path.isfile(p_prefix+"_iter"+str(restartIter-1)+"_inv_mod.H")!=1):
-	#	print("ERROR: specified restart at iteration ",restartIter,", but previous iteration does not exist")
-	#	print("\tLooking for file: ",p_prefix+"_iter"+str(restartIter-1)+"_inv_mod.H")
-	#	exit()
 	if(restartIter==-1):
 		print("no restart")
 		pFinished=parObject.getInt("pFinished",0)
@@ -289,6 +254,21 @@ if __name__ == '__main__':
 		if(restartIter!=0):
 			current_m_model=genericIO.defaultIO.getVector(m_prefix+"_iter"+str(restartIter-1)+"_inv_mod.H")
 		print("restarting at iteration ",restartIter,". Wavefield already reconstructed=",pFinished)
+
+	############################# Evaluate epsilon ###############################
+	#need to set earth model in wave equation operator
+	waveEquationAcousticOp.op2.update_slsq(current_m_model)
+	# Evaluate Epsilon for p inversion
+	if (epsilonEval==1):
+		if(pyinfo): print("--- Epsilon evaluation ---")
+		inv_log.addToLog("--- Epsilon evaluation ---")
+		epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
+	else:
+		epsilon_p=parObject.getFloat("eps_p_scale",1.0)*parObject.getFloat("eps_p",1.0)
+	if(pyinfo): print("--- Epsilon value: ",epsilon_p," ---")
+	inv_log.addToLog("--- Epsilon value: %s ---"%(epsilon_p))
+
+	# for number of outer loops
 	for iteration in range(restartIter,nIter):
 		if(pyinfo): print("\n---------------------- Running Iteration ",iteration," ---------------------------")
 		inv_log.addToLog("\n---------------------- Running Iteration "+str(iteration)+" ---------------------------")
@@ -296,7 +276,7 @@ if __name__ == '__main__':
 		if(pFinished==0):
 			# minimize ||Kp-d||+e^2/2||A(m)p-f|| w.r.t. p
 			# update m
-			waveEquationAcousticOp.update_slsq(current_m_model)
+			waveEquationAcousticOp.op2.update_slsq(current_m_model)
 			#re-evaluate epsilon
 			if(parObject.getInt("reEvalEpsilon",0)!=0):
 				epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
@@ -316,13 +296,14 @@ if __name__ == '__main__':
 			p_LCGsolver.run(p_invProb,verbose=True)
 			# update current p model
 			current_p_model=p_LCGsolver.inv_model
+			FFTop.forward(False,current_p_model,current_p_model_time)
 		pFinished=0
 		# minimize ||A(p)m-f|| w.r.t. m
 		# update p and f
 		#m_dataFloat,_ = Acoustic_iso_float_gradio.update_data(current_p_model,sys.argv) #f is actaully f+Lapl(p) so we need to update
 		#gradioOp.get_op1().update_wfld(current_p_model) # updates d2p/dt2
 		# create new gradioOp
-		_,m_dataFloat,pressureData,gradioOp= Acoustic_iso_float_gradio.gradioOpInitFloat_givenPressure(current_p_model,sys.argv)
+		_,m_dataFloat,pressureData,gradioOp= Acoustic_iso_float_gradio.gradioOpInitFloat_givenPressure(current_p_model_time,sys.argv)
 		#update prec
 		# reinit L2 problem with new initial m
 		m_invProb=Prblm.ProblemL2LinearReg(current_m_model,m_dataFloat,gradioOp,epsilon_m,minBound=minBoundVector,maxBound=maxBoundVector,reg_op=regOp_m,prec=precondOp_m)
