@@ -3,7 +3,7 @@ project(seis_utils_double)
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 
 set(PythonMains
-    waveletDoubleMain.py
+
 )
 
 set(PythonModules
@@ -11,7 +11,7 @@ set(PythonModules
 )
 
 install(FILES ${PythonModules} DESTINATION lib/python)
-install(FILES ${PythonMains} PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+# install(FILES ${PythonMains} PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 
 
 # This is a CMake example for Python

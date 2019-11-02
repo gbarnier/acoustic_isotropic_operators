@@ -7,7 +7,7 @@ import sys
 
 if __name__ == '__main__':
 
-	# IO object
+	# Bullshit stuff
 	parObject=genericIO.io(params=sys.argv)
 
 	# Ali's wavelet
@@ -20,11 +20,15 @@ if __name__ == '__main__':
 		timeDelay=parObject.getFloat("timeDelay",0.0)
 
 		# Time signal
-		timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+		timeAxis=Hypercube.axis(n=nts,o=ots,d=dts,label="Time")
 		waveletHyper=Hypercube.hypercube(axes=[timeAxis])
 		wavelet=SepVector.getSepVector(waveletHyper)
 		waveletNd=wavelet.getNdArray();
-		waveletFftNd=np.zeros(waveletNd.shape,dtype=np.complex64)
+		odd = False
+		if(nts%2 != 0):
+			nts+=1
+			odd=True
+		waveletFftNd=np.zeros(nts,dtype=np.complex64)
 
 		# Frequency parameters
 		f1=parObject.getFloat("f1",-1.0)
@@ -62,7 +66,10 @@ if __name__ == '__main__':
 		waveletFftNd[nts//2+1:] = np.flip(waveletFftNd[1:nts//2].conj())
 
 		# Apply inverse FFT
-		waveletNd[:]=np.fft.ifft(waveletFftNd[:]).real #*2.0/np.sqrt(nts)
+		if(odd):
+			waveletNd[:]=np.fft.ifft(waveletFftNd[:-1]).real #*2.0/np.sqrt(nts)
+		else:
+			waveletNd[:]=np.fft.ifft(waveletFftNd[:]).real #*2.0/np.sqrt(nts)
 
 		# Write wavelet to disk
 		waveletFile=parObject.getString("wavelet")
