@@ -201,47 +201,38 @@ def buildReceiversGeometryDipole(parObject,vel):
 	return receiversVector,receiverAxis
 
 ############################### Nonlinear ######################################
-def nonlinearOpInitFloat(args):
+def nonlinearOpInitFloat(args,client=None):
 	"""Function to correctly initialize nonlinear operator
 	   The function will return the necessary variables for operator construction
 	"""
 	# IO object
 	parObject=genericIO.io(params=args)
 
-	hostnames = parObject.getString("hostnames","None")
+	# Allocate and read velocity
+	velFile=parObject.getString("vel","noVelFile")
+	if (velFile == "noVelFile"):
+		print("**** ERROR: User did not provide velocity file ****\n")
+		quit()
+	velFloat=genericIO.defaultIO.getVector(velFile)
 
-	if(hostnames == "None"):
+	# Time Axis
+	nts=parObject.getInt("nts",-1)
+	ots=parObject.getFloat("ots",0.0)
+	dts=parObject.getFloat("dts",-1.0)
+	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
 
-		hostnames = hostnames.split(",")
-		print(hostnames)
+	# Allocate model and fill with zeros
+	dummyAxis=Hypercube.axis(n=1)
+	modelHyper=Hypercube.hypercube(axes=[timeAxis,dummyAxis,dummyAxis])
+	modelFloat=SepVector.getSepVector(modelHyper)
 
-	else:
+	# Allocate data and fill with zeros
+	dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis])
+	dataFloat=SepVector.getSepVector(dataHyper)
 
-		# Allocate and read velocity
-		velFile=parObject.getString("vel","noVelFile")
-		if (velFile == "noVelFile"):
-			print("**** ERROR: User did not provide velocity file ****\n")
-			quit()
-		velFloat=genericIO.defaultIO.getVector(velFile)
-
-		# Build sources/receivers geometry
-		sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
-		receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
-
-		# Time Axis
-		nts=parObject.getInt("nts",-1)
-		ots=parObject.getFloat("ots",0.0)
-		dts=parObject.getFloat("dts",-1.0)
-		timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
-
-		# Allocate model and fill with zeros
-		dummyAxis=Hypercube.axis(n=1)
-		modelHyper=Hypercube.hypercube(axes=[timeAxis,dummyAxis,dummyAxis])
-		modelFloat=SepVector.getSepVector(modelHyper)
-
-		# Allocate data and fill with zeros
-		dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis])
-		dataFloat=SepVector.getSepVector(dataHyper)
+	# Build sources/receivers geometry
+	sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
+	receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
 
 	# Outputs
 	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,receiversVector

@@ -7,10 +7,22 @@ import numpy as np
 import time
 import sys
 
+#Dask-related modules
+from dask_util import DaskClient
+
 if __name__ == '__main__':
 
+	#Getting parameter object
+	parObject=genericIO.io(params=sys.argv)
+	hostnames = parObject.getString("hostnames","noHost")
+	client = None
+	#Starting Dask client if requested
+	if(hostnames != "noHost"):
+		print("Starting dask client using following workers: %s"%(hostnames))
+		client = DaskClient(hostnames.split(","))
+
     # Initialize operator
-    modelFloat,dataFloat,velFloat,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv)
+    modelFloat,dataFloat,velFloat,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv,client)
 
     # Construct nonlinear operator object
     nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(modelFloat,dataFloat,velFloat,parObject.param,sourcesVector,receiversVector)
