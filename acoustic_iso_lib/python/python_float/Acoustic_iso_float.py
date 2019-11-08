@@ -18,6 +18,29 @@ import numpy as np
 
 from pyAcoustic_iso_float_nl import deviceGpu
 
+
+#Dask-related modules and functions
+import dask.distributed as daskD
+
+def create_parObj(args):
+	""" Function to call genericIO correctly"""
+	obj = genericIO.io(params=args)
+	return obj
+
+def call_deviceGpu(nzDevice, ozDevice, dzDevice, nxDevice, oxDevice, dxDevice, vel, nts, dipole, zDipoleShift, xDipoleShift):
+	"""Function instantiate a deviceGpu object (first constructor)"""
+	obj = deviceGpu(nzDevice, ozDevice, dzDevice, nxDevice, oxDevice, dxDevice, vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift)
+	return obj
+
+def call_deviceGpu1(z_dev, x_dev, vel, nts, dipole, zDipoleShift, xDipoleShift):
+	"""Function to construct device using its absolute position"""
+	zCoordFloat=SepVector.getSepVector(ns=[1])
+	xCoordFloat=SepVector.getSepVector(ns=[1])
+	zCoordFloat.set(z_dev)
+	xCoordFloat.set(x_dev)
+	obj = deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift)
+	return obj
+
 ############################ Bounds vectors ####################################
 # Create bound vectors for FWI
 def createBoundVectors(parObject,model):
@@ -62,7 +85,7 @@ def createBoundVectors(parObject,model):
 
 ############################ Acquisition geometry ##############################
 # Build sources geometry
-def buildSourceGeometry(parObject,vel):
+def buildSourceGeometry(parObject,vel,client=None):
 
 	#Common parameters
 	sourceGeomFile = parObject.getString("sourceGeomFile","None")
@@ -75,25 +98,23 @@ def buildSourceGeometry(parObject,vel):
 
 	#Reading source geometry from file
 	if(sourceGeomFile != "None"):
-		sourceGeomVector=genericIO.defaultIO.getVector(sourceGeomFile)
-		sourceGeomVectorNd = sourceGeomVector.getNdArray()
-		SourceAxis=Hypercube.axis(n=1,o=0.0,d=1.0)
-		zCoordFloat=SepVector.getSepVector(SourceAxis,storage="dataFloat")
-		xCoordFloat=SepVector.getSepVector(SourceAxis,storage="dataFloat")
+		sourceGeomVectorNd = genericIO.defaultIO.getVector(sourceGeomFile).getNdArray()
+		zCoordFloat=SepVector.getSepVector(ns=[1])
+		xCoordFloat=SepVector.getSepVector(ns=[1])
 		#Check for consistency between number of shots and provided coordinates
 		if(nShot != sourceGeomVectorNd.shape[1]):
-			raise ValueError("ERROR! Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
+			raise ValueError("Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
 		#Setting source geometry
 		for ishot in range(nShot):
 			#Setting z and x position of the source for the given experiment
 			zCoordFloat.set(sourceGeomVectorNd[2,ishot])
 			xCoordFloat.set(sourceGeomVectorNd[0,ishot])
-			sourcesVector.append(deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, nts, dipole, zDipoleShift, xDipoleShift))
+			sourcesVector.append(deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift))
+		sourceAxis=Hypercube.axis(n=nShot,o=1.0,d=1.0)
 
 	#Reading regular source geometry from parameters
 	else:
 		# Horizontal axis
-		dx=vel.getHyper().axes[1].n
 		dx=vel.getHyper().axes[1].d
 		ox=vel.getHyper().axes[1].o
 		# Sources geometry
@@ -112,11 +133,71 @@ def buildSourceGeometry(parObject,vel):
 
 	return sourcesVector,sourceAxis
 
+# Build sources geometry for Dask
+def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
+
+	#Common parameters
+	sourceGeomFile = parObject.getString("sourceGeomFile","None")
+	List_Shots = parObject.getInts("nShot")
+	nts = parObject.getInt("nts")
+	dipole = parObject.getInt("dipole",0)
+	zDipoleShift = parObject.getInt("zDipoleShift",2)
+	xDipoleShift = parObject.getInt("xDipoleShift",0)
+
+	#Checking if list of shots is consistent with number of workers
+	nWrks = client.getNworkers()
+	#Getting number of shots
+	List_Shots = parObject.getInts("nShot")
+	if len(List_Shots) != nWrks:
+		raise ValueError("Number of workers (#nWrk=%s) not consistent with length of the provided list of shots (len=%s)"%(nWrks,len(List_Shots)))
+
+	sourcesVector = [[] for ii in range(nWrks)]
+	sourceAxis = []
+
+	#Reading source geometry from file
+	if(sourceGeomFile != "None"):
+		sourceGeomVectorNd = genericIO.defaultIO.getVector(sourceGeomFile).getNdArray()
+		for idx,nShot in enumerate(List_Shots):
+			#Check for consistency between number of shots and provided coordinates
+			if(nShot != sourceGeomVectorNd.shape[1]):
+				raise ValueError("Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
+			#Setting source geometry
+			for ishot in range(nShot):
+				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu1, sourceGeomVectorNd[2,ishot],sourceGeomVectorNd[0,ishot], vel[idx], nts, dipole, zDipoleShift, xDipoleShift))
+			sourceAxis.append(Hypercube.axis(n=nShot,o=1.0,d=1.0))
+
+	#Reading regular source geometry from parameters
+	else:
+		# Horizontal axis
+		dx=hyper_vel.axes[1].d
+		ox=hyper_vel.axes[1].o
+		# Sources geometry
+		nzSource=1
+		dzSource=1
+		nxSource=1
+		dxSource=1
+		ozSource=parObject.getInt("zSource")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
+		oxSource=parObject.getInt("xSource")-1+parObject.getInt("xPadMinus")+parObject.getInt("fat")
+		spacingShots=parObject.getInt("spacingShots")
+		#Source position and sampling
+		ox = ox+oxSource*dx
+		dx = spacingShots*dx
+		for idx,nShot in enumerate(List_Shots):
+			#Shot axis for given shots
+			sourceAxis.append(Hypercube.axis(n=nShot,o=ox,d=dx))
+			#Setting source geometry
+			for ishot in range(nShot):
+				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu, nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, vel[idx], nts, dipole, zDipoleShift, xDipoleShift, pure=False))
+				oxSource=oxSource+dx # Shift source
+			#Adding shots offset to origin of shot axis
+			ox += (nShot-1)*dx
+
+	return sourcesVector,sourceAxis
+
 # Build sources geometry for dipole only
 def buildSourceGeometryDipole(parObject,vel):
 
 	# Horizontal axis
-	dx=vel.getHyper().axes[1].n
 	dx=vel.getHyper().axes[1].d
 	ox=vel.getHyper().axes[1].o
 
@@ -148,12 +229,15 @@ def buildSourceGeometryDipole(parObject,vel):
 	return sourcesVector,sourceAxis
 
 # Build receivers geometry
-def buildReceiversGeometry(parObject,vel):
+def buildReceiversGeometry(parObject,vel,client=None):
 
 	# Horizontal axis
-	dx=vel.getHyper().axes[1].n
 	dx=vel.getHyper().axes[1].d
 	ox=vel.getHyper().axes[1].o
+	nts = parObject.getInt("nts")
+	dipole = parObject.getInt("dipole",0)
+	zDipoleShift = parObject.getInt("zDipoleShift",2)
+	xDipoleShift = parObject.getInt("xDipoleShift",0)
 
 	nzReceiver=1
 	ozReceiver=parObject.getInt("depthReceiver")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
@@ -165,7 +249,34 @@ def buildReceiversGeometry(parObject,vel):
 	receiversVector=[]
 	nRecGeom=1; # Constant receivers' geometry
 	for iRec in range(nRecGeom):
-		receiversVector.append(deviceGpu(nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel.getCpp(),parObject.getInt("nts"), parObject.getInt("dipole",0), parObject.getInt("zDipoleShift",2), parObject.getInt("xDipoleShift",0)))
+		receiversVector.append(deviceGpu(nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel.getCpp(),nts, dipole, zDipoleShift, xDipoleShift))
+
+	return receiversVector,receiverAxis
+
+def buildReceiversGeometryDask(parObject,vel,hyper_vel,client=None):
+
+	# Horizontal axis
+	dx=hyper_vel.axes[1].d
+	ox=hyper_vel.axes[1].o
+	nts = parObject.getInt("nts")
+	dipole = parObject.getInt("dipole",0)
+	zDipoleShift = parObject.getInt("zDipoleShift",2)
+	xDipoleShift = parObject.getInt("xDipoleShift",0)
+
+	nzReceiver=1
+	ozReceiver=parObject.getInt("depthReceiver")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
+	dzReceiver=1
+	nxReceiver=parObject.getInt("nReceiver")
+	oxReceiver=parObject.getInt("oReceiver")-1+parObject.getInt("xPadMinus")+parObject.getInt("fat")
+	dxReceiver=parObject.getInt("dReceiver")
+
+	#Getting number of workers
+	nWrks = client.getNworkers()
+
+	receiverAxis=[Hypercube.axis(n=nxReceiver,o=ox+oxReceiver*dx,d=dxReceiver*dx)]*nWrks
+	receiversVector = [[] for ii in range(nWrks)]
+	for iwrk in range(nWrk):
+		receiversVector[iwrk].append(client.getClient().submit(call_deviceGpu,nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel[idx],nts, dipole, zDipoleShift, xDipoleShift))
 
 	return receiversVector,receiverAxis
 
@@ -226,13 +337,40 @@ def nonlinearOpInitFloat(args,client=None):
 	modelHyper=Hypercube.hypercube(axes=[timeAxis,dummyAxis,dummyAxis])
 	modelFloat=SepVector.getSepVector(modelHyper)
 
-	# Allocate data and fill with zeros
-	dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis])
-	dataFloat=SepVector.getSepVector(dataHyper)
+	#Setting variables if Dask is employed
+	if(client):
+		#Getting number of workers and passing
+		nWrks = client.getNworkers()
+		#Spreading domain vector (i.e., wavelet)
+		modelFloat = pyDaskVector.DaskVector(client,vectors=[modelFloat]*nWrks).vecDask
+		#Spreading velocity model to workers
+		hyper_vel = velFloat.getHyper()
+		velFloat = pyDaskVector.DaskVector(client,vectors=[velFloat]*nWrks).vecDask
 
-	# Build sources/receivers geometry
-	sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
-	receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometryDask(parObject,velFloat,hyper_vel,client)
+		receiversVector,receiverAxis=buildReceiversGeometryDask(parObject,velFloat,hyper_vel,client)
+
+		#Allocating data vectors to be spread
+		dataFloat = []
+		for iwrk in range(nWrks):
+			dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis[iwrk]])
+			dataFloat.append(SepVector.getSepVector(dataHyper))
+		dataFloat = pyDaskVector.DaskVector(client,vectors=dataFloat).vecDask
+
+		#Spreading/Instantiating the parameter objects
+		parObject = client.getClient().map(create_parObj,[args]*nWrks,pure=False)
+		daskD.wait(parObject)
+
+	else:
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
+		receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
+
+		# Allocate data and fill with zeros
+		dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis])
+		dataFloat=SepVector.getSepVector(dataHyper)
 
 	# Outputs
 	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,receiversVector

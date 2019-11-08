@@ -20,71 +20,75 @@ if __name__ == '__main__':
 	if(hostnames != "noHost"):
 		print("Starting dask client using following workers: %s"%(hostnames))
 		client = DaskClient(hostnames.split(","))
+		print("Client has started!")
 
-    # Initialize operator
-    modelFloat,dataFloat,velFloat,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv,client)
+	# Initialize operator
+	modelFloat,dataFloat,velFloat,parObject1,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv,client)
 
-    # Construct nonlinear operator object
-    nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(modelFloat,dataFloat,velFloat,parObject.param,sourcesVector,receiversVector)
+	if(client):
+		quit()
+	else:
+		# Construct nonlinear operator object
+		nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(modelFloat,dataFloat,velFloat,parObject1.param,sourcesVector,receiversVector)
 
-    # Forward
-    if (parObject.getInt("adj",0) == 0):
+	# Forward
+	if (parObject.getInt("adj",0) == 0):
 
-        print("-------------------------------------------------------------------")
-        print("------------------ Running Python nonlinear forward ---------------")
-        print("-------------------- Single precision Python code -----------------")
-        print("-------------------------------------------------------------------\n")
+		print("-------------------------------------------------------------------")
+		print("------------------ Running Python nonlinear forward ---------------")
+		print("-------------------- Single precision Python code -----------------")
+		print("-------------------------------------------------------------------\n")
 
-        # Check that model was provided
-        modelFile=parObject.getString("model","noModelFile")
-        if (modelFile == "noModelFile"):
-            print("**** ERROR: User did not provide model file ****\n")
-            quit()
+		# Check that model was provided
+		modelFile=parObject.getString("model","noModelFile")
+		if (modelFile == "noModelFile"):
+			print("**** ERROR: User did not provide model file ****\n")
+			quit()
 
-        # Read model
-        modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
+		# Read model
+		modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
 
-        # Apply forward
-        nonlinearOp.forward(False,modelFloat,dataFloat)
+		# Apply forward
+		nonlinearOp.forward(False,modelFloat,dataFloat)
 
-        # Write data
-        dataFile=parObject.getString("data","noDataFile")
-        if (dataFile == "noDataFile"):
-            print("**** ERROR: User did not provide data file name ****\n")
-            quit()
-        genericIO.defaultIO.writeVector(dataFile,dataFloat)
+		# Write data
+		dataFile=parObject.getString("data","noDataFile")
+		if (dataFile == "noDataFile"):
+			print("**** ERROR: User did not provide data file name ****\n")
+			quit()
+		genericIO.defaultIO.writeVector(dataFile,dataFloat)
 
-        print("-------------------------------------------------------------------")
-        print("--------------------------- All done ------------------------------")
-        print("-------------------------------------------------------------------\n")
+		print("-------------------------------------------------------------------")
+		print("--------------------------- All done ------------------------------")
+		print("-------------------------------------------------------------------\n")
 
-    # Adjoint
-    else:
+	# Adjoint
+	else:
 
-        print("-------------------------------------------------------------------")
-        print("----------------- Running Python nonlinear adjoint ----------------")
-        print("-------------------- Single precision Python code -----------------")
-        print("-------------------------------------------------------------------\n")
+		print("-------------------------------------------------------------------")
+		print("----------------- Running Python nonlinear adjoint ----------------")
+		print("-------------------- Single precision Python code -----------------")
+		print("-------------------------------------------------------------------\n")
 
-        # Check that data was provided
-        dataFile=parObject.getString("data","noDataFile")
-        if (dataFile == "noDataFile"):
-            print("**** ERROR: User did not provide data file ****\n")
-            quit()
+		# Check that data was provided
+		dataFile=parObject.getString("data","noDataFile")
+		if (dataFile == "noDataFile"):
+			print("**** ERROR: User did not provide data file ****\n")
+			quit()
 
-        # Read data
-        dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
+		# Read data
+		dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
 
-        # Apply adjoint
-        nonlinearOp.adjoint(False,modelFloat,dataFloat)
+		# Apply adjoint
+		nonlinearOp.adjoint(False,modelFloat,dataFloat)
 
-        # Write model
-        modelFile=parObject.getString("model","noModelFile")
-        if (modelFile == "noModelFile"):
-            print("**** ERROR: User did not provide model file name ****\n")
-            quit()
-        genericIO.defaultIO.writeVector(modelFile,modelFloat)
+		# Write model
+		modelFile=parObject.getString("model","noModelFile")
+		if (modelFile == "noModelFile"):
+			print("**** ERROR: User did not provide model file name ****\n")
+			quit()
+		genericIO.defaultIO.writeVector(modelFile,modelFloat)
 
-        print("-------------------------------------------------------------------")
-        print("--------------------------- All done ------------------------------")
-        print("-------------------------------------------------------------------\n")
+		print("-------------------------------------------------------------------")
+		print("--------------------------- All done ------------------------------")
+		print("-------------------------------------------------------------------\n")
