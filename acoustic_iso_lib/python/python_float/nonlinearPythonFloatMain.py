@@ -2,6 +2,7 @@
 import genericIO
 import SepVector
 import Hypercube
+import pyOperator as pyOp
 import Acoustic_iso_float
 import numpy as np
 import time
@@ -52,6 +53,11 @@ if __name__ == '__main__':
 
 		# Read model
 		modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
+
+		#Adding spreading operator and concatenating with non-linear operator
+		if(client):
+			Sprd = DaskOp.DaskSpreadOp(client,modelFloat,[1]*nWrks)
+			nonlinearOp = pyOp.ChainOperator(Sprd,nonlinearOp)
 
 		# Apply forward
 		nonlinearOp.forward(False,modelFloat,dataFloat)
