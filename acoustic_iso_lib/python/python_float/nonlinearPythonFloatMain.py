@@ -9,6 +9,7 @@ import sys
 
 #Dask-related modules
 from dask_util import DaskClient
+import pyDaskOperator as DaskOp
 
 if __name__ == '__main__':
 
@@ -27,6 +28,10 @@ if __name__ == '__main__':
 
 	if(client):
 		quit()
+		#Instantiating Dask Operator
+		nWrks = client.getNworkers()
+		nlOp_args = [(modelFloat[iwrk],dataFloat[iwrk],velFloat[iwrk],parObject1[iwrk],sourcesVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		nonlinearOp = DaskOp.DaskOperator(client,Acoustic_iso_float.nonlinearOpInitFloat,scal_op_args,[1]*nWrks)
 	else:
 		# Construct nonlinear operator object
 		nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(modelFloat,dataFloat,velFloat,parObject1.param,sourcesVector,receiversVector)
