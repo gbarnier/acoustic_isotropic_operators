@@ -28,14 +28,13 @@ if __name__ == '__main__':
 	modelFloat,dataFloat,velFloat,parObject1,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv,client)
 
 	if(client):
-		quit()
 		#Instantiating Dask Operator
 		nWrks = client.getNworkers()
-		nlOp_args = [(modelFloat[iwrk],dataFloat[iwrk],velFloat[iwrk],parObject1[iwrk],sourcesVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
-		nonlinearOp = DaskOp.DaskOperator(client,Acoustic_iso_float.nonlinearOpInitFloat,scal_op_args,[1]*nWrks)
+		nlOp_args = [(modelFloat.vecDask[iwrk],dataFloat.vecDask[iwrk],velFloat[iwrk],parObject1[iwrk],sourcesVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		nonlinearOp = DaskOp.DaskOperator(client,Acoustic_iso_float.nonlinearPropShotsGpu,nlOp_args,[1]*nWrks)
 	else:
 		# Construct nonlinear operator object
-		nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(modelFloat,dataFloat,velFloat,parObject1.param,sourcesVector,receiversVector)
+		nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(modelFloat,dataFloat,velFloat,parObject1,sourcesVector,receiversVector)
 
 	# Forward
 	if (parObject.getInt("adj",0) == 0):
@@ -67,7 +66,8 @@ if __name__ == '__main__':
 		if (dataFile == "noDataFile"):
 			print("**** ERROR: User did not provide data file name ****\n")
 			quit()
-		genericIO.defaultIO.writeVector(dataFile,dataFloat)
+		# genericIO.defaultIO.writeVector(dataFile,dataFloat)
+		dataFloat.writeVec(dataFile)
 
 		print("-------------------------------------------------------------------")
 		print("--------------------------- All done ------------------------------")
@@ -75,6 +75,9 @@ if __name__ == '__main__':
 
 	# Adjoint
 	else:
+
+		if(client):
+			raise NotImplementedError("Adjoint operator employing Dask not implemented yet")
 
 		print("-------------------------------------------------------------------")
 		print("----------------- Running Python nonlinear adjoint ----------------")
@@ -103,3 +106,6 @@ if __name__ == '__main__':
 		print("-------------------------------------------------------------------")
 		print("--------------------------- All done ------------------------------")
 		print("-------------------------------------------------------------------\n")
+	#
+	# if client:
+	# 	del client

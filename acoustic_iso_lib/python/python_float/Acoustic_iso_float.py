@@ -21,6 +21,25 @@ from pyAcoustic_iso_float_nl import deviceGpu
 
 #Dask-related modules and functions
 import dask.distributed as daskD
+import pyDaskVector
+import re
+
+def parfile2pars(args):
+	"""Function to expand arguments in parfile to parameters"""
+	#Check if par argument was provided
+	par_arg = None
+	match = [arg for arg in args if "par" in arg]
+	if len(match) > 0:
+		par_arg = match[-1] #Taking last par argument
+	#If par was found expand arguments
+	if par_arg:
+		par_file = par_arg.split("=")[-1]
+		with open(par_file) as fid:
+			lines = fid.read().splitlines()
+		#Substitute par with its arguments
+		idx = args.index(par_arg)
+		args = args[:idx] + lines + args[idx+1:]
+	return args
 
 def create_parObj(args):
 	""" Function to call genericIO correctly"""
@@ -138,7 +157,7 @@ def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
 
 	#Common parameters
 	sourceGeomFile = parObject.getString("sourceGeomFile","None")
-	List_Shots = parObject.getInts("nShot")
+	List_Shots = parObject.getInts("nShot",0)
 	nts = parObject.getInt("nts")
 	dipole = parObject.getInt("dipole",0)
 	zDipoleShift = parObject.getInt("zDipoleShift",2)
@@ -146,10 +165,8 @@ def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
 
 	#Checking if list of shots is consistent with number of workers
 	nWrks = client.getNworkers()
-	#Getting number of shots
-	List_Shots = parObject.getInts("nShot")
 	if len(List_Shots) != nWrks:
-		raise ValueError("Number of workers (#nWrk=%s) not consistent with length of the provided list of shots (len=%s)"%(nWrks,len(List_Shots)))
+		raise ValueError("Number of workers (#nWrk=%s) not consistent with length of the provided list of shots (nShot=%s)"%(nWrks,parObject.getString("nShot")))
 
 	sourcesVector = [[] for ii in range(nWrks)]
 	sourceAxis = []
@@ -163,7 +180,8 @@ def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
 				raise ValueError("Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
 			#Setting source geometry
 			for ishot in range(nShot):
-				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu1, sourceGeomVectorNd[2,ishot],sourceGeomVectorNd[0,ishot], vel[idx], nts, dipole, zDipoleShift, xDipoleShift))
+				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu1, sourceGeomVectorNd[2,ishot],sourceGeomVectorNd[0,ishot], vel[idx], nts, dipole, zDipoleShift, xDipoleShift,pure=False))
+			daskD.wait(sourcesVector[idx])
 			sourceAxis.append(Hypercube.axis(n=nShot,o=1.0,d=1.0))
 
 	#Reading regular source geometry from parameters
@@ -188,7 +206,8 @@ def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
 			#Setting source geometry
 			for ishot in range(nShot):
 				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu, nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, vel[idx], nts, dipole, zDipoleShift, xDipoleShift, pure=False))
-				oxSource=oxSource+dx # Shift source
+				oxSource+=spacingShots # Shift source
+			daskD.wait(sourcesVector[idx])
 			#Adding shots offset to origin of shot axis
 			ox += (nShot-1)*dx
 
@@ -275,8 +294,9 @@ def buildReceiversGeometryDask(parObject,vel,hyper_vel,client=None):
 
 	receiverAxis=[Hypercube.axis(n=nxReceiver,o=ox+oxReceiver*dx,d=dxReceiver*dx)]*nWrks
 	receiversVector = [[] for ii in range(nWrks)]
-	for iwrk in range(nWrk):
-		receiversVector[iwrk].append(client.getClient().submit(call_deviceGpu,nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel[idx],nts, dipole, zDipoleShift, xDipoleShift))
+	for iwrk in range(nWrks):
+		receiversVector[iwrk].append(client.getClient().submit(call_deviceGpu,nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel[iwrk],nts, dipole, zDipoleShift, xDipoleShift))
+	daskD.wait(receiversVector)
 
 	return receiversVector,receiverAxis
 
@@ -342,7 +362,8 @@ def nonlinearOpInitFloat(args,client=None):
 		#Getting number of workers and passing
 		nWrks = client.getNworkers()
 		#Spreading domain vector (i.e., wavelet)
-		modelFloat = pyDaskVector.DaskVector(client,vectors=[modelFloat]*nWrks).vecDask
+		modelFloat = pyDaskVector.DaskVector(client,vectors=[modelFloat]*nWrks)
+
 		#Spreading velocity model to workers
 		hyper_vel = velFloat.getHyper()
 		velFloat = pyDaskVector.DaskVector(client,vectors=[velFloat]*nWrks).vecDask
@@ -354,12 +375,20 @@ def nonlinearOpInitFloat(args,client=None):
 		#Allocating data vectors to be spread
 		dataFloat = []
 		for iwrk in range(nWrks):
-			dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis[iwrk]])
+			dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis[iwrk],sourceAxis[iwrk]])
 			dataFloat.append(SepVector.getSepVector(dataHyper))
-		dataFloat = pyDaskVector.DaskVector(client,vectors=dataFloat).vecDask
+		dataFloat = pyDaskVector.DaskVector(client,vectors=dataFloat,copy=False)
 
 		#Spreading/Instantiating the parameter objects
-		parObject = client.getClient().map(create_parObj,[args]*nWrks,pure=False)
+		List_Shots = parObject.getInts("nShot",0)
+		parObject = []
+		args1=parfile2pars(args)
+		#Finding index of nShot parameter
+		idx_nshot = [ii for ii,el in enumerate(args1) if "nShot" in el][-1]
+		for idx,wrkId in enumerate(client.getWorkerIds()):
+			#Substituting nShot with the correct number of shots
+			args1[idx_nshot]="nShot=%s"%(List_Shots[idx])
+			parObject.append(client.getClient().submit(create_parObj,args1,workers=[wrkId],pure=False))
 		daskD.wait(parObject)
 
 	else:
@@ -387,7 +416,7 @@ class nonlinearPropShotsGpu(Op.Operator):
 			velocity = velocity.getCpp()
 		if("getCpp" in dir(paramP)):
 			paramP = paramP.getCpp()
-		self.pyOp = pyAcoustic_iso_float_nl.nonlinearPropShotsGpu(velocity,paramP,sourceVector,receiversVector)
+		self.pyOp = pyAcoustic_iso_float_nl.nonlinearPropShotsGpu(velocity,paramP.param,sourceVector,receiversVector)
 		return
 
 	def forward(self,add,model,data):
@@ -1530,21 +1559,21 @@ class SymesWdBornExtGpu(Op.Operator):
 
 ################################ Symes' Wd #####################################
 class SymesWdGpu(Op.Operator):
-        """Wrapper encapsulating PYBIND11 module for Wd"""
+		"""Wrapper encapsulating PYBIND11 module for Wd"""
 
-        def __init__(self,domain,dts):
-                # Domain = Seismic data
-                # Range = Extended image
-                self.setDomainRange(domain,domain)
-                # Instanciate 3rd time integral
-                self.timeIntegOp=timeIntegModule.timeInteg(domain,dts)
-                return
+		def __init__(self,domain,dts):
+				# Domain = Seismic data
+				# Range = Extended image
+				self.setDomainRange(domain,domain)
+				# Instanciate 3rd time integral
+				self.timeIntegOp=timeIntegModule.timeInteg(domain,dts)
+				return
 
-        def forward(self,add,model,data):
-                self.checkDomainRange(model,data)
-                # Apply time integral (x3)
-                self.timeIntegOp.forward(add,model,data)
-                return
+		def forward(self,add,model,data):
+				self.checkDomainRange(model,data)
+				# Apply time integral (x3)
+				self.timeIntegOp.forward(add,model,data)
+				return
 
 ################################ Symes' Wm #####################################
 class SymesWmGpu(Op.Operator):

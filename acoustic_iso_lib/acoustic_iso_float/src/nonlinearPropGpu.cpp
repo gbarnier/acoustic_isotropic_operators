@@ -54,7 +54,6 @@ void nonlinearPropGpu::forward(const bool add, const std::shared_ptr<float2DReg>
 		propShotsFwdGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
     } else {
 		propShotsFwdGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
-		std::cerr << "popr gpu _wavefield max: " << _wavefield->max() << std::endl;
 	}
 
 	/* Interpolate to irregular grid */
