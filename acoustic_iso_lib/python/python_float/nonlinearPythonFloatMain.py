@@ -25,13 +25,16 @@ if __name__ == '__main__':
 		print("Client has started!")
 
 	# Initialize operator
-	modelFloat,dataFloat,velFloat,parObject1,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv,client)
+	modelFloat,dataFloat,velFloat,parObject1,sourcesVector,receiversVector,modelFloatLocal=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv,client)
 
 	if(client):
 		#Instantiating Dask Operator
 		nWrks = client.getNworkers()
 		nlOp_args = [(modelFloat.vecDask[iwrk],dataFloat.vecDask[iwrk],velFloat[iwrk],parObject1[iwrk],sourcesVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
 		nonlinearOp = DaskOp.DaskOperator(client,Acoustic_iso_float.nonlinearPropShotsGpu,nlOp_args,[1]*nWrks)
+		#Adding spreading operator and concatenating with non-linear operator (using modelFloatLocal)
+		Sprd = DaskOp.DaskSpreadOp(client,modelFloatLocal,[1]*nWrks)
+		nonlinearOp = pyOp.ChainOperator(Sprd,nonlinearOp)
 	else:
 		# Construct nonlinear operator object
 		nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(modelFloat,dataFloat,velFloat,parObject1,sourcesVector,receiversVector)
@@ -47,16 +50,10 @@ if __name__ == '__main__':
 		# Check that model was provided
 		modelFile=parObject.getString("model","noModelFile")
 		if (modelFile == "noModelFile"):
-			print("**** ERROR: User did not provide model file ****\n")
-			quit()
+			raise IOError("**** ERROR: User did not provide model file ****\n")
 
 		# Read model
 		modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
-
-		#Adding spreading operator and concatenating with non-linear operator
-		if(client):
-			Sprd = DaskOp.DaskSpreadOp(client,modelFloat,[1]*nWrks)
-			nonlinearOp = pyOp.ChainOperator(Sprd,nonlinearOp)
 
 		# Apply forward
 		nonlinearOp.forward(False,modelFloat,dataFloat)
@@ -64,8 +61,8 @@ if __name__ == '__main__':
 		# Write data
 		dataFile=parObject.getString("data","noDataFile")
 		if (dataFile == "noDataFile"):
-			print("**** ERROR: User did not provide data file name ****\n")
-			quit()
+			raise IOError("**** ERROR: User did not provide data file name ****\n")
+
 		# genericIO.defaultIO.writeVector(dataFile,dataFloat)
 		dataFloat.writeVec(dataFile)
 
@@ -106,6 +103,3 @@ if __name__ == '__main__':
 		print("-------------------------------------------------------------------")
 		print("--------------------------- All done ------------------------------")
 		print("-------------------------------------------------------------------\n")
-	#
-	# if client:
-	# 	del client

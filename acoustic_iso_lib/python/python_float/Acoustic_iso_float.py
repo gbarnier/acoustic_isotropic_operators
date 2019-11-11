@@ -357,6 +357,9 @@ def nonlinearOpInitFloat(args,client=None):
 	modelHyper=Hypercube.hypercube(axes=[timeAxis,dummyAxis,dummyAxis])
 	modelFloat=SepVector.getSepVector(modelHyper)
 
+	#Local vector copy useful for dask interface (None if dask is not employed)
+	modelFloatLocal = modelFloat
+
 	#Setting variables if Dask is employed
 	if(client):
 		#Getting number of workers and passing
@@ -402,7 +405,7 @@ def nonlinearOpInitFloat(args,client=None):
 		dataFloat=SepVector.getSepVector(dataHyper)
 
 	# Outputs
-	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,receiversVector
+	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,receiversVector,modelFloatLocal
 
 class nonlinearPropShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for non-linear propagator"""
