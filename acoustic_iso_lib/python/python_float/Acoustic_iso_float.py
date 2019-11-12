@@ -19,6 +19,7 @@ import numpy as np
 from pyAcoustic_iso_float_nl import deviceGpu
 
 
+############################ Dask interface ####################################
 #Dask-related modules and functions
 import dask.distributed as daskD
 import pyDaskVector
@@ -51,6 +52,10 @@ def call_deviceGpu(nzDevice, ozDevice, dzDevice, nxDevice, oxDevice, dxDevice, v
 	obj = deviceGpu(nzDevice, ozDevice, dzDevice, nxDevice, oxDevice, dxDevice, vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift)
 	return obj
 
+def get_hyper(vecObj):
+	"""Function to return Hypercube from vector"""
+	return vecObj.getHyper()
+
 def call_deviceGpu1(z_dev, x_dev, vel, nts, dipole, zDipoleShift, xDipoleShift):
 	"""Function to construct device using its absolute position"""
 	zCoordFloat=SepVector.getSepVector(ns=[1])
@@ -59,6 +64,31 @@ def call_deviceGpu1(z_dev, x_dev, vel, nts, dipole, zDipoleShift, xDipoleShift):
 	xCoordFloat.set(x_dev)
 	obj = deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift)
 	return obj
+
+def chunkData(dataVecLocal,dataSpaceRemote):
+	"""Function to chunk and spread the data vector across dask workers"""
+	dask_client = dataSpaceRemote.dask_client #Getting Dask client
+	client = dask_client.getClient()
+	wrkIds = dask_client.getWorkerIds()
+	dataHypers = client.gather(client.map(get_hyper,dataSpaceRemote.vecDask,pure=False)) #Getting hypercubes of remote vector chunks
+	List_Shots = [hyper.getAxis(hyper.getNdim()).n for hyper in dataHypers]
+	dataNd = dataVecLocal.getNdArray()
+	if(np.sum(List_Shots) != dataNd.shape[0]):
+		raise ValueError("Number of shot within provide data vector (%s) not consistent with total number of shots from nShot parameter (%s)"%(dataNd.shape[0],np.sum(List_Shots)))
+	#Pointer-wise chunking
+	dataArrays = []
+	firstShot = 0
+	for nShot in List_Shots:
+		dataArrays.append(dataNd[firstShot:firstShot+nShot,:,:])
+		firstShot += nShot
+	#Copying the data to remove vector
+	dataVecRemote = dataSpaceRemote.clone()
+	for idx,wrkId in enumerate(wrkIds):
+		arrD = client.scatter(dataArrays[idx],workers=[wrkId])
+		daskD.wait(arrD)
+		daskD.wait(client.submit(pyDaskVector.copy_from_NdArray,dataVecRemote.vecDask[idx],arrD,pure=False))
+	# daskD.wait(client.map(pyDaskVector.copy_from_NdArray,dataVecRemote.vecDask,dataArrays,pure=False))
+	return dataVecRemote
 
 ############################ Bounds vectors ####################################
 # Create bound vectors for FWI

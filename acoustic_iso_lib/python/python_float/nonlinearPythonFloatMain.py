@@ -73,9 +73,6 @@ if __name__ == '__main__':
 	# Adjoint
 	else:
 
-		if(client):
-			raise NotImplementedError("Adjoint operator employing Dask not implemented yet")
-
 		print("-------------------------------------------------------------------")
 		print("----------------- Running Python nonlinear adjoint ----------------")
 		print("-------------------- Single precision Python code -----------------")
@@ -89,16 +86,19 @@ if __name__ == '__main__':
 
 		# Read data
 		dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
+		if(client):
+			#Chunking the data and spreading them across workers if dask was requested
+			dataFloat = Acoustic_iso_float.chunkData(dataFloat,nonlinearOp.getRange())
 
 		# Apply adjoint
-		nonlinearOp.adjoint(False,modelFloat,dataFloat)
+		nonlinearOp.adjoint(False,modelFloatLocal,dataFloat)
 
 		# Write model
 		modelFile=parObject.getString("model","noModelFile")
 		if (modelFile == "noModelFile"):
 			print("**** ERROR: User did not provide model file name ****\n")
 			quit()
-		genericIO.defaultIO.writeVector(modelFile,modelFloat)
+		modelFloatLocal.writeVec(modelFile)
 
 		print("-------------------------------------------------------------------")
 		print("--------------------------- All done ------------------------------")
