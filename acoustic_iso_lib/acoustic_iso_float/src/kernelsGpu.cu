@@ -471,6 +471,7 @@ __global__ void imagingOffsetWemvaAdjGpu(float *dev_wavefieldIn, float *dev_time
 		dev_timeSliceOut[iSpace] += dev_extReflectivityIn[iModel] * dev_wavefieldIn[iSrcWavefield];
 	}
 }
+
 /****************************************************************************************/
 /*********************************** Forward steppers ***********************************/
 /****************************************************************************************/
