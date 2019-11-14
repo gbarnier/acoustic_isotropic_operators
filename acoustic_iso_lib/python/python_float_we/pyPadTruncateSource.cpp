@@ -27,4 +27,15 @@ PYBIND11_MODULE(pyPadTruncateSource, clsGeneric) {
 
     ;
 
+		py::class_<padTruncateSource_mutli_exp, std::shared_ptr<padTruncateSource_mutli_exp>>(clsGeneric,"padTruncateSource_mutli_exp")  //
+      .def(py::init<const std::shared_ptr<float2DReg>, const std::shared_ptr<float4DReg>, std::vector<std::vector<int>>,std::vector<std::map<int,int>> >(),"Initlialize padTruncateSource_mutli_exp")
+
+      .def("forward",(void (padTruncateSource_mutli_exp::*)(const bool, const std::shared_ptr<float2DReg>, std::shared_ptr<float4DReg>)) &padTruncateSource_mutli_exp::forward,"Forward")
+
+      .def("adjoint",(void (padTruncateSource_mutli_exp::*)(const bool, std::shared_ptr<float2DReg>, const std::shared_ptr<float4DReg>)) &padTruncateSource_mutli_exp::adjoint,"Adjoint")
+
+      .def("dotTest",(bool (padTruncateSource_mutli_exp::*)(const bool, const float)) &padTruncateSource_mutli_exp::dotTest,"Dot-Product Test")
+
+    ;
+
 }

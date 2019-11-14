@@ -138,40 +138,23 @@ if __name__ == '__main__':
 			print("\nCurrent p model is zero so we will do DP test with rand p")
 			rand_p_model = current_p_model.clone()
 			rand_p_model.rand()
-			gradioOp.get_op1().update_wfld(rand_p_model)
+			gradioOp.op1.update_wfld(rand_p_model)
 			gradioOp.dotTest(1)
-			gradioOp.get_op1().update_wfld(current_p_model) # updates d2p/dt2
+			gradioOp.op1.update_wfld(current_p_model) # updates d2p/dt2
 		else:
-			gradioOp.get_op1().update_wfld(current_p_model) # updates d2p/dt2
+			gradioOp.op1.update_wfld(current_p_model) # updates d2p/dt2
 			gradioOp.dotTest(1)
 
 	############################# Regularization ###############################
 	# Evaluate Epsilon for p inversion
+	############################# Evaluate epsilon ###############################
+	#need to set earth model in wave equation operator
+	waveEquationAcousticOp.update_slsq(current_m_model)
+	# Evaluate Epsilon for p inversion
 	if (epsilonEval==1):
 		if(pyinfo): print("--- Epsilon evaluation ---")
 		inv_log.addToLog("--- Epsilon evaluation ---")
-
 		epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
-	#	#make first data residual
-	#	K_resid = SepVector.getSepVector(dataSamplingOp.getRange().getHyper(),storage="dataFloat")
-	#	K_resid.scaleAdd(p_dataFloat,0,-1)
-	#	dataSamplingOp.forward(1,current_p_model,K_resid)
-
-	#	#make first model residual
-	#	A_resid = SepVector.getSepVector(waveEquationAcousticOp.getRange().getHyper(),storage="dataFloat")
-	#	A_resid.scaleAdd(prior,0,-1)
-	#	waveEquationAcousticOp.forward(1,current_p_model,A_resid)
-
-	#	if(current_p_model.norm()!=0):
-	#		#update model
-	#		modelOne = SepVector.getSepVector(current_p_model.getHyper(),storage="dataFloat")
-	#		modelOne.scale(0.0)
-	#		dataSamplingOp.adjoint(1,modelOne,K_resid)
-	#		waveEquationAcousticOp.adjoint(1,modelOne,A_resid)
-	#		dataSamplingOp.forward(1,modelOne,K_resid)
-	#		waveEquationAcousticOp.forward(1,modelOne,A_resid)
-
-	#	epsilon_p = parObject.getFloat("eps_p_scale",1.0)*math.sqrt(K_resid.dot(K_resid)/A_resid.dot(A_resid))
 	else:
 		epsilon_p=parObject.getFloat("eps_p_scale",1.0)*parObject.getFloat("eps_p",1.0)
 	if(pyinfo): print("--- Epsilon value: ",epsilon_p," ---")

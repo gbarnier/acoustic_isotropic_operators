@@ -7,6 +7,7 @@
 #include <pybind11/iostream.h>
 /*Library header files*/
 #include "Gradio.h"
+#include "Gradio_multi_exp.h"
 
 namespace py = pybind11;
 using namespace SEP;
@@ -28,7 +29,17 @@ PYBIND11_MODULE(pyGradio, clsGeneric) {
       .def("set_wfld",(bool (Gradio::*)(std::shared_ptr<float3DReg>)) &Gradio::set_wfld,"Dot-Product Test")
     ;
 
+		//gradiometry over multiple shots
+		py::class_<Gradio_multi_exp, std::shared_ptr<Gradio_multi_exp>>(clsGeneric,"Gradio_multi_exp")  //
+			.def(py::init<const std::shared_ptr<float2DReg>,const std::shared_ptr<float4DReg>, const std::shared_ptr<float4DReg>>(),"Initlialize Gradio_multi_exp")
+
+			.def("forward",(void (Gradio_multi_exp::*)(const bool, const std::shared_ptr<float2DReg>, std::shared_ptr<float4DReg>)) &Gradio_multi_exp::forward,"Forward")
+
+			.def("adjoint",(void (Gradio_multi_exp::*)(const bool, std::shared_ptr<float2DReg>, const std::shared_ptr<float4DReg>)) &Gradio_multi_exp::adjoint,"Adjoint")
+
+			.def("dotTest",(bool (Gradio_multi_exp::*)(const bool, const float)) &Gradio_multi_exp::dotTest,"Dot-Product Test")
+
+			.def("set_wfld",(bool (Gradio_multi_exp::*)(std::shared_ptr<float4DReg>)) &Gradio_multi_exp::set_wfld,"Dot-Product Test")
+		;
+
 }
-
-
-

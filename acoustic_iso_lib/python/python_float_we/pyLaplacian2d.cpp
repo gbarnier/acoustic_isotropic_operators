@@ -27,6 +27,14 @@ PYBIND11_MODULE(pyLaplacian2d, clsGeneric) {
 
     ;
 
+		py::class_<Laplacian2d_multi_exp, std::shared_ptr<Laplacian2d_multi_exp>>(clsGeneric,"Laplacian2d_multi_exp")  //
+			.def(py::init<const std::shared_ptr<float4DReg>, const std::shared_ptr<float4DReg>>(),"Initlialize Laplacian2d_multi_exp")
+
+			.def("forward",(void (Laplacian2d_multi_exp::*)(const bool, const std::shared_ptr<float4DReg>, std::shared_ptr<float4DReg>)) &Laplacian2d_multi_exp::forward,"Forward")
+
+			.def("adjoint",(void (Laplacian2d_multi_exp::*)(const bool, std::shared_ptr<float4DReg>, const std::shared_ptr<float4DReg>)) &Laplacian2d_multi_exp::adjoint,"Adjoint")
+
+			.def("dotTest",(bool (Laplacian2d_multi_exp::*)(const bool, const float)) &Laplacian2d_multi_exp::dotTest,"Dot-Product Test")
+
+		;
 }
-
-

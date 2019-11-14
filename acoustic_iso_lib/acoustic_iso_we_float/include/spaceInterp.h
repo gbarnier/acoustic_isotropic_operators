@@ -65,36 +65,35 @@ class spaceInterp : public Operator<SEP::float2DReg, SEP::float2DReg> {
 		void calcGaussWeights();
 };
 
-class spaceInterp2D : public Operator<SEP::float2DReg, SEP::float2DReg> {
+class spaceInterp_multi_exp : public Operator<SEP::float2DReg, SEP::float2DReg> {
 
 	private:
 
 		/* Spatial interpolation */
 		//std::shared_ptr<float2DReg> _elasticPar; /** for dimension checking*/
 		std::shared_ptr<SEP::hypercube> _vpParamHypercube;
-		std::shared_ptr<float1DReg> _zCoord, _xCoord; /** Detailed description after the member */
-		std::vector<int> _gridPointIndexUnique; /** Array containing all the positions of the excited grid points - each grid point is unique */
-		std::map<int, int> _indexMap;
-		std::map<int, int>::iterator _iteratorIndexMap;
+		std::shared_ptr<float1DReg> _zCoord, _xCoord, _expIndex; /** Detailed description after the member */
+		std::vector<std::vector<int>> _gridPointIndexUnique; /** Vector of vectors. Each inner vector containing all the positions of the excited grid points - each grid point is unique - for one experiment */
+		std::vector<std::map<int, int>> _indexMaps;  /** vector of index maps. one index map per experiment */
 		float *_weight;
 		int *_gridPointIndex;
-		int _nDeviceIrreg, _nDeviceReg, _nt, _nz, _nFilt,_nFilt2D,_nFiltTotal;
+		int _nDeviceIrreg, _nDeviceReg, _nt, _nz, _nFilt,_nFilt2D,_nFiltTotal,_nExp;
 		float _ox,_oz,_dx,_dz;
 		std::string _interpMethod;
 
 	public:
 
 		/* Overloaded constructors */
-		spaceInterp2D(const std::shared_ptr<float1DReg> zCoord, const std::shared_ptr<float1DReg> xCoord, const std::shared_ptr<SEP::hypercube> vpParamHyper, int &nt, std::string interpMethod, int nFilt);
+		spaceInterp_multi_exp(const std::shared_ptr<float1DReg> zCoord, const std::shared_ptr<float1DReg> xCoord, const std::shared_ptr<float1DReg> _expIndex, const std::shared_ptr<SEP::hypercube> vpParamHyper, int &nt, std::string interpMethod, int nFilt);
 		// spaceInterp(const std::vector<int> &zGridVector, const std::vector<int> &xGridVector, const std::shared_ptr<SEP::hypercube> vpParamHyper, int &nt);
 		// spaceInterp(const int &nzDevice, const int &ozDevice, const int &dzDevice , const int &nxDevice, const int &oxDevice, const int &dxDevice, const std::shared_ptr<SEP::hypercube> vpParamHyper, int &nt);
 
 		// FWD / ADJ
-		void forward(const bool add, const std::shared_ptr<float3DReg> signalReg, std::shared_ptr<float2DReg> signalIrreg) const;
-		void adjoint(const bool add, std::shared_ptr<float3DReg> signalReg, const std::shared_ptr<float2DReg> signalIrreg) const;
+		void forward(const bool add, const std::shared_ptr<float2DReg> signalReg, std::shared_ptr<float2DReg> signalIrreg) const;
+		void adjoint(const bool add, std::shared_ptr<float2DReg> signalReg, const std::shared_ptr<float2DReg> signalIrreg) const;
 
 		// Destructor
-		~spaceInterp2D(){};
+		~spaceInterp_multi_exp(){};
 
 		// Other functions
 		void checkOutOfBounds(const std::shared_ptr<float1DReg> zCoord, const std::shared_ptr<float1DReg> xCoord); // For constructor #1
@@ -102,8 +101,9 @@ class spaceInterp2D : public Operator<SEP::float2DReg, SEP::float2DReg> {
 		void checkOutOfBounds(const int &nzDevice, const int &ozDevice, const int &dzDevice , const int &nxDevice, const int &oxDevice, const int &dxDevice); // For constructor #3
 		void convertIrregToReg();
 
-		std::vector<int> getRegPosUniqueVector(){ return _gridPointIndexUnique; }
-		int *getRegPosUnique(){ return _gridPointIndexUnique.data(); }
+		std::vector<std::vector<int>> getRegPosUniqueVector(){ return _gridPointIndexUnique; }
+		std::vector<std::map<int,int>> getIndexMaps(){ return _indexMaps; }
+		//int *getRegPosUnique(){ return _gridPointIndexUnique.data(); }
 		int *getRegPos(){ return _gridPointIndex; }
 		int getNt(){ return _nt; }
 		int getNDeviceReg(){ return _nDeviceReg; }
