@@ -44,12 +44,14 @@ set(SOURCES
   ${SRC_DIR}/PadModel2d.cpp
   ${SRC_DIR}/PadModel3d.cpp
   ${SRC_DIR}/Mask3d.cpp
+  ${SRC_DIR}/Mask4d.cpp
   ${SRC_DIR}/CausalMask.cpp
   ${SRC_DIR}/spaceInterp.cpp
   ${SRC_DIR}/padTruncateSource.cpp
   ${SRC_DIR}/tpowWfld.cpp
   ${SRC_DIR}/Mask2d.cpp
   ${SRC_DIR}/Gradio.cpp
+  ${SRC_DIR}/Gradio_multi_exp.cpp
   ${SRC_DIR}/SampleWfld.cpp
   ${SRC_DIR}/Smooth2d.cpp
   # ${SRC_DIR}/C2_2DCube.cpp
@@ -107,12 +109,14 @@ set(HEADERS
   ${INC_DIR}/PadModel2d.h
   ${INC_DIR}/PadModel3d.h
   ${INC_DIR}/Mask3d.h
+  ${INC_DIR}/Mask4d.h
   ${INC_DIR}/CausalMask.h
   ${INC_DIR}/spaceInterp.h
   ${INC_DIR}/padTruncateSource.h
   ${INC_DIR}/tpowWfld.h
   ${INC_DIR}/Mask2d.h
   ${INC_DIR}/Gradio.h
+  ${INC_DIR}/Gradio_multi_exp.h
   ${INC_DIR}/SampleWfld.h
   ${INC_DIR}/Smooth2d.h
   # ${INC_DIR}/C2_2DCube.h

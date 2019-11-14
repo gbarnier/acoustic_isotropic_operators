@@ -143,3 +143,154 @@ void Laplacian2d::adjoint(const bool                         add,
     }
   }
 }
+
+
+/**
+   Many 2d slices case over multiple shots
+ */
+Laplacian2d_multi_exp::Laplacian2d_multi_exp(const std::shared_ptr<float4DReg>model,
+                         const std::shared_ptr<float4DReg>data) {
+  // ensure dimensions match
+  assert(model->getHyper()->getAxis(1).n == data->getHyper()->getAxis(1).n);
+  assert(model->getHyper()->getAxis(2).n == data->getHyper()->getAxis(2).n);
+  assert(model->getHyper()->getAxis(3).n == data->getHyper()->getAxis(3).n);
+  assert(model->getHyper()->getAxis(4).n == data->getHyper()->getAxis(4).n);
+  assert(model->getHyper()->getAxis(1).d == data->getHyper()->getAxis(1).d);
+  assert(model->getHyper()->getAxis(2).d == data->getHyper()->getAxis(2).d);
+  assert(model->getHyper()->getAxis(3).d == data->getHyper()->getAxis(3).d);
+
+  n1 =model->getHyper()->getAxis(1).n; //z
+   n2 =model->getHyper()->getAxis(2).n; //x
+   n3 =model->getHyper()->getAxis(3).n; //t
+   n4 =model->getHyper()->getAxis(4).n; //shot
+
+  setDomainRange(model, data);
+
+  // get spatial sampling
+  _db = model->getHyper()->getAxis(1).d;
+  _da = model->getHyper()->getAxis(2).d;
+
+  // calculate lapl coefficients
+  C0z = -2.927222222 / (_db * _db);
+  C1z =  1.666666667 / (_db * _db);
+  C2z = -0.238095238 / (_db * _db);
+  C3z =  0.039682539 / (_db * _db);
+  C4z = -0.004960317 / (_db * _db);
+  C5z =  0.000317460 / (_db * _db);
+
+  C0x = -2.927222222 / (_da * _da);
+  C1x =  1.666666667 / (_da * _da);
+  C2x = -0.238095238 / (_da * _da);
+  C3x =  0.039682539 / (_da * _da);
+  C4x = -0.004960317 / (_da * _da);
+  C5x =  0.000317460 / (_da * _da);
+
+  // set domain and range
+  setDomainRange(model, data);
+
+  buffer.reset(new SEP::float4DReg(data->getHyper()->getAxis(1).n+ 2 * _laplOrder,
+                                    data->getHyper()->getAxis(2).n + 2 * _laplOrder,
+                                    data->getHyper()->getAxis(3).n,data->getHyper()->getAxis(4).n));
+  buffer->zero();
+}
+void Laplacian2d_multi_exp::forward(const bool                         add,
+                          const std::shared_ptr<SEP::float4DReg>model,
+                          std::shared_ptr<SEP::float4DReg>      data) const {
+  assert(checkDomainRange(model, data));
+  if (!add) data->scale(0.);
+
+  std::shared_ptr<float4D> b =
+    ((std::dynamic_pointer_cast<float4DReg>(buffer))->_mat);
+    const std::shared_ptr<float4D> m =
+      ((std::dynamic_pointer_cast<float4DReg>(model))->_mat);
+     std::shared_ptr<float4D> d =
+      ((std::dynamic_pointer_cast<float4DReg>(data))->_mat);
+
+    // load buffer
+  #pragma omp parallel for collapse(4)
+  for (int is = 0; is < n4; is++) {
+    for (int it = 0; it < n3; it++) {
+      for (int ix = 0; ix < n2; ix++) {
+        for (int iz = 0; iz < n1; iz++) {
+          (*b)[is][it ][ix + _laplOrder][iz+ _laplOrder] = (*m)[is][it][ix][iz];
+        }
+      }
+    }
+  }
+
+  // multiply by slowness squared
+  #pragma omp parallel for collapse(4)
+  for (int is = 0; is < n4; is++) {
+    for (int it = 0; it < n3; it++) { //time
+      for (int ix = 0; ix < n2; ix++) { //x
+        for (int iz = 0; iz < n1; iz++) { //z
+          (*d)[is][it][ix][iz] += //laplacian
+                                    (C0x * (*b)[is][it][ix + _laplOrder][iz + _laplOrder] + \
+                                    C1x * ((*b)[is][it][ix + 1 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 1 + _laplOrder][iz + _laplOrder]) + \
+                                    C2x * ((*b)[is][it][ix + 2 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 2 + _laplOrder][iz + _laplOrder]) + \
+                                    C3x * ((*b)[is][it][ix + 3 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 3 + _laplOrder][iz + _laplOrder]) + \
+                                    C4x * ((*b)[is][it][ix + 4 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 4 + _laplOrder][iz + _laplOrder]) + \
+                                    C5x * ((*b)[is][it][ix + 5 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 5 + _laplOrder][iz + _laplOrder]) + \
+                                    C0z * (*b)[is][it][ix + _laplOrder][iz + _laplOrder] + \
+                                    C1z * ((*b)[is][it][ix + _laplOrder][iz + 1 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 1 + _laplOrder]) + \
+                                    C2z * ((*b)[is][it][ix + _laplOrder][iz + 2 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 2 + _laplOrder]) + \
+                                    C3z * ((*b)[is][it][ix + _laplOrder][iz + 3 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 3 + _laplOrder]) + \
+                                    C4z * ((*b)[is][it][ix + _laplOrder][iz + 4 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 4 + _laplOrder]) + \
+                                    C5z * ((*b)[is][it][ix + _laplOrder][iz + 5 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 5 + _laplOrder]));
+        }
+      }
+    }
+  }
+
+}
+
+void Laplacian2d_multi_exp::adjoint(const bool                         add,
+                          std::shared_ptr<SEP::float4DReg>      model,
+                          const std::shared_ptr<SEP::float4DReg>data) const {
+  assert(checkDomainRange(model, data));
+
+  if (!add) model->scale(0.);
+
+  std::shared_ptr<float4D> b =
+    ((std::dynamic_pointer_cast<float4DReg>(buffer))->_mat);
+    std::shared_ptr<float4D> m =
+      ((std::dynamic_pointer_cast<float4DReg>(model))->_mat);
+    const std::shared_ptr<float4D> d =
+      ((std::dynamic_pointer_cast<float4DReg>(data))->_mat);
+
+    // load buffer
+    #pragma omp parallel for collapse(4)
+    for (int is = 0; is < n4; is++) {
+      for (int it = 0; it < n3; it++) {
+        for (int ix = 0; ix < n2; ix++) {
+          for (int iz = 0; iz < n1; iz++) {
+            (*b)[it ][ix + _laplOrder][iz+ _laplOrder] = (*d)[it][ix][iz];
+          }
+        }
+      }
+    }
+
+  // multiply by slowness squared
+  #pragma omp parallel for collapse(4)
+  for (int is = 0; is < n4; is++) {
+    for (int it = 0; it < n3; it++) {
+      for (int ix = 0; ix < n2; ix++) {
+        for (int iz = 0; iz < n1; iz++) {
+          (*m)[is][it][ix][iz] +=       //laplacian
+                              (C0x * (*b)[is][it][ix + _laplOrder][iz + _laplOrder] + \
+                              C1x * ((*b)[is][it][ix + 1 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 1 + _laplOrder][iz + _laplOrder]) + \
+                              C2x * ((*b)[is][it][ix + 2 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 2 + _laplOrder][iz + _laplOrder]) + \
+                              C3x * ((*b)[is][it][ix + 3 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 3 + _laplOrder][iz + _laplOrder]) + \
+                              C4x * ((*b)[is][it][ix + 4 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 4 + _laplOrder][iz + _laplOrder]) + \
+                              C5x * ((*b)[is][it][ix + 5 + _laplOrder][iz + _laplOrder] + (*b)[is][it][ix - 5 + _laplOrder][iz + _laplOrder]) + \
+                              C0z * (*b)[is][it][ix + _laplOrder][iz + _laplOrder] + \
+                              C1z * ((*b)[is][it][ix + _laplOrder][iz + 1 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 1 + _laplOrder]) + \
+                              C2z * ((*b)[is][it][ix + _laplOrder][iz + 2 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 2 + _laplOrder]) + \
+                              C3z * ((*b)[is][it][ix + _laplOrder][iz + 3 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 3 + _laplOrder]) + \
+                              C4z * ((*b)[is][it][ix + _laplOrder][iz + 4 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 4 + _laplOrder]) + \
+                              C5z * ((*b)[is][it][ix + _laplOrder][iz + 5 + _laplOrder] + (*b)[is][it][ix + _laplOrder][iz - 5 + _laplOrder]));
+        }
+      }
+    }
+  }
+}

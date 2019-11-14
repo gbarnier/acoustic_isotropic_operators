@@ -138,6 +138,17 @@ PYBIND11_MODULE(pyAcoustic_iso_float_we, clsGeneric) {
       .def("set_slsq",(void (WaveReconV10::*)(std::shared_ptr<float2DReg>)) &WaveReconV10::set_slsq,"Set slowness squared model")
   ;
 
+  py::class_<WaveRecon_multi_exp, std::shared_ptr<WaveRecon_multi_exp>>(clsGeneric,"WaveRecon_multi_exp")
+      .def(py::init<const std::shared_ptr<SEP::float4DReg>, const std::shared_ptr<SEP::float4DReg>, const std::shared_ptr<SEP::float2DReg>, float,float,int>(), "Initialize a WaveRecon_multi_exp")
+
+      .def("forward", (void (WaveRecon_multi_exp::*)(const bool, const std::shared_ptr<float4DReg>, std::shared_ptr<float4DReg>)) &WaveRecon_multi_exp::forward, "Forward")
+
+      .def("adjoint", (void (WaveRecon_multi_exp::*)(const bool, const std::shared_ptr<float4DReg>, std::shared_ptr<float4DReg>)) &WaveRecon_multi_exp::adjoint, "Adjoint")
+
+      .def("dotTest",(bool (WaveRecon_multi_exp::*)(const bool, const float)) &WaveRecon_multi_exp::dotTest,"Dot-Product Test")
+      .def("set_slsq",(void (WaveRecon_multi_exp::*)(std::shared_ptr<float2DReg>)) &WaveRecon_multi_exp::set_slsq,"Set slowness squared model")
+  ;
+
   py::class_<waveEquationAcousticGpu, std::shared_ptr<waveEquationAcousticGpu>>(clsGeneric,"waveEquationAcousticGpu")
       .def(py::init<std::shared_ptr<SEP::float3DReg> , std::shared_ptr<SEP::float3DReg>, std::shared_ptr<SEP::float2DReg>, std::shared_ptr<paramObj>  >(), "Initialize a waveEquationAcousticGpu")
 
