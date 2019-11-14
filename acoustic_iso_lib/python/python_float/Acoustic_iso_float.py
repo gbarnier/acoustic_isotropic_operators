@@ -43,9 +43,24 @@ def parfile2pars(args):
 	return args
 
 def create_parObj(args):
-	""" Function to call genericIO correctly"""
+	"""Function to call genericIO correctly"""
 	obj = genericIO.io(params=args)
 	return obj
+
+def spreadParObj(client,args,par):
+	"""Function to spread parameter object to workers"""
+	#Spreading/Instantiating the parameter objects
+	List_Shots = par.getInts("nShot",0)
+	parObject = []
+	args1=parfile2pars(args)
+	#Finding index of nShot parameter
+	idx_nshot = [ii for ii,el in enumerate(args1) if "nShot" in el][-1]
+	for idx,wrkId in enumerate(client.getWorkerIds()):
+		#Substituting nShot with the correct number of shots
+		args1[idx_nshot]="nShot=%s"%(List_Shots[idx])
+		parObject.append(client.getClient().submit(create_parObj,args1,workers=[wrkId],pure=False))
+	daskD.wait(parObject)
+	return parObject
 
 def call_deviceGpu(nzDevice, ozDevice, dzDevice, nxDevice, oxDevice, dxDevice, vel, nts, dipole, zDipoleShift, xDipoleShift):
 	"""Function instantiate a deviceGpu object (first constructor)"""
@@ -387,11 +402,11 @@ def nonlinearOpInitFloat(args,client=None):
 	modelHyper=Hypercube.hypercube(axes=[timeAxis,dummyAxis,dummyAxis])
 	modelFloat=SepVector.getSepVector(modelHyper)
 
-	#Local vector copy useful for dask interface (None if dask is not employed)
+	#Local vector copy useful for dask interface
 	modelFloatLocal = modelFloat
 
 	#Setting variables if Dask is employed
-	if(client):
+	if client:
 		#Getting number of workers and passing
 		nWrks = client.getNworkers()
 		#Spreading domain vector (i.e., wavelet)
@@ -413,16 +428,7 @@ def nonlinearOpInitFloat(args,client=None):
 		dataFloat = pyDaskVector.DaskVector(client,vectors=dataFloat,copy=False)
 
 		#Spreading/Instantiating the parameter objects
-		List_Shots = parObject.getInts("nShot",0)
-		parObject = []
-		args1=parfile2pars(args)
-		#Finding index of nShot parameter
-		idx_nshot = [ii for ii,el in enumerate(args1) if "nShot" in el][-1]
-		for idx,wrkId in enumerate(client.getWorkerIds()):
-			#Substituting nShot with the correct number of shots
-			args1[idx_nshot]="nShot=%s"%(List_Shots[idx])
-			parObject.append(client.getClient().submit(create_parObj,args1,workers=[wrkId],pure=False))
-		daskD.wait(parObject)
+		parObject = spreadParObj(client,args,parObject)
 
 	else:
 
@@ -511,7 +517,7 @@ class nonlinearPropShotsGpu(Op.Operator):
 			wfld = self.pyOp.getWfld()
 			wfld = SepVector.floatVector(fromCpp=wfld)
 		return wfld
-def nonlinearFwiOpInitFloat(args):
+def nonlinearFwiOpInitFloat(args,client=None):
 	"""Function to correctly initialize a nonlinear operator where the model is velocity
 	   The function will return the necessary variables for operator construction
 	"""
@@ -522,27 +528,60 @@ def nonlinearFwiOpInitFloat(args):
 	modelStartFile=parObject.getString("vel")
 	modelStart=genericIO.defaultIO.getVector(modelStartFile)
 
-	# Build sources/receivers geometry
-	sourcesVector,sourceAxis=buildSourceGeometry(parObject,modelStart)
-	receiversVector,receiverAxis=buildReceiversGeometry(parObject,modelStart)
-
-	# Time Axis
-	nts=parObject.getInt("nts",-1)
-	ots=parObject.getFloat("ots",0.0)
-	dts=parObject.getFloat("dts",-1.0)
-	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+	#Local vector copy useful for dask interface
+	modelStartLocal = modelFloat
 
 	# Allocate wavelet and fill with zeros
 	dummyAxis=Hypercube.axis(n=1)
 	sourcesSignalHyper=Hypercube.hypercube(axes=[timeAxis,dummyAxis,dummyAxis])
 	sourcesSignal=SepVector.getSepVector(sourcesSignalHyper)
 
-	# Allocate data and fill with zeros
-	dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis])
-	dataFloat=SepVector.getSepVector(dataHyper)
+	#Setting variables if Dask is employed
+	if client:
+
+		#Getting number of workers and passing
+		nWrks = client.getNworkers()
+
+		#Spreading source wavelet
+		sourcesSignal = pyDaskVector.DaskVector(client,vectors=[sourcesSignal]*nWrks)
+
+		#Spreading domain vector (i.e., velocity)
+		hyper_model = modelStart.getHyper()
+		modelStart = pyDaskVector.DaskVector(client,vectors=[modelStart]*nWrks)
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometryDask(parObject,modelStart,hyper_model,client)
+		receiversVector,receiverAxis=buildReceiversGeometryDask(parObject,modelStart,hyper_model,client)
+
+		#Allocating data vectors to be spread
+		dataFloat = []
+		for iwrk in range(nWrks):
+			dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis[iwrk],sourceAxis[iwrk]])
+			dataFloat.append(SepVector.getSepVector(dataHyper))
+		dataFloat = pyDaskVector.DaskVector(client,vectors=dataFloat,copy=False)
+
+		#Spreading/Instantiating the parameter objects
+		parObject = spreadParObj(client,args,parObject)
+
+	else:
+
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometry(parObject,modelStart)
+		receiversVector,receiverAxis=buildReceiversGeometry(parObject,modelStart)
+
+		# Time Axis
+		nts=parObject.getInt("nts",-1)
+		ots=parObject.getFloat("ots",0.0)
+		dts=parObject.getFloat("dts",-1.0)
+		timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+
+		# Allocate data and fill with zeros
+		dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis])
+		dataFloat=SepVector.getSepVector(dataHyper)
 
 	# Outputs
-	return modelStart,dataFloat,sourcesSignal,parObject,sourcesVector,receiversVector
+	return modelStart,dataFloat,sourcesSignal,parObject,sourcesVector,receiversVector,modelStartLocal
 
 class nonlinearFwiPropShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for non-linear propagator where the model vector is the velocity"""
@@ -559,7 +598,7 @@ class nonlinearFwiPropShotsGpu(Op.Operator):
 		if("getCpp" in dir(sources)):
 			sources = sources.getCpp()
 			self.sources = sources.clone()
-		self.pyOp = pyAcoustic_iso_float_nl.nonlinearPropShotsGpu(domain,paramP,sourceVector,receiversVector)
+		self.pyOp = pyAcoustic_iso_float_nl.nonlinearPropShotsGpu(domain,paramP.param,sourceVector,receiversVector)
 		return
 
 	def forward(self,add,model,data):
@@ -581,7 +620,7 @@ class nonlinearFwiPropShotsGpu(Op.Operator):
 		return
 
 ################################### Born #######################################
-def BornOpInitFloat(args):
+def BornOpInitFloat(args,client=None):
 	"""Function to correctly initialize Born operator
 	   The function will return the necessary variables for operator construction
 	"""
@@ -593,9 +632,10 @@ def BornOpInitFloat(args):
 	velFile=parObject.getString("vel")
 	velFloat=genericIO.defaultIO.getVector(velFile)
 
-	# Build sources/receivers geometry
-	sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
-	receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
+	# Allocate model
+	modelFloat=SepVector.getSepVector(velFloat.getHyper())
+	#Local vector copy useful for dask interface
+	modelFloatLocal = modelFloat
 
 	# Time Axis
 	nts=parObject.getInt("nts",-1)
@@ -606,19 +646,54 @@ def BornOpInitFloat(args):
 	# Read sources signals
 	sourcesFile=parObject.getString("sources","noSourcesFile")
 	if (sourcesFile == "noSourcesFile"):
-		print("**** ERROR: User did not provide seismic sources file ****\n")
-		quit()
+		raise IOError("**** ERROR: User did not provide seismic sources file ****\n")
 	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile,ndims=2)
-	sourcesSignalsVector=[]
-	sourcesSignalsVector.append(sourcesSignalsFloat) # Create a vector of float2DReg slices
 
-	# Allocate model
-	modelFloat=SepVector.getSepVector(velFloat.getHyper())
+	if client:
+		#Getting number of workers and passing
+		nWrks = client.getNworkers()
 
-	# Allocate data
-	dataFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis]))
+		#Spreading velocity model to workers
+		hyper_vel = velFloat.getHyper()
+		velFloatD = pyDaskVector.DaskVector(client,vectors=[velFloat]*nWrks)
+		velFloat = velFloatD.vecDask
 
-	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector
+		#Allocate model
+		modelFloat = velFloatD.clone()
+		modelFloat.zero()
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometryDask(parObject,velFloat,hyper_vel,client)
+		receiversVector,receiverAxis=buildReceiversGeometryDask(parObject,velFloat,hyper_vel,client)
+
+		#Spreading source wavelet
+		sourcesSignalsFloat = pyDaskVector.DaskVector(client,vectors=[sourcesSignalsFloat]*nWrks).vecDask
+		sourcesSignalsVector = client.getClient().map((lambda x: [x]),sourcesSignalsFloat,pure=False)
+		daskD.wait(sourcesSignalsVector)
+
+		#Allocating data vectors to be spread
+		dataFloat = []
+		for iwrk in range(nWrks):
+			dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis[iwrk],sourceAxis[iwrk]])
+			dataFloat.append(SepVector.getSepVector(dataHyper))
+		dataFloat = pyDaskVector.DaskVector(client,vectors=dataFloat,copy=False)
+
+		#Spreading/Instantiating the parameter objects
+		parObject = spreadParObj(client,args,parObject)
+
+	else:
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
+		receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
+
+		sourcesSignalsVector=[]
+		sourcesSignalsVector.append(sourcesSignalsFloat) # Create a vector of float2DReg slices
+
+		# Allocate data
+		dataFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis]))
+
+	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,modelFloatLocal
 
 class BornShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for Born operator"""
@@ -635,7 +710,7 @@ class BornShotsGpu(Op.Operator):
 		for idx,sourceSignal in enumerate(sourcesSignalsVector):
 			if("getCpp" in dir(sourceSignal)):
 				sourcesSignalsVector[idx] = sourceSignal.getCpp()
-		self.pyOp = pyAcoustic_iso_float_born.BornShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector)
+		self.pyOp = pyAcoustic_iso_float_born.BornShotsGpu(velocity,paramP.param,sourceVector,sourcesSignalsVector,receiversVector)
 		return
 
 	def forward(self,add,model,data):
