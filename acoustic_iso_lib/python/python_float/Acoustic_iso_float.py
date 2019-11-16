@@ -529,7 +529,13 @@ def nonlinearFwiOpInitFloat(args,client=None):
 	modelStart=genericIO.defaultIO.getVector(modelStartFile)
 
 	#Local vector copy useful for dask interface
-	modelStartLocal = modelFloat
+	modelStartLocal = modelStart
+
+	# Time Axis
+	nts=parObject.getInt("nts",-1)
+	ots=parObject.getFloat("ots",0.0)
+	dts=parObject.getFloat("dts",-1.0)
+	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
 
 	# Allocate wavelet and fill with zeros
 	dummyAxis=Hypercube.axis(n=1)
@@ -550,8 +556,8 @@ def nonlinearFwiOpInitFloat(args,client=None):
 		modelStart = pyDaskVector.DaskVector(client,vectors=[modelStart]*nWrks)
 
 		# Build sources/receivers geometry
-		sourcesVector,sourceAxis=buildSourceGeometryDask(parObject,modelStart,hyper_model,client)
-		receiversVector,receiverAxis=buildReceiversGeometryDask(parObject,modelStart,hyper_model,client)
+		sourcesVector,sourceAxis=buildSourceGeometryDask(parObject,modelStart.vecDask,hyper_model,client)
+		receiversVector,receiverAxis=buildReceiversGeometryDask(parObject,modelStart.vecDask,hyper_model,client)
 
 		#Allocating data vectors to be spread
 		dataFloat = []
@@ -569,12 +575,6 @@ def nonlinearFwiOpInitFloat(args,client=None):
 		# Build sources/receivers geometry
 		sourcesVector,sourceAxis=buildSourceGeometry(parObject,modelStart)
 		receiversVector,receiverAxis=buildReceiversGeometry(parObject,modelStart)
-
-		# Time Axis
-		nts=parObject.getInt("nts",-1)
-		ots=parObject.getFloat("ots",0.0)
-		dts=parObject.getFloat("dts",-1.0)
-		timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
 
 		# Allocate data and fill with zeros
 		dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis])
@@ -647,6 +647,7 @@ def BornOpInitFloat(args,client=None):
 	sourcesFile=parObject.getString("sources","noSourcesFile")
 	if (sourcesFile == "noSourcesFile"):
 		raise IOError("**** ERROR: User did not provide seismic sources file ****\n")
+
 	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile,ndims=2)
 
 	if client:
