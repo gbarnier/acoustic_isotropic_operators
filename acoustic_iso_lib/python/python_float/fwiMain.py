@@ -77,10 +77,7 @@ if __name__ == '__main__':
 
 	# Data taper
 	if (dataTaper==1):
-		if(client):
-			raise NotImplementedError("Dask interface for dataTaper operator not implemented yet!")
-		else:
-			t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth=dataTaperModule.dataTaperInit(sys.argv)
+		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth=dataTaperModule.dataTaperInit(sys.argv)
 
 
 	# FWI nonlinear operator
@@ -157,6 +154,7 @@ if __name__ == '__main__':
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
 		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiInvOp)
 
+	#Dask interface
 	if(client):
 		#Chunking the data and spreading them across workers if dask was requested
 		data = Acoustic_iso_float.chunkData(data,BornOp.getRange())
@@ -166,10 +164,15 @@ if __name__ == '__main__':
 		if(pyinfo): print("--- Using Xukai's trace normalization ---")
 		inv_log.addToLog("--- Using Xukai's trace normalization ---")
 		if client:
-			raise NotImplementedError("Dask interface for dataNormalization operator not implemented yet!")
-		phaseOnlyXkOp=phaseOnlyXkModule.phaseOnlyXk(data,data) # Instanciate forward operator
-		phaseOnlyXkJacOp=phaseOnlyXkModule.phaseOnlyXkJac(data) # Instanciate Jacobian operator
-		phaseOnlyXkNlOp=pyOp.NonLinearOperator(phaseOnlyXkOp,phaseOnlyXkJacOp,phaseOnlyXkJacOp.setData) # Instanciate the nonlinear operator
+			XkOp_args = [(data.vecDask[iwrk],data.vecDask[iwrk]) for iwrk in range(nWrks)]
+			phaseOnlyXkOp = DaskOp.DaskOperator(client,phaseOnlyXkModule.phaseOnlyXk,XkOp_args,[1]*nWrks)
+			XkJacOp_args = [data.vecDask[iwrk] for iwrk in range(nWrks)]
+			phaseOnlyXkJacOp = DaskOp.DaskOperator(client,phaseOnlyXkModule.phaseOnlyXkJac,XkJacOp_args,[1]*nWrks,setbackground_func_name="setData")
+			phaseOnlyXkNlOp=pyOp.NonLinearOperator(phaseOnlyXkOp,phaseOnlyXkJacOp,phaseOnlyXkJacOp.set_background)
+		else:
+			phaseOnlyXkOp=phaseOnlyXkModule.phaseOnlyXk(data,data) # Instanciate forward operator
+			phaseOnlyXkJacOp=phaseOnlyXkModule.phaseOnlyXkJac(data) # Instanciate Jacobian operator
+			phaseOnlyXkNlOp=pyOp.NonLinearOperator(phaseOnlyXkOp,phaseOnlyXkJacOp,phaseOnlyXkJacOp.setData) # Instantiate the nonlinear operator
 		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOp,phaseOnlyXkNlOp)
 		obsDataNormalized=data.clone() # Apply normalization to data
 		phaseOnlyXkOp.forward(False,data,obsDataNormalized)
@@ -179,7 +182,13 @@ if __name__ == '__main__':
 	if (dataTaper==1):
 		if(pyinfo): print("--- Using data tapering ---")
 		inv_log.addToLog("--- Using data tapering ---")
-		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
+		if client:
+			hypers = client.getClient().map(lambda x: x.getHyper(),data.vecDask,pure=False)
+			dataTaper_args = [(data.vecDask[iwrk],data.vecDask[iwrk],t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,hypers[iwrk],time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth) for iwrk in range(nWrks)]
+			dataTaperOp = DaskOp.DaskOperator(client,dataTaperModule.datTaper,dataTaper_args,[1]*nWrks)
+		else:
+			dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
+		#Tapering observed data and constructing FWI operator
 		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
