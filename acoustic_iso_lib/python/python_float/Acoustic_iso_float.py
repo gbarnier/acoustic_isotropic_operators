@@ -780,7 +780,7 @@ class BornShotsGpu(Op.Operator):
 			wfld = SepVector.floatVector(fromCpp=wfld)
 		return wfld
 ############################## Born extended ###################################
-def BornExtOpInitFloat(args):
+def BornExtOpInitFloat(args,client=None):
 
 	# IO object
 	parObject=genericIO.io(params=args)
@@ -791,10 +791,6 @@ def BornExtOpInitFloat(args):
 		print("**** ERROR: User did not provide vel file ****\n")
 		quit()
 	velFloat=genericIO.defaultIO.getVector(velFile)
-
-	# Build sources/receivers geometry
-	sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
-	receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
 
 	# Space axes
 	zAxis=velFloat.getHyper().axes[0]
@@ -840,20 +836,56 @@ def BornExtOpInitFloat(args):
 		print("**** ERROR: User did not provide seismic sources file ****\n")
 		quit()
 	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile,ndims=2)
-	sourcesSignalsVector=[]
-	sourcesSignalsVector.append(sourcesSignalsFloat) # Create a vector of float2DReg slices
-
-	# Build sources/receivers geometry
-	sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
-	receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
 
 	# Allocate model
 	modelFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[zAxis,xAxis,extAxis]))
+	#Local vector copy useful for dask interface
+	modelFloatLocal = modelFloat
 
-	# Allocate data
-	dataFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis]))
+	if client:
 
-	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector
+		#Getting number of workers and passing
+		nWrks = client.getNworkers()
+
+		#Spreading velocity model to workers
+		hyper_vel = velFloat.getHyper()
+		velFloatD = pyDaskVector.DaskVector(client,vectors=[velFloat]*nWrks)
+		velFloat = velFloatD.vecDask
+
+		modelFloat = pyDaskVector.DaskVector(client,vectors=[modelFloat]*nWrks)
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometryDask(parObject,velFloat,hyper_vel,client)
+		receiversVector,receiverAxis=buildReceiversGeometryDask(parObject,velFloat,hyper_vel,client)
+
+		#Spreading source wavelet
+		sourcesSignalsFloat = pyDaskVector.DaskVector(client,vectors=[sourcesSignalsFloat]*nWrks).vecDask
+		sourcesSignalsVector = client.getClient().map((lambda x: [x]),sourcesSignalsFloat,pure=False)
+		daskD.wait(sourcesSignalsVector)
+
+		#Allocating data vectors to be spread
+		dataFloat = []
+		for iwrk in range(nWrks):
+			dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis[iwrk],sourceAxis[iwrk]])
+			dataFloat.append(SepVector.getSepVector(dataHyper))
+		dataFloat = pyDaskVector.DaskVector(client,vectors=dataFloat,copy=False)
+
+		#Spreading/Instantiating the parameter objects
+		parObject = spreadParObj(client,args,parObject)
+
+	else:
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
+		receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
+
+		sourcesSignalsVector=[]
+		sourcesSignalsVector.append(sourcesSignalsFloat) # Create a vector of float2DReg slices
+
+		# Allocate data
+		dataFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis]))
+
+	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,modelFloatLocal
 
 class BornExtShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for Extended Born operator"""
@@ -870,7 +902,7 @@ class BornExtShotsGpu(Op.Operator):
 		for idx,sourceSignal in enumerate(sourcesSignalsVector):
 			if("getCpp" in dir(sourceSignal)):
 				sourcesSignalsVector[idx] = sourceSignal.getCpp()
-		self.pyOp = pyAcoustic_iso_float_born_ext.BornExtShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector)
+		self.pyOp = pyAcoustic_iso_float_born_ext.BornExtShotsGpu(velocity,paramP.param,sourceVector,sourcesSignalsVector,receiversVector)
 		return
 
 	def forward(self,add,model,data):

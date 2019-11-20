@@ -5,7 +5,6 @@ import Hypercube
 import pyOperator as pyOp
 import Acoustic_iso_float
 import numpy as np
-import time
 import sys
 
 #Dask-related modules
@@ -57,6 +56,10 @@ if __name__ == '__main__':
 		if (modelFile == "noModelFile"):
 			raise IOError("**** ERROR: User did not provide model file ****\n")
 
+		dataFile=parObject.getString("data","noDataFile")
+		if (dataFile == "noDataFile"):
+			raise IOError("**** ERROR: User did not provide data file name ****\n")
+
 		# Read model
 		modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=2)
 
@@ -64,10 +67,6 @@ if __name__ == '__main__':
 		bornOp.forward(False,modelFloat,dataFloat)
 
 		# Write data
-		dataFile=parObject.getString("data","noDataFile")
-		if (dataFile == "noDataFile"):
-			raise IOError("**** ERROR: User did not provide data file name ****\n")
-
 		dataFloat.writeVec(dataFile)
 
 	# Adjoint
@@ -82,6 +81,9 @@ if __name__ == '__main__':
 		dataFile=parObject.getString("data","noDataFile")
 		if (dataFile == "noDataFile"):
 			raise IOError("**** ERROR: User did not provide data file ****\n")
+		modelFile=parObject.getString("model","noModelFile")
+		if (modelFile == "noModelFile"):
+			raise IOError("**** ERROR: User did not provide model file name ****\n")
 
 		# Read data
 		dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
@@ -93,10 +95,6 @@ if __name__ == '__main__':
 		bornOp.adjoint(False,modelFloatLocal,dataFloat)
 
 		# Write model
-		modelFile=parObject.getString("model","noModelFile")
-		if (modelFile == "noModelFile"):
-			raise IOError("**** ERROR: User did not provide model file name ****\n")
-
 		modelFloatLocal.writeVec(modelFile)
 
 	print("-------------------------------------------------------------------")

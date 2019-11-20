@@ -24,6 +24,10 @@ import pyStopperBase as Stopper
 import inversionUtils
 from sys_util import logger
 
+#Dask-related modules
+from dask_util import DaskClient
+import pyDaskOperator as DaskOp
+
 # Template for linearized waveform inversion workflow
 if __name__ == '__main__':
 
