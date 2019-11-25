@@ -67,9 +67,9 @@ def call_deviceGpu(nzDevice, ozDevice, dzDevice, nxDevice, oxDevice, dxDevice, v
 	obj = deviceGpu(nzDevice, ozDevice, dzDevice, nxDevice, oxDevice, dxDevice, vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift)
 	return obj
 
-def get_hyper(vecObj):
-	"""Function to return Hypercube from vector"""
-	return vecObj.getHyper()
+def get_axes(vecObj):
+	"""Function to return Axes from vector"""
+	return vecObj.getHyper().axes
 
 def call_deviceGpu1(z_dev, x_dev, vel, nts, dipole, zDipoleShift, xDipoleShift):
 	"""Function to construct device using its absolute position"""
@@ -85,8 +85,8 @@ def chunkData(dataVecLocal,dataSpaceRemote):
 	dask_client = dataSpaceRemote.dask_client #Getting Dask client
 	client = dask_client.getClient()
 	wrkIds = dask_client.getWorkerIds()
-	dataHypers = client.gather(client.map(get_hyper,dataSpaceRemote.vecDask,pure=False)) #Getting hypercubes of remote vector chunks
-	List_Shots = [hyper.getAxis(hyper.getNdim()).n for hyper in dataHypers]
+	dataAxes = client.gather(client.map(get_axes,dataSpaceRemote.vecDask,pure=False)) #Getting hypercubes of remote vector chunks
+	List_Shots = [axes[-1].n for axes in dataAxes]
 	dataNd = dataVecLocal.getNdArray()
 	if(np.sum(List_Shots) != dataNd.shape[0]):
 		raise ValueError("Number of shot within provide data vector (%s) not consistent with total number of shots from nShot parameter (%s)"%(dataNd.shape[0],np.sum(List_Shots)))
@@ -980,7 +980,7 @@ class BornExtShotsGpu(Op.Operator):
 		return result
 
 ############################## Tomo nonlinear #################################
-def BornExtTomoInvOpInitFloat(args):
+def BornExtTomoInvOpInitFloat(args,client=None):
 
 	# IO object
 	parObject=genericIO.io(params=args)
@@ -989,9 +989,8 @@ def BornExtTomoInvOpInitFloat(args):
 	modelStartFile=parObject.getString("vel")
 	modelStart=genericIO.defaultIO.getVector(modelStartFile)
 
-	# Build sources/receivers geometry
-	sourcesVector,sourceAxis=buildSourceGeometry(parObject,modelStart)
-	receiversVector,receiverAxis=buildReceiversGeometry(parObject,modelStart)
+	#Local vector copy useful for dask interface
+	modelStartLocal = modelStart
 
 	# Time axis
 	nts=parObject.getInt("nts",-1)
@@ -1009,13 +1008,23 @@ def BornExtTomoInvOpInitFloat(args):
 		print("**** ERROR: User did not provide seismic sources file ****\n")
 		quit()
 	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile,ndims=2)
-	sourcesSignalsVector=[]
-	sourcesSignalsVector.append(sourcesSignalsFloat) # Create a vector of float2DReg slices
 
-	# Allocate data
-	dataFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis]))
+	if client:
+		#Getting number of workers and passing
+		nWrks = client.getNworkers()
 
-	return modelStart,dataFloat,reflectivityFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector
+	else:
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometry(parObject,modelStart)
+		receiversVector,receiverAxis=buildReceiversGeometry(parObject,modelStart)
+
+		sourcesSignalsVector=[]
+		sourcesSignalsVector.append(sourcesSignalsFloat) # Create a vector of float2DReg slices
+
+		# Allocate data
+		dataFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis]))
+
+	return modelStart,dataFloat,reflectivityFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,modelStartLocal
 
 class BornExtTomoInvShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for Extended Born operator"""
@@ -1034,7 +1043,7 @@ class BornExtTomoInvShotsGpu(Op.Operator):
 		for idx,sourceSignal in enumerate(sourcesSignalsVector):
 			if("getCpp" in dir(sourceSignal)):
 				sourcesSignalsVector[idx] = sourceSignal.getCpp()
-		self.pyOp = pyAcoustic_iso_float_born_ext.BornExtShotsGpu(domain,paramP,sourceVector,sourcesSignalsVector,receiversVector)
+		self.pyOp = pyAcoustic_iso_float_born_ext.BornExtShotsGpu(domain,paramP.param,sourceVector,sourcesSignalsVector,receiversVector)
 		return
 
 	def forward(self,add,model,data):
