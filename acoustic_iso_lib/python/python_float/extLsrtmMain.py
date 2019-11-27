@@ -18,6 +18,7 @@ import dsoInvGpuModule
 # Solver library
 import pyOperator as pyOp
 import pyLCGsolver as LCG
+import pyLBFGSsolver as LBFGS
 import pySymLCGsolver as SymLCGsolver
 import pyProblem as Prblm
 import pyStopperBase as Stopper
@@ -49,6 +50,7 @@ if __name__ == '__main__':
 		nWrks = client.getNworkers()
 
 	pyinfo=parObject.getInt("pyinfo",1)
+	solver=parObject.getString("solver","LCG")
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
 	regType=parObject.getString("reg","None")
@@ -171,6 +173,10 @@ if __name__ == '__main__':
 			invOpTemp=pyOp.ChainOperator(splineTempOp,BornExtOp)
 			invOp=pyOp.ChainOperator(invOpTemp,dataTaperOp)
 
+	if solver == "lbfgs":
+		#Solving linear problem with BFGS
+		invOp = pyOp.NonLinearOperator(invOp,invOp)
+
 	############################# Regularization ###############################
 	# Regularization
 	if (reg==1):
@@ -182,7 +188,10 @@ if __name__ == '__main__':
 		if (regType=="id"):
 			if(pyinfo): print("--- Identity regularization ---")
 			inv_log.addToLog("--- Identity regularization ---")
-			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
+			if solver == "lbfgs":
+				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon)
+			else:
+				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
 
 		# Dso
 		elif (regType=="dso"):
@@ -197,16 +206,21 @@ if __name__ == '__main__':
 				nExt=modelInit.getHyper().axes[2].n
 				fat=0
 				dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,dsoZeroShift)
-				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp)
 			else:
 				nz,nx,nExt,fat,dsoZeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
 				dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,dsoZeroShift)
+			if solver == "lbfgs":
+				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon,reg_op=pyOp.NonLinearOperator(dsoOp,dsoOp))
+			else:
 				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp)
 
 		elif (regType=="dsoPrec"):
 			if(pyinfo): print("--- DSO regularization with preconditioning ---")
 			inv_log.addToLog("--- DSO regularization with preconditioning ---")
-			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
+			if solver == "lbfgs":
+				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon)
+			else:
+				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
 
 		else:
 			if(pyinfo): print("--- Regularization that you have required is not supported by our code ---")
@@ -223,15 +237,24 @@ if __name__ == '__main__':
 
 	# No regularization
 	else:
-		invProb=Prblm.ProblemL2Linear(modelInit,data,invOp)
+		if solver == "lbfgs":
+			invProb=Prblm.ProblemL2NonLinear(modelInit,data,invOp)
+		else:
+			invProb=Prblm.ProblemL2Linear(modelInit,data,invOp)
 
 	############################## Solver ######################################
 	# Solver
-	LCGsolver=LCG.LCGsolver(stop,logger=inv_log)
-	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
+	if solver == "LCG":
+		linSolver=LCG.LCGsolver(stop,logger=inv_log)
+	elif solver == "lbfgs":
+		linSolver=LBFGS.LBFGSsolver(stop,logger=inv_log)
+	else:
+		raise ValueError("Provided requested solver (%s) not supported!"%(solver))
+
+	linSolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver
-	LCGsolver.run(invProb,verbose=True)
+	linSolver.run(invProb,verbose=True)
 
 	if(pyinfo): print("-------------------------------------------------------------------")
 	if(pyinfo): print("--------------------------- All done ------------------------------")
