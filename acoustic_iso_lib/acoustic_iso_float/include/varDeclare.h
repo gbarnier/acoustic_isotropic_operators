@@ -31,8 +31,8 @@ __constant__ int dev_ntw; // Number of time steps at the fine time sampling on D
 __constant__ int dev_nz; // nz on Device
 __constant__ int dev_nx; // nx on Device
 __constant__ int dev_sub; // Subsampling in time
- __constant__ int dev_nExt; // Length of extension axis
- __constant__ int dev_hExt; // Half-length of extension axis
+__constant__ int dev_nExt; // Length of extension axis
+__constant__ int dev_hExt; // Half-length of extension axis
 
 __constant__ int dev_nSourcesReg; // Nb of source grid points
 __constant__ int dev_nReceiversReg; // Nb of receiver grid points

@@ -81,7 +81,7 @@ void nonlinearPropShotsGpu::forward(const bool add, const std::shared_ptr<float3
 	std::vector<std::shared_ptr<nonlinearPropGpu>> propObjectVector;
 
 	// Initialization for each GPU:
-	// (1) Creation of vector of objects, model, and data.
+	// (1) Creation of vector of objects, model, and data
 	// (2) Memory allocation on GPU
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 

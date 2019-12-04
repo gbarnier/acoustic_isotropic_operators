@@ -68,13 +68,13 @@ if __name__ == '__main__':
 		vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
 
 	# Nonlinear modeling operator
-	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
+	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector,_=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
 
 	# Born
-	_,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	_,_,_,_,_,sourcesSignalsVector,_,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
 
 	# Born extended
-	reflectivityExtInit,_,vel,_,_,_,_=Acoustic_iso_float.BornExtOpInitFloat(sys.argv)
+	reflectivityExtInit,_,vel,_,_,_,_,_=Acoustic_iso_float.BornExtOpInitFloat(sys.argv)
 
 	# Tomo extended
 	_,_,_,_,_,_,_,_=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv)

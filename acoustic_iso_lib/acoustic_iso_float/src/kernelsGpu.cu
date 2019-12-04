@@ -486,6 +486,7 @@ __global__ void stepFwdGpu(float *dev_o, float *dev_c, float *dev_n, float *dev_
 	int iGlobal = dev_nz * ixGlobal + izGlobal; // 1D array index for the model on the global memory
 
 	// Copy current slice from global to shared memory
+	// Each thread is going to perform this operation
 	shared_c[ixLocal][izLocal] = dev_c[iGlobal];
 
 	// Copy current slice from global to shared -- edges
@@ -497,7 +498,9 @@ __global__ void stepFwdGpu(float *dev_o, float *dev_c, float *dev_n, float *dev_
 		shared_c[ixLocal][izLocal-FAT] = dev_c[iGlobal-FAT]; // Up
 		shared_c[ixLocal][izLocal+BLOCK_SIZE] = dev_c[iGlobal+BLOCK_SIZE]; // Down
 	}
-	__syncthreads(); // Synchronise all threads within each block -- look new sync options
+	__syncthreads(); // Synchronise all threads within each block
+	// For a given block, we have now loaded the entire "block slice" plus the halos on both directions into the shared memory
+	// We can now compute the Laplacian value at each point of the entire block slice
 
 	dev_n[iGlobal] =  dev_vel2Dtw2[iGlobal] * ( dev_zCoeff[0] * shared_c[ixLocal][izLocal]
 				   +  dev_zCoeff[1] * ( shared_c[ixLocal][izLocal-1] + shared_c[ixLocal][izLocal+1] )
