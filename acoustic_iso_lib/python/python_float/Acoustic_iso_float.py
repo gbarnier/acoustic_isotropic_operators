@@ -1013,6 +1013,35 @@ def BornExtTomoInvOpInitFloat(args,client=None):
 		#Getting number of workers and passing
 		nWrks = client.getNworkers()
 
+		#Spreading velocity model to workers
+		hyper_vel = modelStart.getHyper()
+		velFloatD = pyDaskVector.DaskVector(client,vectors=[modelStart]*nWrks)
+		velFloat = velFloatD.vecDask
+
+		modelStart = pyDaskVector.DaskVector(client,vectors=[modelStart]*nWrks)
+
+		#Spreading reflectivity
+		reflectivityFloat = pyDaskVector.DaskVector(client,vectors=[reflectivityFloat]*nWrks).vecDask
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometryDask(parObject,velFloat,hyper_vel,client)
+		receiversVector,receiverAxis=buildReceiversGeometryDask(parObject,velFloat,hyper_vel,client)
+
+		#Spreading source wavelet
+		sourcesSignalsFloat = pyDaskVector.DaskVector(client,vectors=[sourcesSignalsFloat]*nWrks).vecDask
+		sourcesSignalsVector = client.getClient().map((lambda x: [x]),sourcesSignalsFloat,pure=False)
+		daskD.wait(sourcesSignalsVector)
+
+		#Allocating data vectors to be spread
+		dataFloat = []
+		for iwrk in range(nWrks):
+			dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis[iwrk],sourceAxis[iwrk]])
+			dataFloat.append(SepVector.getSepVector(dataHyper))
+		dataFloat = pyDaskVector.DaskVector(client,vectors=dataFloat,copy=False)
+
+		#Spreading/Instantiating the parameter objects
+		parObject = spreadParObj(client,args,parObject)
+
 	else:
 		# Build sources/receivers geometry
 		sourcesVector,sourceAxis=buildSourceGeometry(parObject,modelStart)
@@ -1078,7 +1107,7 @@ class BornExtTomoInvShotsGpu(Op.Operator):
 		return
 
 #################################### Tomo ######################################
-def tomoExtOpInitFloat(args):
+def tomoExtOpInitFloat(args,client=None):
 
 	# IO object
 	parObject=genericIO.io(params=args)
@@ -1089,10 +1118,6 @@ def tomoExtOpInitFloat(args):
 		print("**** ERROR: User did not provide vel file ****\n")
 		quit()
 	velFloat=genericIO.defaultIO.getVector(velFile)
-
-	# Build sources/receivers geometry
-	sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
-	receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
 
 	# Space axes
 	zAxis=velFloat.getHyper().axes[0]
@@ -1138,8 +1163,6 @@ def tomoExtOpInitFloat(args):
 		print("**** ERROR: User did not provide seismic sources file ****\n")
 		quit()
 	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile,ndims=2)
-	sourcesSignalsVector=[]
-	sourcesSignalsVector.append(sourcesSignalsFloat) # Create a vector of float2DReg slices
 
 	# Extended reflectivity
 	reflectivityFile=parObject.getString("reflectivity","None")
@@ -1151,11 +1174,56 @@ def tomoExtOpInitFloat(args):
 
 	# Allocate model
 	modelFloat=SepVector.getSepVector(velFloat.getHyper())
+	#Local vector copy useful for dask interface
+	modelFloatLocal = modelFloat
 
-	# Allocate data
-	dataFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis]))
 
-	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityFloat
+	if client:
+
+		#Getting number of workers and passing
+		nWrks = client.getNworkers()
+
+		#Spreading velocity model to workers
+		hyper_vel = velFloat.getHyper()
+		velFloatD = pyDaskVector.DaskVector(client,vectors=[velFloat]*nWrks)
+		velFloat = velFloatD.vecDask
+
+		modelFloat = pyDaskVector.DaskVector(client,vectors=[modelFloat]*nWrks)
+
+		reflectivityFloat = pyDaskVector.DaskVector(client,vectors=[reflectivityFloat]*nWrks)
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometryDask(parObject,velFloat,hyper_vel,client)
+		receiversVector,receiverAxis=buildReceiversGeometryDask(parObject,velFloat,hyper_vel,client)
+
+		#Spreading source wavelet
+		sourcesSignalsFloat = pyDaskVector.DaskVector(client,vectors=[sourcesSignalsFloat]*nWrks).vecDask
+		sourcesSignalsVector = client.getClient().map((lambda x: [x]),sourcesSignalsFloat,pure=False)
+		daskD.wait(sourcesSignalsVector)
+
+		#Allocating data vectors to be spread
+		dataFloat = []
+		for iwrk in range(nWrks):
+			dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis[iwrk],sourceAxis[iwrk]])
+			dataFloat.append(SepVector.getSepVector(dataHyper))
+		dataFloat = pyDaskVector.DaskVector(client,vectors=dataFloat,copy=False)
+
+		#Spreading/Instantiating the parameter objects
+		parObject = spreadParObj(client,args,parObject)
+
+	else:
+
+		# Build sources/receivers geometry
+		sourcesVector,sourceAxis=buildSourceGeometry(parObject,velFloat)
+		receiversVector,receiverAxis=buildReceiversGeometry(parObject,velFloat)
+
+		sourcesSignalsVector=[]
+		sourcesSignalsVector.append(sourcesSignalsFloat) # Create a vector of float2DReg slices
+
+		# Allocate data
+		dataFloat=SepVector.getSepVector(Hypercube.hypercube(axes=[timeAxis,receiverAxis,sourceAxis]))
+
+	return modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityFloat,modelFloatLocal
 
 class tomoExtShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for Born operator"""
@@ -1175,7 +1243,7 @@ class tomoExtShotsGpu(Op.Operator):
 		if("getCpp" in dir(reflectivityExt)):
 			reflectivityExt = reflectivityExt.getCpp()
 
-		self.pyOp = pyAcoustic_iso_float_tomo.tomoExtShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector,reflectivityExt)
+		self.pyOp = pyAcoustic_iso_float_tomo.tomoExtShotsGpu(velocity,paramP.param,sourceVector,sourcesSignalsVector,receiversVector,reflectivityExt)
 		return
 
 	def forward(self,add,model,data):

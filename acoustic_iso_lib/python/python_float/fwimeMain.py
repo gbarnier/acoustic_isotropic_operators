@@ -144,7 +144,7 @@ if __name__ == '__main__':
 		gInvOpTemp=pyOp.CombNonlinearOp(splineNlOp,gOp) # Combine spline and FWI
 		gInvOp=pyOp.CombNonlinearOp(gInvOpTemp,dataTaperNlOp) # Combine everything
 
-	################ Instanciation of variable projection operator #############
+	################ Instantiation of variable projection operator #############
 	# Born extended
 	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(reflectivityExtInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
 	BornExtInvOp=BornExtOp
@@ -182,7 +182,7 @@ if __name__ == '__main__':
 	# Regularization operators
 	dsoNonlinearJacobian=pyOp.ZeroOp(modelInit,reflectivityExtInit)
 	dsoNonlinearDummy=pyOp.ZeroOp(modelInit,reflectivityExtInit)
-	dsoNonlinearOp=pyOp.NonLinearOperator(dsoNonlinearDummy,dsoNonlinearJacobian,pyOp.dummy_set_background)
+	dsoNonlinearOp=pyOp.NonLinearOperator(dsoNonlinearDummy,dsoNonlinearJacobian)
 
 	# Variable projection operator for the regularization term
 	vpRegOp=pyVp.VpOperator(dsoNonlinearOp,dsoOp,pyOp.dummy_set_background,pyOp.dummy_set_background)

@@ -55,7 +55,7 @@ if __name__ == '__main__':
 		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec=dataTaperModule.dataTaperInit(sys.argv)
 
 	# Tomo
-	modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExt=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv)
+	modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExt,_=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv)
 
 	############################# Read files ###################################
 	# Read initial model
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
 	############################# Instanciation ################################
 	# Tomo
-	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExt)
+	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExt)
 	invOp=tomoExtOp
 
 	# Spline
