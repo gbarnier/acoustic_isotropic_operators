@@ -17,13 +17,14 @@ import phaseOnlyXkModule
 
 # Solver library
 import pyOperator as pyOp
-import pyNLCGsolver as NLCG
-import pyLBFGSsolver as LBFGS
+from pyLinearSolver import pyLCGsolver as LCG
+from pyNonLinearSolver import pyNLCGsolver as NLCG
+from pyNonLinearSolver import pyLBFGSsolver as LBFGS
 import pyProblem as Prblm
-import pyStopperBase as Stopper
-import pyStepperParabolic as Stepper
-import inversionUtils
+import pyVPproblem as pyVp
+from pyStopper import pyStopperBase as Stopper
 from sys_util import logger
+import inversionUtils
 
 #Dask-related modules
 from dask_util import DaskClient

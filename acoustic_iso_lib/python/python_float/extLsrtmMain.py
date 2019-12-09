@@ -17,13 +17,14 @@ import dsoInvGpuModule
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
-import pyLBFGSsolver as LBFGS
-import pySymLCGsolver as SymLCGsolver
+from pyLinearSolver import pyLCGsolver as LCG
+from pyNonLinearSolver import pyNLCGsolver as NLCG
+from pyNonLinearSolver import pyLBFGSsolver as LBFGS
 import pyProblem as Prblm
-import pyStopperBase as Stopper
-import inversionUtils
+import pyVPproblem as pyVp
+from pyStopper import pyStopperBase as Stopper
 from sys_util import logger
+import inversionUtils
 
 #Dask-related modules
 from dask_util import DaskClient

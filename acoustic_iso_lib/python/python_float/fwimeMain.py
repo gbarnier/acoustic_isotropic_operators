@@ -17,12 +17,12 @@ import maskGradientModule
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
-import pyNLCGsolver as NLCG
-import pyLBFGSsolver as LBFGS
+from pyLinearSolver import pyLCGsolver as LCG
+from pyNonLinearSolver import pyNLCGsolver as NLCG
+from pyNonLinearSolver import pyLBFGSsolver as LBFGS
 import pyProblem as Prblm
 import pyVPproblem as pyVp
-import pyStopperBase as Stopper
+from pyStopper import pyStopperBase as Stopper
 from sys_util import logger
 import inversionUtils
 
