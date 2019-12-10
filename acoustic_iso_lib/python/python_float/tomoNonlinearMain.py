@@ -16,9 +16,9 @@ import maskGradientModule
 
 # Solver library
 import pyOperator as pyOp
-import pyNLCGsolver as NLCG
+from pyNonLinearSolver import NLCGsolver as NLCG
 import pyProblem as Prblm
-import pyStopperBase as Stopper
+from pyStopper import StopperBase as Stopper
 import inversionUtils
 from sys_util import logger
 

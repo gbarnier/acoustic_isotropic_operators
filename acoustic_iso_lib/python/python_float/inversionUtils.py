@@ -6,7 +6,7 @@ import numpy as np
 import time
 import sys
 import os
-from pyStopper import pyStopperBase as Stopper
+from pyStopper import StopperBase as Stopper
 
 def inversionFullWRIInit(args):
 

@@ -17,10 +17,10 @@ import dsoInvGpuModule
 
 # Solver library
 import pyOperator as pyOp
-from pyLinearSolver import pyLCGsolver as LCG
-from pyLinearSolver import pySymLCGsolver as SymLCGsolver
+from pyLinearSolver import LCGsolver as LCG
+from pyLinearSolver import SymLCGsolver as SymLCGsolver
 import pyProblem as Prblm
-from pyStopper import pyStopperBase as Stopper
+from pyStopper import BasicStopper as Stopper
 import inversionUtils
 from sys_util import logger
 

@@ -15,9 +15,9 @@ import spatialDerivModule
 
 # Solver library
 import pyOperator as pyOp
-from pyLinearSolver import pyLCGsolver as LCG
+from pyLinearSolver import LCGsolver as LCG
 import pyProblem as Prblm
-from pyStopper import pyStopperBase as Stopper
+from pyStopper import BasicStopper as Stopper
 import inversionUtils
 from sys_util import logger
 
