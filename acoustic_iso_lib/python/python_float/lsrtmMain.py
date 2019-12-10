@@ -21,11 +21,29 @@ from pyStopper import pyStopperBase as Stopper
 import inversionUtils
 from sys_util import logger
 
+#Dask-related modules
+from dask_util import DaskClient
+import pyDaskOperator as DaskOp
+
+#Dask-related modules
+from dask_util import DaskClient
+import pyDaskOperator as DaskOp
+import pyDaskVector
+
 # Template for linearized waveform inversion workflow
 if __name__ == '__main__':
 
 	# IO object
 	parObject=genericIO.io(params=sys.argv)
+
+	hostnames = parObject.getString("hostnames","noHost")
+	client = None
+	#Starting Dask client if requested
+	if(hostnames != "noHost"):
+		print("Starting Dask client using following workers: %s"%(hostnames))
+		client = DaskClient(hostnames.split(","))
+		print("Client has started!")
+		nWrks = client.getNworkers()
 
 	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)
@@ -53,8 +71,19 @@ if __name__ == '__main__':
 	if (dataTaper==1):
 		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth=dataTaperModule.dataTaperInit(sys.argv)
 
-	# Born
-	modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	# Born arguments
+	modelFineInit,data,vel,parObject1,sourcesVector,sourcesSignalsVector,receiversVector,modelFineInitLocal=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	# Born operator
+	if client:
+		#Instantiating Dask Operator
+		BornOp_args = [(modelFineInit.vecDask[iwrk],data.vecDask[iwrk],vel[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		BornOp = DaskOp.DaskOperator(client,Acoustic_iso_float.BornShotsGpu,BornOp_args,[1]*nWrks)
+		#Adding spreading operator and concatenating with Born operator (using modelFineInitLocal)
+		Sprd = DaskOp.DaskSpreadOp(client,modelFineInitLocal,[1]*nWrks)
+		invOp = pyOp.ChainOperator(Sprd,BornOp)
+	else:
+		BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,vel,parObject1,sourcesVector,sourcesSignalsVector,receiversVector)
+	invOp=BornOp
 
 	############################# Read files ###################################
 	# Read initial model
@@ -67,17 +96,19 @@ if __name__ == '__main__':
 			modelInit=genericIO.defaultIO.getVector(modelInitFile,ndims=2)
 	else:
 		if (modelInitFile=="None"):
-			modelInit=modelFineInit.clone()
+			modelInit=modelFineInitLocal.clone()
 			modelInit.scale(0.0)
 
 	# Data
 	dataFile=parObject.getString("data")
 	data=genericIO.defaultIO.getVector(dataFile,ndims=3)
 
+	#Dask interface
+	if(client):
+		#Chunking the data and spreading them across workers if dask was requested
+		data = Acoustic_iso_float.chunkData(data,BornExtOp.getRange())
+
 	############################# Instanciation ################################
-	# Born
-	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
-	invOp=BornOp
 
 	# Spline
 	if (spline==1):
@@ -89,7 +120,12 @@ if __name__ == '__main__':
 	if (dataTaper==1):
 		if(pyinfo): print("--- Using data tapering ---")
 		inv_log.addToLog("--- Using data tapering ---")
-		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
+		if client:
+			hypers = client.getClient().map(lambda x: x.getHyper(),data.vecDask,pure=False)
+			dataTaper_args = [(data.vecDask[iwrk],data.vecDask[iwrk],t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,hypers[iwrk],time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth) for iwrk in range(nWrks)]
+			dataTaperOp = DaskOp.DaskOperator(client,dataTaperModule.datTaper,dataTaper_args,[1]*nWrks)
+		else:
+			dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
 		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered

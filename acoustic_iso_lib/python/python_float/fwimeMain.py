@@ -26,6 +26,11 @@ from pyStopper import pyStopperBase as Stopper
 from sys_util import logger
 import inversionUtils
 
+#Dask-related modules
+from dask_util import DaskClient
+import pyDaskOperator as DaskOp
+import pyDaskVector
+
 # Template for FWIME workflow
 if __name__ == '__main__':
 
