@@ -37,6 +37,15 @@ if __name__ == '__main__':
 	# IO object
 	parObject=genericIO.io(params=sys.argv)
 
+	hostnames = parObject.getString("hostnames","noHost")
+	client = None
+	#Starting Dask client if requested
+	if(hostnames != "noHost"):
+		print("Starting Dask client using following workers: %s"%(hostnames))
+		client = DaskClient(hostnames.split(","))
+		print("Client has started!")
+		nWrks = client.getNworkers()
+
 	# Auxiliary operators
 	spline=parObject.getInt("spline")
 	dataTaper=parObject.getInt("dataTaper")
@@ -70,22 +79,22 @@ if __name__ == '__main__':
 	# Gradient mask
 	if (gradientMask==1):
 		print("--- Using gradient masking ---")
-		vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
+		vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv,client)
 
 	# Nonlinear modeling operator
-	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector,_=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
+	modelFineInit,dataInit,wavelet,parObject1,sourcesVector,receiversVector,modelFineInitLocal=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv,client)
 
 	# Born
-	_,_,_,_,_,sourcesSignalsVector,_,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	_,_,_,_,_,sourcesSignalsVector,_,_=Acoustic_iso_float.BornOpInitFloat(sys.argv,client)
 
 	# Born extended
-	reflectivityExtInit,_,vel,_,_,_,_,_=Acoustic_iso_float.BornExtOpInitFloat(sys.argv)
+	reflectivityExtInit,_,vel,_,_,_,_,reflectivityExtInitLocal=Acoustic_iso_float.BornExtOpInitFloat(sys.argv,client)
 
 	# Tomo extended
-	_,_,_,_,_,_,_,_=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv)
+	# _,_,_,_,_,_,_,_=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv,client)
 
 	# Dso
-	nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
+	nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv,client)
 
 	# ############################# Read files ###################################
 	# The initial model is read during the initialization of the nonlinear operator (no need to re-read it)
@@ -97,12 +106,12 @@ if __name__ == '__main__':
 	# Read initial extended reflectivity
 	reflectivityExtInitFile=parObject.getString("reflectivityExtInit","None")
 	if (reflectivityExtInitFile=="None"):
-		reflectivityExtInit.scale(0.0)
+		reflectivityExtInitLocal.set(0.0)
 	else:
-		reflectivityExtInit=genericIO.defaultIO.getVector(reflectivityExtInitFile,ndims=3)
+		reflectivityExtInitLocal=genericIO.defaultIO.getVector(reflectivityExtInitFile,ndims=3)
 
 	# Coarse-grid model
-	modelInit=modelFineInit
+	modelInit=modelFineInitLocal
 	if (spline==1):
 		modelCoarseInitFile=parObject.getString("modelCoarseInit")
 		modelCoarseInit=genericIO.defaultIO.getVector(modelCoarseInitFile,ndims=2)
@@ -112,6 +121,48 @@ if __name__ == '__main__':
 	dataFile=parObject.getString("data")
 	data=genericIO.defaultIO.getVector(dataFile,ndims=3)
 
+
+	############################# Instanciation of g ###########################
+	#Dask interface
+	if client:
+		wavelet = pyDaskVector.DaskVector(client,vectors=[wavelet]*nWrks)
+		#Spreading operator and concatenating with non-linear and born operators
+		Sprd = DaskOp.DaskSpreadOp(client,modelFineInitLocal,[1]*nWrks)
+		# Nonlinear
+		nlOp_args = [(modelFineInit.vecDask[iwrk],dataInit.vecDask[iwrk],wavelet.vecDask[iwrk],parObject1[iwrk],sourcesVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		nonlinearFwdOp = DaskOp.DaskOperator(client,Acoustic_iso_float.nonlinearFwiPropShotsGpu,nlOp_args,[1]*nWrks)
+		#Concatenating spreading and non-linear
+		nonlinearFwdOp = pyOp.ChainOperator(Sprd,nonlinearFwdOp)
+
+		# Born
+		BornOp_args = [(modelFineInit.vecDask[iwrk],dataInit.vecDask[iwrk],modelFineInit.vecDask[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		BornOpDask = DaskOp.DaskOperator(client,Acoustic_iso_float.BornShotsGpu,BornOp_args,[1]*nWrks,setbackground_func_name="setVel",spread_op=Sprd)
+		#Concatenating spreading and Born
+		BornOp = pyOp.ChainOperator(Sprd,BornOpDask)
+	else:
+		# Nonlinear
+		nonlinearFwdOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,dataInit,wavelet,parObject,sourcesVector,receiversVector)
+
+		# Born
+		BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,dataInit,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+
+	BornInvOp=BornOp
+	if (gradientMask==1):
+		maskGradientOp=maskGradientModule.maskGradient(modelFineInitLocal,modelFineInitLocal,vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
+		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
+
+	# g nonlinear (same as conventional FWI operator)
+	if client:
+		gOp=pyOp.NonLinearOperator(nonlinearFwdOp,BornInvOp,BornOpDask.set_background)
+	else:
+		gOp=pyOp.NonLinearOperator(nonlinearFwdOp,BornInvOp,BornOp.setVel)
+	gInvOp=gOp
+
+	#Dask interface
+	if(client):
+		#Chunking the data and spreading them across workers if dask was requested
+		data = Acoustic_iso_float.chunkData(data,BornOp.getRange())
+
 	############################# Auxiliary operators ##########################
 	if (spline==1):
 		splineOp=interpBSplineModule.bSpline2d(modelInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
@@ -119,26 +170,18 @@ if __name__ == '__main__':
 
 	# Data taper
 	if (dataTaper==1):
-		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
-		dataTapered=data.clone()
+		if(pyinfo): print("--- Using data tapering ---")
+		inv_log.addToLog("--- Using data tapering ---")
+		if client:
+			hypers = client.getClient().map(lambda x: x.getHyper(),data.vecDask,pure=False)
+			dataTaper_args = [(data.vecDask[iwrk],data.vecDask[iwrk],t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,hypers[iwrk],time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth) for iwrk in range(nWrks)]
+			dataTaperOp = DaskOp.DaskOperator(client,dataTaperModule.datTaper,dataTaper_args,[1]*nWrks)
+		else:
+			dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
+			dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
 		dataTaperNlOp=pyOp.NonLinearOperator(dataTaperOp,dataTaperOp) # Create dataTaper nonlinear operator
-
-	############################# Instanciation of g ###########################
-	# Nonlinear
-	nonlinearFwdOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,data,wavelet,parObject.param,sourcesVector,receiversVector)
-
-	# Born
-	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
-	BornInvOp=BornOp
-	if (gradientMask==1):
-		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
-		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
-
-	# g nonlinear (same as conventional FWI operator)
-	gOp=pyOp.NonLinearOperator(nonlinearFwdOp,BornInvOp,BornOp.setVel)
-	gInvOp=gOp
 
 	# Concatenate operators
 	if (spline==1 and dataTaper==0):
@@ -150,15 +193,31 @@ if __name__ == '__main__':
 		gInvOp=pyOp.CombNonlinearOp(gInvOpTemp,dataTaperNlOp) # Combine everything
 
 	################ Instantiation of variable projection operator #############
-	# Born extended
-	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(reflectivityExtInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
-	BornExtInvOp=BornExtOp
-	if (spline==1):
-		BornExtOp.add_spline(splineOp)
 
-	# Tomo
-	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExtInit)
-	tomoExtInvOp=tomoExtOp
+	if client:
+		raise NotImplementedError("dask not implemented yet")
+
+		#Instantiating Dask Operator
+		BornExtOp_args = [(reflectivityExtInit.vecDask[iwrk],data.vecDask[iwrk],vel[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		BornExtOp = DaskOp.DaskOperator(client,Acoustic_iso_float.BornExtShotsGpu,BornExtOp_args,[1]*nWrks)
+		#Adding spreading operator and concatenating with Born operator (using modelFineInitLocal)
+		BornExtInvOp = pyOp.ChainOperator(Sprd,BornExtOp)
+
+		#Instantiating Dask Operator
+		tomoExtOp_args = [(modelFineInit.vecDask[iwrk],data.vecDask[iwrk],vel[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk],reflectivityFloat.vecDask[iwrk]) for iwrk in range(nWrks)]
+		tomoExtOp = DaskOp.DaskOperator(client,Acoustic_iso_float.tomoExtShotsGpu,tomoExtOp_args,[1]*nWrks)
+		#Adding spreading operator and concatenating with Born operator (using modelFloatLocal)
+		tomoExtOp = pyOp.ChainOperator(Sprd,tomoExtOp)
+	else:
+		# Born extended
+		BornExtOp=Acoustic_iso_float.BornExtShotsGpu(reflectivityExtInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+		BornExtInvOp=BornExtOp
+		if (spline==1):
+			BornExtOp.add_spline(splineOp)
+
+		# Tomo
+		tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExtInit)
+		tomoExtInvOp=tomoExtOp
 
 	# Concatenate operators
 	if (gradientMask==1 and dataTaper==1):
@@ -172,7 +231,7 @@ if __name__ == '__main__':
 		tomoExtInvOp=pyOp.ChainOperator(tomoExtOp,dataTaperOp)
 
 	# Dso
-	dsoOp=dsoGpuModule.dsoGpu(reflectivityExtInit,reflectivityExtInit,nz,nx,nExt,fat,zeroShift)
+	dsoOp=dsoGpuModule.dsoGpu(reflectivityExtInitLocal,reflectivityExtInitLocal,nz,nx,nExt,fat,zeroShift)
 
 	# h nonlinear
 	hNonlinearDummyOp=pyOp.ZeroOp(modelFineInit,data)
@@ -185,8 +244,8 @@ if __name__ == '__main__':
 	vpOp=pyVp.VpOperator(hNonlinearInvOp,BornExtInvOp,BornExtOp.setVel,tomoExtOp.setReflectivityExt)
 
 	# Regularization operators
-	dsoNonlinearJacobian=pyOp.ZeroOp(modelInit,reflectivityExtInit)
-	dsoNonlinearDummy=pyOp.ZeroOp(modelInit,reflectivityExtInit)
+	dsoNonlinearJacobian=pyOp.ZeroOp(modelInit,reflectivityExtInitLocal)
+	dsoNonlinearDummy=pyOp.ZeroOp(modelInit,reflectivityExtInitLocal)
 	dsoNonlinearOp=pyOp.NonLinearOperator(dsoNonlinearDummy,dsoNonlinearJacobian)
 
 	# Variable projection operator for the regularization term
@@ -223,7 +282,7 @@ if __name__ == '__main__':
 	minBoundVector,maxBoundVector=Acoustic_iso_float.createBoundVectors(parObject,modelInit)
 
 	######################### Variable projection problem ######################
-	vpProb=pyVp.ProblemL2VpReg(modelInit,reflectivityExtInit,vpOp,data,linSolver,gInvOp,h_op_reg=vpRegOp,epsilon=epsilon,minBound=minBoundVector,maxBound=maxBoundVector)
+	vpProb=pyVp.ProblemL2VpReg(modelInit,reflectivityExtInitLocal,vpOp,data,linSolver,gInvOp,h_op_reg=vpRegOp,epsilon=epsilon,minBound=minBoundVector,maxBound=maxBoundVector)
 
 	################################# Inversion ################################
 	print("Run solver")

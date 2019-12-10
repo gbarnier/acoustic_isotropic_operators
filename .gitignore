@@ -4,3 +4,4 @@ build/
 *.H
 .ipynb_checkpoints
 local/
+._*

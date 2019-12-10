@@ -72,7 +72,7 @@ if __name__ == '__main__':
 		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth=dataTaperModule.dataTaperInit(sys.argv)
 
 	# Born arguments
-	modelFineInit,data,vel,parObject1,sourcesVector,sourcesSignalsVector,receiversVector,modelFineInitLocal=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	modelFineInit,data,vel,parObject1,sourcesVector,sourcesSignalsVector,receiversVector,modelFineInitLocal=Acoustic_iso_float.BornOpInitFloat(sys.argv,client)
 	# Born operator
 	if client:
 		#Instantiating Dask Operator
