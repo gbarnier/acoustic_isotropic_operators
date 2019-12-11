@@ -458,6 +458,10 @@ class nonlinearPropShotsGpu(Op.Operator):
 		self.pyOp = pyAcoustic_iso_float_nl.nonlinearPropShotsGpu(velocity,paramP.param,sourceVector,receiversVector)
 		return
 
+	def __str__(self):
+		"""Name of the operator"""
+		return " NLOper "
+
 	def forward(self,add,model,data):
 		#Checking if getCpp is present
 		if("getCpp" in dir(model)):
@@ -601,6 +605,10 @@ class nonlinearFwiPropShotsGpu(Op.Operator):
 		self.pyOp = pyAcoustic_iso_float_nl.nonlinearPropShotsGpu(domain,paramP.param,sourceVector,receiversVector)
 		return
 
+	def __str__(self):
+		"""Name of the operator"""
+		return " NLOper "
+
 	def forward(self,add,model,data):
 		#Setting velocity model
 		self.setVel(model)
@@ -713,6 +721,10 @@ class BornShotsGpu(Op.Operator):
 				sourcesSignalsVector[idx] = sourceSignal.getCpp()
 		self.pyOp = pyAcoustic_iso_float_born.BornShotsGpu(velocity,paramP.param,sourceVector,sourcesSignalsVector,receiversVector)
 		return
+
+	def __str__(self):
+		"""Name of the operator"""
+		return " BornOp "
 
 	def forward(self,add,model,data):
 		#Checking if getCpp is present
@@ -905,6 +917,10 @@ class BornExtShotsGpu(Op.Operator):
 		self.pyOp = pyAcoustic_iso_float_born_ext.BornExtShotsGpu(velocity,paramP.param,sourceVector,sourcesSignalsVector,receiversVector)
 		return
 
+	def __str__(self):
+		"""Name of the operator"""
+		return " BornExt"
+
 	def forward(self,add,model,data):
 		#Checking if getCpp is present
 		if("getCpp" in dir(model)):
@@ -1074,6 +1090,10 @@ class BornExtTomoInvShotsGpu(Op.Operator):
 				sourcesSignalsVector[idx] = sourceSignal.getCpp()
 		self.pyOp = pyAcoustic_iso_float_born_ext.BornExtShotsGpu(domain,paramP.param,sourceVector,sourcesSignalsVector,receiversVector)
 		return
+
+	def __str__(self):
+		"""Name of the operator"""
+		return " BornExt"
 
 	def forward(self,add,model,data):
 		self.setVel(model)
@@ -1245,6 +1265,10 @@ class tomoExtShotsGpu(Op.Operator):
 
 		self.pyOp = pyAcoustic_iso_float_tomo.tomoExtShotsGpu(velocity,paramP.param,sourceVector,sourcesSignalsVector,receiversVector,reflectivityExt)
 		return
+
+	def __str__(self):
+		"""Name of the operator"""
+		return " TomoOp "
 
 	def forward(self,add,model,data):
 		#Checking if getCpp is present
@@ -1424,6 +1448,10 @@ class wemvaExtShotsGpu(Op.Operator):
 		self.pyOp = pyAcoustic_iso_float_wemva.wemvaExtShotsGpu(velocity,paramP,sourceVector,sourcesSignalsVector,receiversVector,receiversSignalsVector)
 		return
 
+	def __str__(self):
+		"""Name of the operator"""
+		return " WemvaOp"
+
 	def forward(self,add,model,data):
 		#Checking if getCpp is present
 		if("getCpp" in dir(model)):
@@ -1581,6 +1609,10 @@ class wemvaNonlinearShotsGpu(Op.Operator):
 		# Instanciate Born ext adjoint
 		self.pyOp = pyAcoustic_iso_float_born_ext.BornExtShotsGpu(domain,paramP,sourceVector,sourcesSignalsVector,receiversVector)
 		return
+
+	def __str__(self):
+		"""Name of the operator"""
+		return " WemvaOp"
 
 	def forward(self,add,model,data):
 		# Model = velocity
