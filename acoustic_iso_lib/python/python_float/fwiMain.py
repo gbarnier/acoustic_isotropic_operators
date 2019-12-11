@@ -20,6 +20,7 @@ import pyOperator as pyOp
 from pyNonLinearSolver import NLCGsolver as NLCG
 from pyNonLinearSolver import LBFGSsolver as LBFGS
 import pyProblem as Prblm
+import pyStepper as Stepper
 from pyStopper import BasicStopper as Stopper
 from sys_util import logger
 import inversionUtils
@@ -253,13 +254,13 @@ if __name__ == '__main__':
 	############################# Solver #######################################
 	# Nonlinear conjugate gradient
 	if (solverType=="nlcg"):
-		nlSolver=NLCG.NLCGsolver(stop,logger=inv_log)
+		nlSolver=NLCG(stop,logger=inv_log)
 	# LBFGS
 	elif (solverType=="lbfgs"):
-		nlSolver=LBFGS.LBFGSsolver(stop,logger=inv_log)
+		nlSolver=LBFGS(stop,logger=inv_log)
 	# Steepest descent
 	elif (solverType=="sd"):
-		nlSolver=NLCG.NLCGsolver(stop,beta_type="SD",logger=inv_log)
+		nlSolver=NLCG(stop,beta_type="SD",logger=inv_log)
 
 	############################# Stepper ######################################
 	if (stepper == "parabolic"):

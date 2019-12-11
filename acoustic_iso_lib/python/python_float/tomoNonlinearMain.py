@@ -18,7 +18,6 @@ import maskGradientModule
 import pyOperator as pyOp
 from pyNonLinearSolver import NLCGsolver as NLCG
 import pyProblem as Prblm
-from pyStopper import StopperBase as Stopper
 import inversionUtils
 from sys_util import logger
 
@@ -190,7 +189,7 @@ if __name__ == '__main__':
 
 	############################# Solver #######################################
 	# Solver
-	NLCGsolver=NLCG.NLCGsolver(stop,logger=inv_log)
+	NLCGsolver=NLCG(stop,logger=inv_log)
 
 	# Manual step length
 	initStep=parObject.getInt("initStep",-1)

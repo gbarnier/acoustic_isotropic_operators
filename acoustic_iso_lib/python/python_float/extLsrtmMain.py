@@ -18,11 +18,8 @@ import dsoInvGpuModule
 # Solver library
 import pyOperator as pyOp
 from pyLinearSolver import LCGsolver as LCG
-from pyNonLinearSolver import NLCGsolver as NLCG
 from pyNonLinearSolver import LBFGSsolver as LBFGS
 import pyProblem as Prblm
-import pyVPproblem as pyVp
-from pyStopper import BasicStopper as Stopper
 from sys_util import logger
 import inversionUtils
 
@@ -246,9 +243,9 @@ if __name__ == '__main__':
 	############################## Solver ######################################
 	# Solver
 	if solver == "LCG":
-		linSolver=LCG.LCGsolver(stop,logger=inv_log)
+		linSolver=LCG(stop,logger=inv_log)
 	elif solver == "lbfgs":
-		linSolver=LBFGS.LBFGSsolver(stop,logger=inv_log)
+		linSolver=LBFGS(stop,logger=inv_log)
 	else:
 		raise ValueError("Provided requested solver (%s) not supported!"%(solver))
 

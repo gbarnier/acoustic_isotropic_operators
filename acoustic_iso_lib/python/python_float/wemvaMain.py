@@ -20,7 +20,6 @@ import pyOperator as pyOp
 from pyNonLinearSolver import NLCGsolver as NLCG
 from pyNonLinearSolver import LBFGSsolver as LBFGS
 import pyProblem as Prblm
-from pyStopper import BasicStopper as Stopper
 import inversionUtils
 from sys_util import logger
 
@@ -192,9 +191,9 @@ if __name__ == '__main__':
 	# Solver
 	# Nonlinear solver
 	if (solverType=="nlcg"):
-		nlSolver=NLCG.NLCGsolver(stop,logger=inv_log)
+		nlSolver=NLCG(stop,logger=inv_log)
 	elif (solverType=="lbfgs"):
-		nlSolver=LBFGS.LBFGSsolver(stop,logger=inv_log)
+		nlSolver=LBFGS(stop,logger=inv_log)
 
 	if (evalParab==0):
 		nlSolver.stepper.eval_parab=False

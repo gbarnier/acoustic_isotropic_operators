@@ -22,7 +22,6 @@ from pyNonLinearSolver import NLCGsolver as NLCG
 from pyNonLinearSolver import LBFGSsolver as LBFGS
 import pyProblem as Prblm
 import pyVPproblem as pyVp
-from pyStopper import BasicStopper as Stopper
 from sys_util import logger
 import inversionUtils
 
@@ -276,12 +275,12 @@ if __name__ == '__main__':
 
 	# Nonlinear solver
 	if (nlSolverType=="nlcg"):
-		nlSolver=NLCG.NLCGsolver(stopNl,logger=logger(logFileNl))
+		nlSolver=NLCG(stopNl,logger=logger(logFileNl))
 		if (evalParab==0):
 			nlSolver.stepper.eval_parab=False
 	elif(nlSolverType=="lbfgs"):
 		# By default, Lbfgs uses MT stepper
-		nlSolver=LBFGS.LBFGSsolver(stopNl,logger=logger(logFileNl))
+		nlSolver=LBFGS(stopNl,logger=logger(logFileNl))
 	else:
 		print("**** ERROR: User did not provide a nonlinear solver type ****")
 		quit()

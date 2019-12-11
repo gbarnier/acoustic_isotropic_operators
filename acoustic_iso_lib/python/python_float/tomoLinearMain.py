@@ -17,7 +17,6 @@ import spatialDerivModule
 import pyOperator as pyOp
 from pyLinearSolver import LCGsolver as LCG
 import pyProblem as Prblm
-from pyStopper import BasicStopper as Stopper
 import inversionUtils
 from sys_util import logger
 
@@ -159,7 +158,7 @@ if __name__ == '__main__':
 
 	############################## Solver ######################################
 	# Solver
-	LCGsolver=LCG.LCGsolver(stop,logger=inv_log)
+	LCGsolver=LCG(stop,logger=inv_log)
 	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver

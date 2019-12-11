@@ -17,10 +17,8 @@ import dsoInvGpuModule
 
 # Solver library
 import pyOperator as pyOp
-from pyLinearSolver import LCGsolver as LCG
-from pyLinearSolver import SymLCGsolver as SymLCGsolver
+from pyLinearSolver import SymLCGsolver 
 import pyProblem as Prblm
-from pyStopper import BasicStopper as Stopper
 import inversionUtils
 from sys_util import logger
 
@@ -105,7 +103,7 @@ if __name__ == '__main__':
 
 	############################## Solver ######################################
 	# Solver
-	symSolver=SymLCGsolver.SymLCGsolver(stop,logger=inv_log)
+	symSolver=SymLCGsolver(stop,logger=inv_log)
 	symSolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver
