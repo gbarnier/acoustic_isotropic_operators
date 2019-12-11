@@ -30,6 +30,7 @@ import inversionUtils
 from dask_util import DaskClient
 import pyDaskOperator as DaskOp
 import pyDaskVector
+import dask.distributed as daskD
 
 # Template for FWIME workflow
 if __name__ == '__main__':
@@ -165,7 +166,7 @@ if __name__ == '__main__':
 
 	############################# Auxiliary operators ##########################
 	if (spline==1):
-		splineOp=interpBSplineModule.bSpline2d(modelInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+		splineOp=interpBSplineModule.bSpline2d(modelInit,modelFineInitLocal,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
 
 	# Data taper
@@ -195,17 +196,25 @@ if __name__ == '__main__':
 	################ Instantiation of variable projection operator #############
 
 	if client:
-		raise NotImplementedError("dask not implemented yet")
-
 		#Instantiating Dask Operator
 		BornExtOp_args = [(reflectivityExtInit.vecDask[iwrk],data.vecDask[iwrk],vel[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
-		BornExtOp = DaskOp.DaskOperator(client,Acoustic_iso_float.BornExtShotsGpu,BornExtOp_args,[1]*nWrks)
+		BornExtOp = DaskOp.DaskOperator(client,Acoustic_iso_float.BornExtShotsGpu,BornExtOp_args,[1]*nWrks,setbackground_func_name="setVel",spread_op=Sprd)
 		#Adding spreading operator and concatenating with Born operator (using modelFineInitLocal)
 		BornExtInvOp = pyOp.ChainOperator(Sprd,BornExtOp)
 
+		#Adding Spline to Born set_vel functions
+		if (spline==1):
+			splineOp_args = [(modelInit.vecDask[iwrk],modelFineInit.vecDask[iwrk],zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat) for iwrk in range(nWrks)]
+			splineOpD = DaskOp.DaskOperator(client,interpBSplineModule.bSpline2d,splineOp_args,[1]*nWrks)
+			add_spline_ftr = []
+			for idx,spln_op in enumerate(splineOpD.dask_ops):
+				add_spline_ftr.append(client.getClient().submit(lambda obj: obj.add_spline(spln_op)),BornExtOp.dask_ops[idx],pure=False)
+			daskD.wait(add_spline_ftr)
+
 		#Instantiating Dask Operator
+		SprdRefl = DaskOp.DaskSpreadOp(client,reflectivityExtInitLocal,[1]*nWrks)
 		tomoExtOp_args = [(modelFineInit.vecDask[iwrk],data.vecDask[iwrk],vel[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk],reflectivityFloat.vecDask[iwrk]) for iwrk in range(nWrks)]
-		tomoExtOp = DaskOp.DaskOperator(client,Acoustic_iso_float.tomoExtShotsGpu,tomoExtOp_args,[1]*nWrks)
+		tomoExtOp = DaskOp.DaskOperator(client,Acoustic_iso_float.tomoExtShotsGpu,tomoExtOp_args,[1]*nWrks,setbackground_func_name="setVel",spread_op=Sprd,set_aux_name="setReflectivityExt",spread_op_aux=SprdRefl)
 		#Adding spreading operator and concatenating with Born operator (using modelFloatLocal)
 		tomoExtOp = pyOp.ChainOperator(Sprd,tomoExtOp)
 	else:
@@ -217,7 +226,7 @@ if __name__ == '__main__':
 
 		# Tomo
 		tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExtInit)
-		tomoExtInvOp=tomoExtOp
+	tomoExtInvOp=tomoExtOp
 
 	# Concatenate operators
 	if (gradientMask==1 and dataTaper==1):
@@ -234,14 +243,20 @@ if __name__ == '__main__':
 	dsoOp=dsoGpuModule.dsoGpu(reflectivityExtInitLocal,reflectivityExtInitLocal,nz,nx,nExt,fat,zeroShift)
 
 	# h nonlinear
-	hNonlinearDummyOp=pyOp.ZeroOp(modelFineInit,data)
-	hNonlinearOp=pyOp.NonLinearOperator(hNonlinearDummyOp,tomoExtInvOp,tomoExtOp.setVel) # We don't need the nonlinear fwd (the residuals are already computed in during the variable projection step)
+	hNonlinearDummyOp=pyOp.ZeroOp(modelFineInitLocal,data)
+	if client:
+		hNonlinearOp=pyOp.NonLinearOperator(hNonlinearDummyOp,tomoExtInvOp,tomoExtOp.set_background)
+	else:
+		hNonlinearOp=pyOp.NonLinearOperator(hNonlinearDummyOp,tomoExtInvOp,tomoExtOp.setVel) # We don't need the nonlinear fwd (the residuals are already computed in during the variable projection step)
 	hNonlinearInvOp=hNonlinearOp
 	if(spline == 1):
 		hNonlinearInvOp=pyOp.CombNonlinearOp(splineNlOp,hNonlinearOp) # Combine everything
 
 	# Variable projection operator for the data fitting term
-	vpOp=pyVp.VpOperator(hNonlinearInvOp,BornExtInvOp,BornExtOp.setVel,tomoExtOp.setReflectivityExt)
+	if client:
+		vpOp=pyVp.VpOperator(hNonlinearInvOp,BornExtInvOp,BornExtOp.set_background,tomoExtOp.set_aux)
+	else:
+		vpOp=pyVp.VpOperator(hNonlinearInvOp,BornExtInvOp,BornExtOp.setVel,tomoExtOp.setReflectivityExt)
 
 	# Regularization operators
 	dsoNonlinearJacobian=pyOp.ZeroOp(modelInit,reflectivityExtInitLocal)
