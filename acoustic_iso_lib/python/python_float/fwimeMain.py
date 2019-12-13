@@ -79,7 +79,7 @@ if __name__ == '__main__':
 	# Gradient mask
 	if (gradientMask==1):
 		print("--- Using gradient masking ---")
-		vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv,client)
+		vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
 
 	# Nonlinear modeling operator
 	modelFineInit,dataInit,wavelet,parObject1,sourcesVector,receiversVector,modelFineInitLocal=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv,client)
@@ -94,7 +94,7 @@ if __name__ == '__main__':
 	# _,_,_,_,_,_,_,_=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv,client)
 
 	# Dso
-	nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv,client)
+	nz,nx,nExt,fat,zeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
 
 	# ############################# Read files ###################################
 	# The initial model is read during the initialization of the nonlinear operator (no need to re-read it)
@@ -270,7 +270,7 @@ if __name__ == '__main__':
 	stopNl,logFileNl,saveObjNl,saveResNl,saveGradNl,saveModelNl,invPrefixNl,bufferSizeNl,iterSamplingNl,restartFolderNl,flushMemoryNl,stopLin,logFileLin,saveObjLin,saveResLin,saveGradLin,saveModelLin,invPrefixLin,bufferSizeLin,iterSamplingLin,restartFolderLin,flushMemoryLin,epsilon,info=inversionUtils.inversionVpInit(sys.argv)
 
 	# linear solver
-	linSolver=LCG.LCGsolver(stopLin,logger=logger(logFileLin))
+	linSolver=LCG(stopLin,logger=logger(logFileLin))
 	linSolver.setDefaults(save_obj=saveObjLin,save_res=saveResLin,save_grad=saveGradLin,save_model=saveModelLin,prefix=invPrefixLin,iter_buffer_size=bufferSizeLin,iter_sampling=iterSamplingLin,flush_memory=flushMemoryLin)
 
 	# Nonlinear solver
