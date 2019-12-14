@@ -40,7 +40,7 @@ if __name__ == '__main__':
 	client = None
 	#Starting Dask client if requested
 	if(hostnames != "noHost"):
-		print("Starting Dask client using following workers: %s"%(hostnames))
+		print("Starting Dask client using the following workers: %s"%(hostnames))
 		client = DaskClient(hostnames.split(","))
 		print("Client has started!")
 		nWrks = client.getNworkers()
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 	# Gradient mask
 	if (gradientMask==1):
 		print("--- Using gradient masking ---")
-		vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
+		velLocal,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
 
 	############################# Read files ###################################
 	# Seismic source
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 	BornInvOp=BornOp
 
 	if (gradientMask==1):
-		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
+		maskGradientOp=maskGradientModule.maskGradient(modelFineInitLocal,modelFineInitLocal,velLocal,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
 		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
 		gMask=maskGradientOp.getMask()
 
