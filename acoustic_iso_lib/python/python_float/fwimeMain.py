@@ -303,7 +303,6 @@ if __name__ == '__main__':
 	vpProb=pyVp.ProblemL2VpReg(modelInit,reflectivityExtInitLocal,vpOp,data,linSolver,gInvOp,h_op_reg=vpRegOp,epsilon=epsilon,minBound=minBoundVector,maxBound=maxBoundVector)
 
 	################################# Inversion ################################
-	print("Run solver")
 	nlSolver.run(vpProb,verbose=info)
 
 	print("-------------------------------------------------------------------")
