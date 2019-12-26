@@ -295,25 +295,74 @@ def buildSourceGeometryDipole(parObject,vel):
 # Build receivers geometry
 def buildReceiversGeometry(parObject,vel,client=None):
 
-	# Horizontal axis
-	dx=vel.getHyper().axes[1].d
-	ox=vel.getHyper().axes[1].o
+	# Two possible cases:
+
+	# I. Irregular receivers' geometry. The user needs to provide a receiver geometry file which is a 3D array.
+	# First (fast) axis contains the coordinates (x,y,z)
+	# Second axis contains the receivers index
+	# Third axis contains the shots index
+
+	# II. Regular and constant receivers' geometry. The user needs to provide the receivers' positions in a grid format (o,d,n)
+
 	nts = parObject.getInt("nts")
 	dipole = parObject.getInt("dipole",0)
 	zDipoleShift = parObject.getInt("zDipoleShift",2)
 	xDipoleShift = parObject.getInt("xDipoleShift",0)
-
-	nzReceiver=1
-	ozReceiver=parObject.getInt("depthReceiver")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
-	dzReceiver=1
-	nxReceiver=parObject.getInt("nReceiver")
-	oxReceiver=parObject.getInt("oReceiver")-1+parObject.getInt("xPadMinus")+parObject.getInt("fat")
-	dxReceiver=parObject.getInt("dReceiver")
-	receiverAxis=Hypercube.axis(n=nxReceiver,o=ox+oxReceiver*dx,d=dxReceiver*dx)
+	receiverGeomFile = parObject.getString("receiverGeomFile","None")
 	receiversVector=[]
-	nRecGeom=1; # Constant receivers' geometry
-	for iRec in range(nRecGeom):
-		receiversVector.append(deviceGpu(nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel.getCpp(),nts, dipole, zDipoleShift, xDipoleShift))
+
+	if (receiverGeomFile != "None"):
+
+		# Read geometry file: 3 axes
+		# First (fast) axis: spatial coordinates
+		# Second axis: receiver index !!! The number of receivers per shot must be constant
+		# Third axis: shot index
+
+		receiverGeomVectorNd = genericIO.defaultIO.getVector(receiverGeomFile).getNdArray()
+
+		# Check consistency with total number of shots
+		nShot = parObject.getInt("nShot",-1)
+		if (nShot != receiverGeomVectorNd.shape[2]):
+				raise ValueError("**** ERROR [buildReceiversGeometry]: Number of shots from parfile (#shot=%s) not consistent with receivers' geometry file (#shots=%s) ****\n"%(nShot,receiverGeomVectorNd.shape[2]))
+
+		# Read size of receivers' geometry file
+		nReceiverPerShot = parObject.getInt("nReceiverPerShot",-1) # -> might move this call to the irregular geometry case
+		if(nReceiverPerShot != receiverGeomVectorNd.shape[1]):
+				raise ValueError("**** ERROR [buildReceiversGeometry]: Number of receivers from parfile (#nReceiverPerShot=%s) not consistent with receivers' geometry file (#recs=%s) ****\n"%(nReceiverPerShot,receiverGeomVectorNd.shape[1]))
+
+		# Create inputs for deviceGpu constructor
+		zCoordFloat=SepVector.getSepVector(ns=[nReceiverPerShot])
+		xCoordFloat=SepVector.getSepVector(ns=[nReceiverPerShot])
+
+		# Generate vector containing deviceGpu objects
+		for ishot in range(nShot):
+
+				# Update the receiver's coordinates
+				zCoordFloat.set(receiverGeomVectorNd[2,:,ishot])
+				xCoordFloat.set(receiverGeomVectorNd[0,:,ishot])
+				receiversVector.append(deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift))
+
+		# Generate receiver axis
+		receiverAxis=Hypercube.axis(n=nReceiverPerShot,o=0.0,d=1.0)
+
+	else:
+
+		#Horizontal axis information
+		dx=vel.getHyper().axes[1].d
+		ox=vel.getHyper().axes[1].o
+
+		# Generate only one deviceGpu object with all the receivers' coordinates
+		nzReceiver=1
+		ozReceiver=parObject.getInt("depthReceiver")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
+		dzReceiver=1
+		nxReceiver=parObject.getInt("nReceiver")
+		oxReceiver=parObject.getInt("oReceiver")-1+parObject.getInt("xPadMinus")+parObject.getInt("fat")
+		dxReceiver=parObject.getInt("dReceiver")
+		receiverAxis=Hypercube.axis(n=nxReceiver,o=ox+oxReceiver*dx,d=dxReceiver*dx)
+
+		nRecGeom=1; # Constant receivers' geometry
+		for iRec in range(nRecGeom):
+				receiversVector.append(deviceGpu(nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel.getCpp(),nts, dipole, zDipoleShift, xDipoleShift))
 
 	return receiversVector,receiverAxis
 

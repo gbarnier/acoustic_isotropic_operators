@@ -20,7 +20,7 @@ if __name__ == '__main__':
 	#Starting Dask client if requested
 	if(hostnames != "noHost"):
 		print("Starting Dask client using the following workers: %s"%(hostnames))
-		client = DaskClient(hostnames.split(","))
+		client = DaskClient(hostnames=hostnames.split(","))
 		print("Client has started!")
 		nWrks = client.getNworkers()
 
