@@ -9,21 +9,15 @@ import time
 import sys
 
 #Dask-related modules
-from dask_util import DaskClient
 import pyDaskOperator as DaskOp
 
 if __name__ == '__main__':
 
 	#Getting parameter object
 	parObject=genericIO.io(params=sys.argv)
-	hostnames = parObject.getString("hostnames","noHost")
-	client = None
-	#Starting Dask client if requested
-	if(hostnames != "noHost"):
-		print("Starting Dask client using the following workers: %s"%(hostnames))
-		client = DaskClient(hostnames=hostnames.split(","))
-		print("Client has started!")
-		nWrks = client.getNworkers()
+
+	# Checking if Dask was requested
+	client, nWrks = Acoustic_iso_float.create_client(parObject)
 
 	# Initialize operator
 	modelFloat,dataFloat,velFloat,parObject1,sourcesVector,receiversVector,modelFloatLocal=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv,client)

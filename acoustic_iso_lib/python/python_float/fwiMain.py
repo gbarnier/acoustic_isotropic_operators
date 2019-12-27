@@ -26,7 +26,6 @@ from sys_util import logger
 import inversionUtils
 
 #Dask-related modules
-from dask_util import DaskClient
 import pyDaskOperator as DaskOp
 import pyDaskVector
 
@@ -36,14 +35,8 @@ if __name__ == '__main__':
 	# IO object
 	parObject=genericIO.io(params=sys.argv)
 
-	hostnames = parObject.getString("hostnames","noHost")
-	client = None
-	#Starting Dask client if requested
-	if(hostnames != "noHost"):
-		print("Starting Dask client using the following workers: %s"%(hostnames))
-		client = DaskClient(hostnames=hostnames.split(","))
-		print("Client has started!")
-		nWrks = client.getNworkers()
+	# Checking if Dask was requested
+	client, nWrks = Acoustic_iso_float.create_client(parObject)
 
 	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)

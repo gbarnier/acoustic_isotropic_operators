@@ -22,8 +22,25 @@ from pyAcoustic_iso_float_nl import deviceGpu
 ############################ Dask interface ####################################
 #Dask-related modules and functions
 import dask.distributed as daskD
+from dask_util import DaskClient
 import pyDaskVector
 import re
+
+def create_client(parObject):
+	"""
+	   Function to create Dask client if requested
+	"""
+	hostnames = parObject.getString("hostnames","noHost")
+	#Starting Dask client if requested
+	if(hostnames != "noHost"):
+		print("Starting Dask client using the following workers: %s"%(hostnames))
+		client = DaskClient(hostnames=hostnames.split(","))
+		print("Client has started!")
+		nWrks = client.getNworkers()
+	else:
+		client = None
+		nWrks = None
+	return client, nWrks
 
 def parfile2pars(args):
 	"""Function to expand arguments in parfile to parameters"""
