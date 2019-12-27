@@ -150,7 +150,7 @@ if __name__ == '__main__':
 		if(pyinfo): print("--- Using spline interpolation ---")
 		inv_log.addToLog("--- Using spline interpolation ---")
 		modelInit=modelCoarseInit
-		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInitLocal,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
 		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiInvOp)
 

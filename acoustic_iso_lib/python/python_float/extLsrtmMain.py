@@ -121,7 +121,7 @@ if __name__ == '__main__':
 	if (spline==1):
 		if(pyinfo): print("--- Using spline interpolation ---")
 		inv_log.addToLog("--- Using spline interpolation ---")
-		splineOp=interpBSplineModule.bSpline3d(modelCoarseInit,modelFineInit1,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
+		splineOp=interpBSplineModule.bSpline3d(modelCoarseInit,modelFineInitLocal,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
 
 	# Data taper
 	if (dataTaper==1):

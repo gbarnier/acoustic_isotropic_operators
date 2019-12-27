@@ -1014,7 +1014,6 @@ class BornExtShotsGpu(Op.Operator):
 		"""
 		   Adding spline operator to set background
 		"""
-		print("Added spline")
 		self.Spline_op = Spline_op
 		self.tmp_fine_model = Spline_op.range.clone()
 		return
@@ -1157,7 +1156,6 @@ class BornExtTomoInvShotsGpu(Op.Operator):
 		"""
 		   Adding spline operator to set background
 		"""
-		print("Added spline")
 		self.Spline_op = Spline_op
 		self.tmp_fine_model = Spline_op.range.clone()
 		return
@@ -1679,7 +1677,6 @@ class wemvaNonlinearShotsGpu(Op.Operator):
 		"""
 		   Adding spline operator to set background
 		"""
-		print("Added spline")
 		self.Spline_op = Spline_op
 		self.tmp_fine_model = Spline_op.range.clone()
 		return
