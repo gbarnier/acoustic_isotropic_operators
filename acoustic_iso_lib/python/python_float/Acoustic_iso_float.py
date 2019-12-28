@@ -31,15 +31,24 @@ def create_client(parObject):
 	   Function to create Dask client if requested
 	"""
 	hostnames = parObject.getString("hostnames","noHost")
+	pbs_args = parObject.getString("pbs_args","noPBS")
 	#Starting Dask client if requested
-	if(hostnames != "noHost"):
+	client = None
+	nWrks = None
+	args = None
+	if hostnames != "noHost":
+		args = {"hostnames":hostnames.split(",")}
+		scheduler_file = parObject.getString("scheduler_file","noFile")
+		if scheduler_file != "noFile":
+			args.update({"scheduler_file_prefix":scheduler_file})
 		print("Starting Dask client using the following workers: %s"%(hostnames))
-		client = DaskClient(hostnames=hostnames.split(","))
+	elif pbs_args != "noPBS":
+		raise NotImplementedError("PBS Dask interface not implemented yet!")
+
+	if args:
+		client = DaskClient(**args)
 		print("Client has started!")
 		nWrks = client.getNworkers()
-	else:
-		client = None
-		nWrks = None
 	return client, nWrks
 
 def parfile2pars(args):
