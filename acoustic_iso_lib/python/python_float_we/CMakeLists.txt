@@ -47,6 +47,8 @@ if (pybind11_FOUND)
   # target_link_libraries(pyAcoustic_iso_float_wemva PRIVATE ACOUSTIC_ISO_FLOAT_WEMVA_EXT ${LIBS})
   pybind11_add_module(pyAcoustic_iso_float_we MODULE pyAcoustic_iso_float_we.cpp)
   target_link_libraries(pyAcoustic_iso_float_we PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
+  pybind11_add_module(pyAcoustic_iso_float_we_freq MODULE pyAcoustic_iso_float_we_freq.cpp)
+  target_link_libraries(pyAcoustic_iso_float_we_freq PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
   pybind11_add_module(pyTruncateSpatialReg MODULE pyTruncateSpatialReg.cpp)
   target_link_libraries(pyTruncateSpatialReg PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
   pybind11_add_module(pySpaceInterpFloat MODULE pySpaceInterpFloat.cpp)
@@ -77,6 +79,10 @@ if (pybind11_FOUND)
   target_link_libraries(pyGF PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
   pybind11_add_module(pySecondDeriv_V2 MODULE pySecondDeriv_V2.cpp)
   target_link_libraries(pySecondDeriv_V2 PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
+  pybind11_add_module(pySecondDeriv_multi_exp_V2 MODULE pySecondDeriv_multi_exp_V2.cpp)
+  target_link_libraries(pySecondDeriv_multi_exp_V2 PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
+  pybind11_add_module(pySecondDeriv_multi_exp_freq MODULE pySecondDeriv_multi_exp_freq.cpp)
+  target_link_libraries(pySecondDeriv_multi_exp_freq PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
 
   # Installing library
   # install( TARGETS pyAcoustic_iso_float_nl DESTINATION lib/python) # Module for non-linear operator
@@ -84,8 +90,9 @@ if (pybind11_FOUND)
   # install( TARGETS pyAcoustic_iso_float_born_ext DESTINATION lib/python) # Module for Extended Born operator
   # install( TARGETS pyAcoustic_iso_float_tomo DESTINATION lib/python) # Module for Extended Tomo operator
   # install( TARGETS pyAcoustic_iso_float_wemva DESTINATION lib/python) # Module for Extended Wemva operator
-  install( TARGETS pyAcoustic_iso_float_we DESTINATION lib/python) # Module for non-linear operator
-  install( TARGETS pyTruncateSpatialReg DESTINATION lib/python) # Module for non-linear operator
+  install( TARGETS pyAcoustic_iso_float_we DESTINATION lib/python) #
+  install( TARGETS pyAcoustic_iso_float_we_freq DESTINATION lib/python) #
+  install( TARGETS pyTruncateSpatialReg DESTINATION lib/python) #
   install( TARGETS pySpaceInterpFloat DESTINATION lib/python)
   install( TARGETS pyPadTruncateSource DESTINATION lib/python)
   install( TARGETS pyTpowWfld DESTINATION lib/python)
@@ -100,9 +107,12 @@ if (pybind11_FOUND)
   install( TARGETS pySphericalSpreadingScale DESTINATION lib/python)
   install( TARGETS pyGF DESTINATION lib/python)
   install( TARGETS pySecondDeriv_V2 DESTINATION lib/python)
+  install( TARGETS pySecondDeriv_multi_exp_V2 DESTINATION lib/python)
+  install( TARGETS pySecondDeriv_multi_exp_freq DESTINATION lib/python)
 
   # install( FILES Acoustic_iso_float.py DESTINATION lib/python)
   install( FILES Acoustic_iso_float_we.py DESTINATION lib/python)
+  install( FILES Acoustic_iso_float_we_freq.py DESTINATION lib/python)
   install( FILES TruncateSpatialReg.py DESTINATION lib/python)
   install( FILES wriUtilFloat.py DESTINATION lib/python)
   install( FILES SpaceInterpFloat.py DESTINATION lib/python)
@@ -137,11 +147,16 @@ if (pybind11_FOUND)
   # install( FILES SymesExtLsrtmMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   # install( FILES fwimeFwiObjMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES waveEquationPythonAcousticFloatMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES waveEquationPythonAcousticFloatMain_multi_exp.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES waveEquationPythonAcousticFloatMain_multi_exp_freq.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES truncateSpatialMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES forcingTermMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES waveEqInvFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES waveEqInvFloat_multi_exp.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES waveEqInvFloat_multi_exp_freq.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES waveReconMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES waveReconMainFloat_multi_exp.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES waveReconMainFloat_multi_exp_freq.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES mask3dMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES GradiometryMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES GradiometryMainFloat_multi_exp.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
@@ -161,6 +176,9 @@ if (pybind11_FOUND)
   install( FILES gradEditTest.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES fftWfldMainFloat.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES generateRecParFileMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES secondDerivMainFloat_multi_exp.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  install( FILES secondDerivMainFloat_multi_exp_freq.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+
 
 else(pybind11_FOUND)
   MESSAGE("WARNING!Did not find pybid11. Not compiling ${PROJECT-NAME}")

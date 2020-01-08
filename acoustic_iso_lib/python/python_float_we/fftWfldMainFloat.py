@@ -26,6 +26,8 @@ if __name__ == '__main__':
 	modelFile=parObject.getString("model","noModelFile")
 	dataFile=parObject.getString("data","noDataFile")
 
+	#get axis
+	axisToFFT = parObject.getInt("axis",0)
 	# Forward
 	if (parObject.getInt("adj",0) == 0):
 		print("-------------------------------------------------------------------")
@@ -41,11 +43,11 @@ if __name__ == '__main__':
 		nw=modelFloat.getHyper().getAxis(3).n
 		ow=0
 		dw=modelFloat.getHyper().getAxis(3).d
-		nt = 2*(nw-1)
+		nt = 2*(nw)-1
 		ot=0
 		dt = 1./((nt-1)*dw)
 		timeAxis=Hypercube.axis(n=nt,o=ot,d=dt)
-		dataHyper=Hypercube.hypercube(axes=[modelFloat.getHyper().getAxis(1),modelFloat.getHyper().getAxis(2),timeAxis])
+		dataHyper=Hypercube.hypercube(axes=[modelFloat.getHyper().getAxis(1),modelFloat.getHyper().getAxis(2),timeAxis,modelFloat.getHyper().getAxis(4)])
 
 		dataFloat=SepVector.getSepVector(dataHyper,storage="dataFloat")
 		dataFloat.scale(0.0)
@@ -53,7 +55,7 @@ if __name__ == '__main__':
 		############################# Initialization ###############################
 		# fft_wfld init
 		if(pyinfo): print("--------------------------- FFT Wfld init --------------------------------")
-		fft_wfld_op = fft_wfld.fft_wfld(modelFloat,dataFloat)
+		fft_wfld_op = fft_wfld.fft_wfld(modelFloat,dataFloat,axisToFFT)
 
 		print("*** domain and range checks *** ")
 		print("* Fp - d * ")
@@ -93,7 +95,7 @@ if __name__ == '__main__':
 		ow=0
 		dw = 1./((nt-1)*dt)
 		freqAxis=Hypercube.axis(n=nw,o=ow,d=dw)
-		modelHyper=Hypercube.hypercube(axes=[dataFloat.getHyper().getAxis(1),dataFloat.getHyper().getAxis(2),freqAxis])
+		modelHyper=Hypercube.hypercube(axes=[dataFloat.getHyper().getAxis(1),dataFloat.getHyper().getAxis(2),freqAxis,dataFloat.getHyper().getAxis(4)])
 
 		modelFloat=SepVector.getSepVector(modelHyper,storage="dataComplex")
 		modelFloat.zero()
@@ -101,7 +103,7 @@ if __name__ == '__main__':
 		############################# Initialization ###############################
 		# fft_wfld init
 		if(pyinfo): print("--------------------------- fft_wfld init --------------------------------")
-		fft_wfld_op = fft_wfld.fft_wfld(modelFloat,dataFloat)
+		fft_wfld_op = fft_wfld.fft_wfld(modelFloat,dataFloat,axisToFFT)
 
 		print("*** domain and range checks *** ")
 		print("* Fp - d * ")

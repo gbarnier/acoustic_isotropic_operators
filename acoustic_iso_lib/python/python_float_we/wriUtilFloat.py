@@ -130,14 +130,16 @@ def evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquati
 		dataSamplingOp.forward(1,modelOne,K_resid)
 		waveEquationAcousticOp.forward(1,modelOne,A_resid)
 
+		print('scale_modelOne_time: ',scale_modelOne_time)
+		print('dataSamplingOp_adjoint_time: ',dataSamplingOp_adjoint_time)
+		print('waveEquationAcousticOp_adjoint_time: ',waveEquationAcousticOp_adjoint_time)
+
 	epsilon_p = parObject.getFloat("eps_p_scale",1.0)*math.sqrt(K_resid.dot(K_resid)/A_resid.dot(A_resid))
 
 	print('k_resid_setup_time: ',k_resid_setup_time)
 	print('dataSamplingOp_forward_time: ',dataSamplingOp_forward_time)
 	print('waveEquationAcousticOp_forward_time: ',waveEquationAcousticOp_forward_time)
-	print('scale_modelOne_time: ',scale_modelOne_time)
-	print('dataSamplingOp_adjoint_time: ',dataSamplingOp_adjoint_time)
-	print('waveEquationAcousticOp_adjoint_time: ',waveEquationAcousticOp_adjoint_time)
+
 	return epsilon_p
 
 def forcing_term_op_init_p(args):
@@ -594,6 +596,78 @@ def data_extraction_reg_op_init(args):
 	#apply forward
 	return modelFloat,dataFloat,op
 
+def data_extraction_op_init_multi_exp_freq(args):
+
+	# Bullshit stuff
+	parObject=genericIO.io(params=sys.argv)
+
+	# Interp operator init
+	xCoord,zCoord,experimentId,centerHyper = SpaceInterpFloat.space_interp_init_rec_multi_exp(args)
+
+	# Horizontal axis
+	nx=centerHyper.getAxis(2).n
+	dx=centerHyper.getAxis(2).d
+	ox=centerHyper.getAxis(2).o
+
+	# Vertical axis
+	nz=centerHyper.getAxis(1).n
+	dz=centerHyper.getAxis(1).d
+	oz=centerHyper.getAxis(1).o
+
+	# Time and freq Axes
+	nts=parObject.getInt("nts",-1)
+	ots=parObject.getFloat("ots",0.0)
+	dts=parObject.getFloat("dts",-1.0)
+	#odd
+	if(nts%2 != 0):
+		nw = int((nts+1)/2)
+	else:
+		nw = int(nts/2+1)
+	dw = 1./((nts-1)*dts)
+	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+	wAxis=Hypercube.axis(n=nw,o=ots,d=dw)
+
+	#interp operator instantiate
+	#check which rec injection interp method
+	recInterpMethod = parObject.getString("recInterpMethod","linear")
+	recInterpNumFilters = parObject.getInt("recInterpNumFilters",4)
+
+	spaceInterpOp = SpaceInterpFloat.space_interp_multi_exp(zCoord,xCoord,experimentId,centerHyper,nw,recInterpMethod,recInterpNumFilters)
+	# pad truncate init
+	tAxis=Hypercube.axis(n=nts,o=0.0,d=dts)
+	wAxis=Hypercube.axis(n=nw,o=0.0,d=dw)
+	nExp = len(spaceInterpOp.getRegPosUniqueVector())
+	regReceiverAxis=Hypercube.axis(n=spaceInterpOp.getNDeviceReg(),o=0.0,d=1)
+	irregReceiverAxis=Hypercube.axis(n=spaceInterpOp.getNDeviceIrreg(),o=0.0,d=1)
+	regReceiverHyper=Hypercube.hypercube(axes=[regReceiverAxis,wAxis])
+	irregReceiverHyper=Hypercube.hypercube(axes=[irregReceiverAxis,wAxis])
+	irregReceiverHyperTime=Hypercube.hypercube(axes=[irregReceiverAxis,tAxis])
+	expAxis=Hypercube.axis(n=nExp,o=0.0,d=1)
+	regWfldHyper=Hypercube.hypercube(axes=[centerHyper.getAxis(1),centerHyper.getAxis(2),wAxis,expAxis])
+
+	output = SepVector.getSepVector(irregReceiverHyper,storage="dataComplex")
+	outputTime= SepVector.getSepVector(irregReceiverHyperTime,storage="dataFloat")
+	padTruncateDummyModel = SepVector.getSepVector(regReceiverHyper,storage="dataComplex")
+	padTruncateDummyData = SepVector.getSepVector(regWfldHyper,storage="dataComplex")
+	sourceGridPositions = spaceInterpOp.getRegPosUniqueVector()
+	sourceGridExpMapping = spaceInterpOp.getIndexMaps()
+
+	padTruncateReceiverOp = PadTruncateSource.pad_truncate_source_multi_exp(padTruncateDummyModel,padTruncateDummyData,sourceGridPositions,sourceGridExpMapping)
+	padTruncateRecOp = Op.Transpose(padTruncateReceiverOp)
+
+	#chain operators
+	spaceInterpOp.setDomainRange(padTruncateDummyModel,output)
+
+	# init fft op
+	fftOp = fft_wfld.fft_wfld(output,outputTime,axis=0)
+
+	#spaceInterpOp = Op.Transpose(spaceInterpOp)
+	# P_adjS_adj = Op.ChainOperator(wavefieldStaggerOp,padTruncateRecOp)
+	KP_adj = Op.ChainOperator(padTruncateRecOp,spaceInterpOp)
+
+	#apply forward
+	return padTruncateDummyData,output,KP_adj,fftOp,outputTime
+
 def data_extraction_op_init_multi_exp(args):
 
 	# Bullshit stuff
@@ -617,6 +691,7 @@ def data_extraction_op_init_multi_exp(args):
 	recInterpMethod = parObject.getString("recInterpMethod","linear")
 	recInterpNumFilters = parObject.getInt("recInterpNumFilters",4)
 	nt = parObject.getInt("nts")
+
 	spaceInterpOp = SpaceInterpFloat.space_interp_multi_exp(zCoord,xCoord,experimentId,centerHyper,nt,recInterpMethod,recInterpNumFilters)
 	# pad truncate init
 	dt = parObject.getFloat("dts",0.0)
@@ -640,7 +715,7 @@ def data_extraction_op_init_multi_exp(args):
 
 	#chain operators
 	spaceInterpOp.setDomainRange(padTruncateDummyModel,output)
-	
+
 	#spaceInterpOp = Op.Transpose(spaceInterpOp)
 	# P_adjS_adj = Op.ChainOperator(wavefieldStaggerOp,padTruncateRecOp)
 	KP_adj = Op.ChainOperator(padTruncateRecOp,spaceInterpOp)

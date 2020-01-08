@@ -29,6 +29,8 @@ set(SOURCES
   ${SRC_DIR}/TruncateSpatialReg.cpp
   ${SRC_DIR}/SecondDeriv.cpp
   ${SRC_DIR}/SecondDeriv_V2.cpp
+  ${SRC_DIR}/SecondDeriv_multi_exp_V2.cpp
+  ${SRC_DIR}/SecondDeriv_multi_exp_freq.cpp
   # ${SRC_DIR}/WaveRecon.cpp
   ${SRC_DIR}/WaveReconV2.cpp
   ${SRC_DIR}/WaveReconV3.cpp
@@ -39,6 +41,7 @@ set(SOURCES
   ${SRC_DIR}/WaveReconV8.cpp
   ${SRC_DIR}/WaveReconV9.cpp
   ${SRC_DIR}/WaveReconV10.cpp
+  ${SRC_DIR}/WaveRecon_freq.cpp
   ${SRC_DIR}/SphericalSpreadingScale.cpp
   ${SRC_DIR}/GF.cpp
   ${SRC_DIR}/PadModel2d.cpp
@@ -94,6 +97,8 @@ set(HEADERS
   ${INC_DIR}/TruncateSpatialReg.h
   ${INC_DIR}/SecondDeriv.h
   ${INC_DIR}/SecondDeriv_V2.h
+  ${INC_DIR}/SecondDeriv_multi_exp_V2.h
+  ${INC_DIR}/SecondDeriv_multi_exp_freq.h
   # ${INC_DIR}/WaveRecon.h
   ${INC_DIR}/WaveReconV2.h
   ${INC_DIR}/WaveReconV3.h
@@ -104,6 +109,7 @@ set(HEADERS
   ${INC_DIR}/WaveReconV8.h
   ${INC_DIR}/WaveReconV9.h
   ${INC_DIR}/WaveReconV10.h
+  ${INC_DIR}/WaveRecon_freq.h
   ${INC_DIR}/SphericalSpreadingScale.h
   ${INC_DIR}/GF.h
   ${INC_DIR}/PadModel2d.h
