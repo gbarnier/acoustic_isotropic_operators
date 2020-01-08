@@ -1,3 +1,6 @@
 [submodule "acoustic_iso_lib/external/ioLibs"]
 	path = acoustic_iso_lib/external/ioLibs
 	url = http://cees-gitlab.Stanford.EDU/SEP-external/sep-iolibs.git
+[submodule "acoustic_iso_lib/external/pySolver"]
+	path = acoustic_iso_lib/external/pySolver
+	url = http://zapad.Stanford.EDU/ettore88/python-solver.git

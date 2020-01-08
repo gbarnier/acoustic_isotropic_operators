@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3
 import genericIO
 import SepVector
 import Hypercube
@@ -17,19 +17,26 @@ import phaseOnlyXkModule
 
 # Solver library
 import pyOperator as pyOp
-import pyNLCGsolver as NLCG
-import pyLBFGSsolver as LBFGS
+from pyNonLinearSolver import NLCGsolver as NLCG
+from pyNonLinearSolver import LBFGSsolver as LBFGS
 import pyProblem as Prblm
-import pyStopperBase as Stopper
-import pyStepperParabolic as Stepper
-import inversionUtils
+import pyStepper as Stepper
+from pyStopper import BasicStopper as Stopper
 from sys_util import logger
+import inversionUtils
+
+#Dask-related modules
+import pyDaskOperator as DaskOp
+import pyDaskVector
 
 # Template for FWI workflow
 if __name__ == '__main__':
 
 	# IO object
 	parObject=genericIO.io(params=sys.argv)
+
+	# Checking if Dask was requested
+	client, nWrks = Acoustic_iso_float.create_client(parObject)
 
 	pyinfo=parObject.getInt("pyinfo",1)
 	spline=parObject.getInt("spline",0)
@@ -65,16 +72,16 @@ if __name__ == '__main__':
 	if (dataTaper==1):
 		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth=dataTaperModule.dataTaperInit(sys.argv)
 
-	# FWI nonlinear operator
-	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv)
 
+	# FWI nonlinear operator
+	modelFineInit,dataInit,wavelet,parObject1,sourcesVector,receiversVector,modelFineInitLocal=Acoustic_iso_float.nonlinearFwiOpInitFloat(sys.argv,client)
 	# Born
-	_,_,_,_,_,sourcesSignalsVector,_=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	_,_,_,_,_,sourcesSignalsVector,_,_=Acoustic_iso_float.BornOpInitFloat(sys.argv,client)
 
 	# Gradient mask
 	if (gradientMask==1):
 		print("--- Using gradient masking ---")
-		vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
+		velLocal,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
 
 	############################# Read files ###################################
 	# Seismic source
@@ -90,39 +97,75 @@ if __name__ == '__main__':
 	dataFile=parObject.getString("data")
 	data=genericIO.defaultIO.getVector(dataFile,ndims=3)
 
-	############################# Instanciation ################################
-	# Nonlinear
-	nonlinearFwiOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,data,wavelet,parObject.param,sourcesVector,receiversVector)
+	############################# Instantiation ################################
 
-	# Born
-	BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,modelFineInit,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
+	#Dask interface
+	if client:
+		wavelet = pyDaskVector.DaskVector(client,vectors=[wavelet]*nWrks)
+		#Spreading operator and concatenating with non-linear and born operators
+		Sprd = DaskOp.DaskSpreadOp(client,modelFineInitLocal,[1]*nWrks)
+		# Nonlinear
+		nlOp_args = [(modelFineInit.vecDask[iwrk],dataInit.vecDask[iwrk],wavelet.vecDask[iwrk],parObject1[iwrk],sourcesVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		nonlinearFwiOp = DaskOp.DaskOperator(client,Acoustic_iso_float.nonlinearFwiPropShotsGpu,nlOp_args,[1]*nWrks)
+		#Concatenating spreading and non-linear
+		nonlinearFwiOp = pyOp.ChainOperator(Sprd,nonlinearFwiOp)
+
+		# Born
+		BornOp_args = [(modelFineInit.vecDask[iwrk],dataInit.vecDask[iwrk],modelFineInit.vecDask[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		BornOpDask = DaskOp.DaskOperator(client,Acoustic_iso_float.BornShotsGpu,BornOp_args,[1]*nWrks,setbackground_func_name="setVel",spread_op=Sprd)
+		#Concatenating spreading and Born
+		BornOp = pyOp.ChainOperator(Sprd,BornOpDask)
+
+	else:
+		# Nonlinear
+		nonlinearFwiOp=Acoustic_iso_float.nonlinearFwiPropShotsGpu(modelFineInit,dataInit,wavelet,parObject,sourcesVector,receiversVector)
+
+		# Born
+		BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,dataInit,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+
+	#Born operator pointer for inversion
 	BornInvOp=BornOp
 
 	if (gradientMask==1):
-		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
+		maskGradientOp=maskGradientModule.maskGradient(modelFineInitLocal,modelFineInitLocal,velLocal,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
 		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
 		gMask=maskGradientOp.getMask()
 
 	# Conventional FWI
-	fwiInvOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornInvOp,BornOp.setVel)
-	modelInit=modelFineInit
+	if client:
+		fwiInvOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornInvOp,BornOpDask.set_background)
+	else:
+		fwiInvOp=pyOp.NonLinearOperator(nonlinearFwiOp,BornInvOp,BornOp.setVel)
+	modelInit=modelFineInitLocal
 
 	# Spline
 	if (spline==1):
 		if(pyinfo): print("--- Using spline interpolation ---")
 		inv_log.addToLog("--- Using spline interpolation ---")
 		modelInit=modelCoarseInit
-		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInit,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+		splineOp=interpBSplineModule.bSpline2d(modelCoarseInit,modelFineInitLocal,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
 		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiInvOp)
+
+	#Dask interface
+	if(client):
+		#Chunking the data and spreading them across workers if dask was requested
+		data = Acoustic_iso_float.chunkData(data,BornOp.getRange())
 
 	# Data normalization
 	if (dataNormalization=="xukai"):
 		if(pyinfo): print("--- Using Xukai's trace normalization ---")
 		inv_log.addToLog("--- Using Xukai's trace normalization ---")
-		phaseOnlyXkOp=phaseOnlyXkModule.phaseOnlyXk(data,data) # Instanciate forward operator
-		phaseOnlyXkJacOp=phaseOnlyXkModule.phaseOnlyXkJac(data) # Instanciate Jacobian operator
-		phaseOnlyXkNlOp=pyOp.NonLinearOperator(phaseOnlyXkOp,phaseOnlyXkJacOp,phaseOnlyXkJacOp.setData) # Instanciate the nonlinear operator
+		if client:
+			XkOp_args = [(data.vecDask[iwrk],data.vecDask[iwrk]) for iwrk in range(nWrks)]
+			phaseOnlyXkOp = DaskOp.DaskOperator(client,phaseOnlyXkModule.phaseOnlyXk,XkOp_args,[1]*nWrks)
+			XkJacOp_args = [data.vecDask[iwrk] for iwrk in range(nWrks)]
+			phaseOnlyXkJacOp = DaskOp.DaskOperator(client,phaseOnlyXkModule.phaseOnlyXkJac,XkJacOp_args,[1]*nWrks,setbackground_func_name="setData")
+			phaseOnlyXkNlOp=pyOp.NonLinearOperator(phaseOnlyXkOp,phaseOnlyXkJacOp,phaseOnlyXkJacOp.set_background)
+		else:
+			phaseOnlyXkOp=phaseOnlyXkModule.phaseOnlyXk(data,data) # Instanciate forward operator
+			phaseOnlyXkJacOp=phaseOnlyXkModule.phaseOnlyXkJac(data) # Instanciate Jacobian operator
+			phaseOnlyXkNlOp=pyOp.NonLinearOperator(phaseOnlyXkOp,phaseOnlyXkJacOp,phaseOnlyXkJacOp.setData) # Instantiate the nonlinear operator
 		fwiInvOp=pyOp.CombNonlinearOp(fwiInvOp,phaseOnlyXkNlOp)
 		obsDataNormalized=data.clone() # Apply normalization to data
 		phaseOnlyXkOp.forward(False,data,obsDataNormalized)
@@ -132,7 +175,13 @@ if __name__ == '__main__':
 	if (dataTaper==1):
 		if(pyinfo): print("--- Using data tapering ---")
 		inv_log.addToLog("--- Using data tapering ---")
-		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
+		if client:
+			hypers = client.getClient().map(lambda x: x.getHyper(),data.vecDask,pure=False)
+			dataTaper_args = [(data.vecDask[iwrk],data.vecDask[iwrk],t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,hypers[iwrk],time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth) for iwrk in range(nWrks)]
+			dataTaperOp = DaskOp.DaskOperator(client,dataTaperModule.datTaper,dataTaper_args,[1]*nWrks)
+		else:
+			dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
+		#Tapering observed data and constructing FWI operator
 		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
@@ -198,13 +247,13 @@ if __name__ == '__main__':
 	############################# Solver #######################################
 	# Nonlinear conjugate gradient
 	if (solverType=="nlcg"):
-		nlSolver=NLCG.NLCGsolver(stop,logger=inv_log)
+		nlSolver=NLCG(stop,logger=inv_log)
 	# LBFGS
 	elif (solverType=="lbfgs"):
-		nlSolver=LBFGS.LBFGSsolver(stop,logger=inv_log)
+		nlSolver=LBFGS(stop,logger=inv_log)
 	# Steepest descent
 	elif (solverType=="sd"):
-		nlSolver=NLCG.NLCGsolver(stop,beta_type="SD",logger=inv_log)
+		nlSolver=NLCG(stop,beta_type="SD",logger=inv_log)
 
 	############################# Stepper ######################################
 	if (stepper == "parabolic"):

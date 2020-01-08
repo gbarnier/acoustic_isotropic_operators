@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3
 import genericIO
 import SepVector
 import Hypercube
@@ -15,9 +15,8 @@ import spatialDerivModule
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
+from pyLinearSolver import LCGsolver as LCG
 import pyProblem as Prblm
-import pyStopperBase as Stopper
 import inversionUtils
 from sys_util import logger
 
@@ -55,7 +54,7 @@ if __name__ == '__main__':
 		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec=dataTaperModule.dataTaperInit(sys.argv)
 
 	# Tomo
-	modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExt=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv)
+	modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExt,_=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv)
 
 	############################# Read files ###################################
 	# Read initial model
@@ -80,7 +79,7 @@ if __name__ == '__main__':
 
 	############################# Instanciation ################################
 	# Tomo
-	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExt)
+	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityExt)
 	invOp=tomoExtOp
 
 	# Spline
@@ -159,7 +158,7 @@ if __name__ == '__main__':
 
 	############################## Solver ######################################
 	# Solver
-	LCGsolver=LCG.LCGsolver(stop,logger=inv_log)
+	LCGsolver=LCG(stop,logger=inv_log)
 	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver

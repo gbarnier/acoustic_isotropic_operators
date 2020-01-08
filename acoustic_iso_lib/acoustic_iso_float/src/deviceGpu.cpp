@@ -18,7 +18,7 @@ deviceGpu::deviceGpu(const std::shared_ptr<float1DReg> zCoord, const std::shared
 	_nt = nt;
 	int _nz = vel->getHyper()->getAxis(1).n;
 
-	_gridPointIndex = new int[_nbCorner*_nDeviceIrreg]; // Index of all the neighboring points of each device (non-unique) on the regular "1D" grid
+	_gridPointIndex = new int[_nbCorner*_nDeviceIrreg]; // Index of all the neighboring points of each device (non-unique) on the regular "1D" grid that are going to be used in the interpolation
 	_weight = new float[_nbCorner*_nDeviceIrreg]; // Weights for spatial interpolation
 
 	for (int iDevice = 0; iDevice < _nDeviceIrreg; iDevice++) {
@@ -232,10 +232,9 @@ void deviceGpu::forward(const bool add, const std::shared_ptr<float2DReg> signal
 	std::shared_ptr<float2D> m = signalReg->_mat;
 
 	for (int iDevice = 0; iDevice < _nDeviceIrreg; iDevice++){ // Loop over device
-		// std::cout << "iDevice = " << iDevice << std::endl;
 		for (int iCorner = 0; iCorner < _nbCorner; iCorner++){ // Loop over neighboring points on regular grid
-			int i1 = iDevice * _nbCorner + iCorner;
-			int i2 = _indexMap.find(_gridPointIndex[i1])->second;
+			int i1 = iDevice * _nbCorner + iCorner; // Index of the corner on a 1D-representation
+			int i2 = _indexMap.find(_gridPointIndex[i1])->second; // Find the index of the trace from the model space that corresponds to that grid point
 			for (int it = 0; it < _nt; it++){
 				(*d)[iDevice][it] += _weight[i1] * (*m)[i2][it];
 			}

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3
 import genericIO
 import SepVector
 import Hypercube
@@ -16,9 +16,8 @@ import maskGradientModule
 
 # Solver library
 import pyOperator as pyOp
-import pyNLCGsolver as NLCG
+from pyNonLinearSolver import NLCGsolver as NLCG
 import pyProblem as Prblm
-import pyStopperBase as Stopper
 import inversionUtils
 from sys_util import logger
 
@@ -58,10 +57,10 @@ if __name__ == '__main__':
 		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec=dataTaperModule.dataTaperInit(sys.argv)
 
 	# Born extended for tomo nonlienar inversion (model=velocity)
-	modelFineInit,data,reflectivity,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornExtTomoInvOpInitFloat(sys.argv)
+	modelFineInit,data,reflectivity,parObject,sourcesVector,sourcesSignalsVector,receiversVector,_=Acoustic_iso_float.BornExtTomoInvOpInitFloat(sys.argv)
 
 	# Tomo extended
-	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector,reflectivity=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv
+	modelFineInit,data,wavelet,parObject,sourcesVector,receiversVector,reflectivity,_=Acoustic_iso_float.tomoExtOpInitFloat(sys.argv)
 
 	# Gradient mask
 	if (gradientMask==1):
@@ -83,10 +82,10 @@ if __name__ == '__main__':
 
 	############################# Instanciation ################################
 	# Born extended for tomo nonlinear inversion
-	BornExtTomoInvOp=Acoustic_iso_float.BornExtTomoInvShotsGpu(modelFineInit,data,reflectivity,wavelet,parObject.param,sourcesVector,receiversVector)
+	BornExtTomoInvOp=Acoustic_iso_float.BornExtTomoInvShotsGpu(modelFineInit,data,reflectivity,wavelet,parObject,sourcesVector,receiversVector)
 
 	# Tomo extended
-	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,modelFineInit,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivity)
+	tomoExtOp=Acoustic_iso_float.tomoExtShotsGpu(modelFineInit,data,modelFineInit,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivity)
 	tomoInvOp=tomoExtOp
 	if (gradientMask==1):
 		maskGradientOp=maskGradientModule.maskGradient(modelFineInit,modelFineInit,vel,bufferUp,bufferDown,taperExp,fat)
@@ -190,7 +189,7 @@ if __name__ == '__main__':
 
 	############################# Solver #######################################
 	# Solver
-	NLCGsolver=NLCG.NLCGsolver(stop,logger=inv_log)
+	NLCGsolver=NLCG(stop,logger=inv_log)
 
 	# Manual step length
 	initStep=parObject.getInt("initStep",-1)

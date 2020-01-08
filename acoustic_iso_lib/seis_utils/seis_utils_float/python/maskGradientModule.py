@@ -12,32 +12,25 @@ def maskGradientInit(args):
 
 	# Check if user directly provides the mask for the gradient
 	gradientMaskFile=parObject.getString("gradientMaskFile","noGradientMaskFile")
+	# Read parameters
+	bufferUp=parObject.getFloat("bufferUp",0) # Taper width above water bottom [km]
+	bufferDown=parObject.getFloat("bufferDown",0) # Taper width below water bottom [km]
+	taperExp=parObject.getFloat("taperExp",0) # Taper exponent
+	fat=parObject.getInt("fat",5)
+	velFile=parObject.getString("vel","noVelFile")
+	vel=genericIO.defaultIO.getVector(velFile)
+	wbShift=parObject.getFloat("wbShift",0) # Shift water bottom velocity [km] to start tapering at a different depth
 
 	# Case where the user wants to apply a mask but does not provide the file
 	# The gradient is computed automatically by providing the following parameters
 	if (gradientMaskFile=="noGradientMaskFile"):
 		print("--- User has not provided a gradient mask file ---")
 		print("--- Automatically generating the mask from the provided parameters ---")
-		# Read parameters
-		bufferUp=parObject.getFloat("bufferUp") # Taper width above water bottom [km]
-		bufferDown=parObject.getFloat("bufferDown") # Taper width below water bottom [km]
-		taperExp=parObject.getFloat("taperExp") # Taper exponent
-		fat=parObject.getInt("fat",5)
-		velFile=parObject.getString("vel","noVelFile")
-		vel=genericIO.defaultIO.getVector(velFile)
-		wbShift=parObject.getFloat("wbShift") # Shift water bottom velocity [km] to start tapering at a different depth
 
 	# The user provides the gradient mask file
 	# If you provide both (parameters and mask file, the mask file has priority)
 	else:
 		print("--- User has provided a gradient mask file ---")
-		bufferUp=0
-		bufferDown=0
-		taperExp=0
-		fat=0
-		velFile=parObject.getString("vel","noVelFile")
-		vel=genericIO.defaultIO.getVector(velFile)
-		wbShift=0
 
 	return vel,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile
 

@@ -30,8 +30,8 @@ if (OPENMP_FOUND)
 endif()
 
 #Adding ioLibs submodule
-  execute_process(COMMAND git submodule update --init --recursive -- external/ioLibs WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-  add_subdirectory(external/ioLibs)
+execute_process(COMMAND git submodule update --init --recursive -- external/ioLibs WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_subdirectory(external/ioLibs)
 
 # Finding multithread libraries
 find_package(Threads)
@@ -51,6 +51,9 @@ add_subdirectory(python/python_float_we)
 # include folder for Seismic utilities
 add_subdirectory(seis_utils/seis_utils_double/)
 add_subdirectory(seis_utils/seis_utils_float/)
+
+execute_process(COMMAND git submodule update --init --recursive -- external/pySolver WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_subdirectory(external/pySolver/GenericSolver)
 
 include(InstallRequiredSystemLibraries)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")

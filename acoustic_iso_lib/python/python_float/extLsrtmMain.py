@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3
 import genericIO
 import SepVector
 import Hypercube
@@ -17,12 +17,15 @@ import dsoInvGpuModule
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
-import pySymLCGsolver as SymLCGsolver
+from pyLinearSolver import LCGsolver as LCG
+from pyNonLinearSolver import LBFGSsolver as LBFGS
 import pyProblem as Prblm
-import pyStopperBase as Stopper
-import inversionUtils
 from sys_util import logger
+import inversionUtils
+
+#Dask-related modules
+import pyDaskOperator as DaskOp
+import pyDaskVector
 
 # Template for linearized waveform inversion workflow
 if __name__ == '__main__':
@@ -30,7 +33,11 @@ if __name__ == '__main__':
 	# IO object
 	parObject=genericIO.io(params=sys.argv)
 
+	# Checking if Dask was requested
+	client, nWrks = Acoustic_iso_float.create_client(parObject)
+
 	pyinfo=parObject.getInt("pyinfo",1)
+	solver=parObject.getString("solver","LCG")
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
 	regType=parObject.getString("reg","None")
@@ -58,7 +65,18 @@ if __name__ == '__main__':
 		t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth=dataTaperModule.dataTaperInit(sys.argv)
 
 	# Born extended
-	modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornExtOpInitFloat(sys.argv)
+	modelFineInit,data,vel,parObject1,sourcesVector,sourcesSignalsVector,receiversVector,modelFineInitLocal=Acoustic_iso_float.BornExtOpInitFloat(sys.argv,client)
+	# Born operator
+	if client:
+		#Instantiating Dask Operator
+		BornExtOp_args = [(modelFineInit.vecDask[iwrk],data.vecDask[iwrk],vel[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		BornExtOp = DaskOp.DaskOperator(client,Acoustic_iso_float.BornExtShotsGpu,BornExtOp_args,[1]*nWrks)
+		#Adding spreading operator and concatenating with Born operator (using modelFineInitLocal)
+		Sprd = DaskOp.DaskSpreadOp(client,modelFineInitLocal,[1]*nWrks)
+		invOp = pyOp.ChainOperator(Sprd,BornExtOp)
+	else:
+		BornExtOp=Acoustic_iso_float.BornExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
+		invOp=BornExtOp
 
 	############################# Read files ###################################
 	# Read initial model
@@ -72,7 +90,7 @@ if __name__ == '__main__':
 
 	else:
 		if (modelInitFile=="None"):
-			modelInit=modelFineInit.clone()
+			modelInit=modelFineInitLocal.clone()
 			modelInit.scale(0.0)
 		else:
 			modelInit=genericIO.defaultIO.getVector(modelInitFile,ndims=3)
@@ -81,22 +99,29 @@ if __name__ == '__main__':
 	dataFile=parObject.getString("data")
 	data=genericIO.defaultIO.getVector(dataFile,ndims=3)
 
-	############################# Instanciation ################################
-	# Born
-	BornExtOp=Acoustic_iso_float.BornExtShotsGpu(modelFineInit,data,vel,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
-	invOp=BornExtOp
+	#Dask interface
+	if(client):
+		#Chunking the data and spreading them across workers if dask was requested
+		data = Acoustic_iso_float.chunkData(data,BornExtOp.getRange())
+
+	############################# Instantiation ################################
 
 	# Spline
 	if (spline==1):
 		if(pyinfo): print("--- Using spline interpolation ---")
 		inv_log.addToLog("--- Using spline interpolation ---")
-		splineOp=interpBSplineModule.bSpline3d(modelCoarseInit,modelFineInit,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
+		splineOp=interpBSplineModule.bSpline3d(modelCoarseInit,modelFineInitLocal,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
 
 	# Data taper
 	if (dataTaper==1):
 		if(pyinfo): print("--- Using data tapering ---")
 		inv_log.addToLog("--- Using data tapering ---")
-		dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
+		if client:
+			hypers = client.getClient().map(lambda x: x.getHyper(),data.vecDask,pure=False)
+			dataTaper_args = [(data.vecDask[iwrk],data.vecDask[iwrk],t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,hypers[iwrk],time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth) for iwrk in range(nWrks)]
+			dataTaperOp = DaskOp.DaskOperator(client,dataTaperModule.datTaper,dataTaper_args,[1]*nWrks)
+		else:
+			dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
 		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
@@ -135,6 +160,10 @@ if __name__ == '__main__':
 			invOpTemp=pyOp.ChainOperator(splineTempOp,BornExtOp)
 			invOp=pyOp.ChainOperator(invOpTemp,dataTaperOp)
 
+	if solver == "lbfgs":
+		#Solving linear problem with BFGS
+		invOp = pyOp.NonLinearOperator(invOp,invOp)
+
 	############################# Regularization ###############################
 	# Regularization
 	if (reg==1):
@@ -146,7 +175,10 @@ if __name__ == '__main__':
 		if (regType=="id"):
 			if(pyinfo): print("--- Identity regularization ---")
 			inv_log.addToLog("--- Identity regularization ---")
-			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
+			if solver == "lbfgs":
+				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon)
+			else:
+				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
 
 		# Dso
 		elif (regType=="dso"):
@@ -161,16 +193,21 @@ if __name__ == '__main__':
 				nExt=modelInit.getHyper().axes[2].n
 				fat=0
 				dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,dsoZeroShift)
-				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp)
 			else:
 				nz,nx,nExt,fat,dsoZeroShift=dsoGpuModule.dsoGpuInit(sys.argv)
 				dsoOp=dsoGpuModule.dsoGpu(modelInit,modelInit,nz,nx,nExt,fat,dsoZeroShift)
+			if solver == "lbfgs":
+				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon,reg_op=pyOp.NonLinearOperator(dsoOp,dsoOp))
+			else:
 				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp)
 
 		elif (regType=="dsoPrec"):
 			if(pyinfo): print("--- DSO regularization with preconditioning ---")
 			inv_log.addToLog("--- DSO regularization with preconditioning ---")
-			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
+			if solver == "lbfgs":
+				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon)
+			else:
+				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
 
 		else:
 			if(pyinfo): print("--- Regularization that you have required is not supported by our code ---")
@@ -187,15 +224,24 @@ if __name__ == '__main__':
 
 	# No regularization
 	else:
-		invProb=Prblm.ProblemL2Linear(modelInit,data,invOp)
+		if solver == "lbfgs":
+			invProb=Prblm.ProblemL2NonLinear(modelInit,data,invOp)
+		else:
+			invProb=Prblm.ProblemL2Linear(modelInit,data,invOp)
 
 	############################## Solver ######################################
 	# Solver
-	LCGsolver=LCG.LCGsolver(stop,logger=inv_log)
-	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
+	if solver == "LCG":
+		linSolver=LCG(stop,logger=inv_log)
+	elif solver == "lbfgs":
+		linSolver=LBFGS(stop,logger=inv_log)
+	else:
+		raise ValueError("Provided requested solver (%s) not supported!"%(solver))
+
+	linSolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver
-	LCGsolver.run(invProb,verbose=True)
+	linSolver.run(invProb,verbose=True)
 
 	if(pyinfo): print("-------------------------------------------------------------------")
 	if(pyinfo): print("--------------------------- All done ------------------------------")

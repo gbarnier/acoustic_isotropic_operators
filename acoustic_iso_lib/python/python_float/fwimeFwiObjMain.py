@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3
 import genericIO
 import SepVector
 import Hypercube
@@ -11,10 +11,10 @@ import sys
 if __name__ == '__main__':
 
 	# Initialize operator
-	model,seismicData,velFloat,parObject,sourcesVector,receiversVector=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv)
+	model,seismicData,velFloat,parObject,sourcesVector,receiversVector,_=Acoustic_iso_float.nonlinearOpInitFloat(sys.argv)
 
 	# Construct nonlinear operator object
-	nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(model,seismicData,velFloat,parObject.param,sourcesVector,receiversVector)
+	nonlinearOp=Acoustic_iso_float.nonlinearPropShotsGpu(model,seismicData,velFloat,parObject,sourcesVector,receiversVector)
 
 	print("-------------------------------------------------------------------")
 	print("------------- Generating Fwi objective function from FWIME --------")

@@ -1,78 +1,96 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3
 import genericIO
 import SepVector
 import Hypercube
+import pyOperator as pyOp
 import Acoustic_iso_float
 import numpy as np
-import time
 import sys
+
+#Dask-related modules
+import pyDaskOperator as DaskOp
 
 if __name__ == '__main__':
 
-    # Seismic operator object initialization
-    modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector=Acoustic_iso_float.BornOpInitFloat(sys.argv)
+	#Getting parameter object
+	parObject=genericIO.io(params=sys.argv)
 
-    # Construct Born operator object
-    bornOp=Acoustic_iso_float.BornShotsGpu(modelFloat,dataFloat,velFloat,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector)
+	# Checking if Dask was requested
+	client, nWrks = Acoustic_iso_float.create_client(parObject)
 
-    # Forward
-    if (parObject.getInt("adj",0) == 0):
+	# Seismic operator object initialization
+	modelFloat,dataFloat,velFloat,parObject1,sourcesVector,sourcesSignalsVector,receiversVector,modelFloatLocal=Acoustic_iso_float.BornOpInitFloat(sys.argv,client)
 
-        print("-------------------------------------------------------------------")
-        print("-------------------- Running Python Born forward ------------------")
-        print("-------------------- Single precision Python code -----------------")
-        print("-------------------------------------------------------------------\n")
+	if(client):
+		#Instantiating Dask Operator
+		BornOp_args = [(modelFloat.vecDask[iwrk],dataFloat.vecDask[iwrk],velFloat[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
+		bornOp = DaskOp.DaskOperator(client,Acoustic_iso_float.BornShotsGpu,BornOp_args,[1]*nWrks)
+		#Adding spreading operator and concatenating with Born operator (using modelFloatLocal)
+		Sprd = DaskOp.DaskSpreadOp(client,modelFloatLocal,[1]*nWrks)
+		bornOp = pyOp.ChainOperator(Sprd,bornOp)
+	else:
+		# Construct Born operator object
+		bornOp=Acoustic_iso_float.BornShotsGpu(modelFloat,dataFloat,velFloat,parObject1,sourcesVector,sourcesSignalsVector,receiversVector)
 
-        # Check that model was provided
-        modelFile=parObject.getString("model","noModelFile")
-        if (modelFile == "noModelFile"):
-            print("**** ERROR: User did not provide model file ****\n")
-            quit()
+	#Testing dot-product test of the operator
+	if (parObject.getInt("dpTest",0) == 1):
+		bornOp.dotTest(True)
+		quit(0)
 
-        # Read model
-        modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=2)
+	# Forward
+	if (parObject.getInt("adj",0) == 0):
 
-        # Apply forward
-        bornOp.forward(False,modelFloat,dataFloat)
+		print("-------------------------------------------------------------------")
+		print("-------------------- Running Python Born forward ------------------")
+		print("-------------------- Single precision Python code -----------------")
+		print("-------------------------------------------------------------------\n")
 
-        # Write data
-        dataFile=parObject.getString("data","noDataFile")
-        if (dataFile == "noDataFile"):
-            print("**** ERROR: User did not provide data file name ****\n")
-            quit()
-        genericIO.defaultIO.writeVector(dataFile,dataFloat)
+		# Check that model was provided
+		modelFile=parObject.getString("model","noModelFile")
+		if (modelFile == "noModelFile"):
+			raise IOError("**** ERROR: User did not provide model file ****\n")
 
-        print("-------------------------------------------------------------------")
-        print("--------------------------- All done ------------------------------")
-        print("-------------------------------------------------------------------\n")
+		dataFile=parObject.getString("data","noDataFile")
+		if (dataFile == "noDataFile"):
+			raise IOError("**** ERROR: User did not provide data file name ****\n")
 
-    # Adjoint
-    else:
+		# Read model
+		modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=2)
 
-        print("-------------------------------------------------------------------")
-        print("-------------------- Running Python Born adjoint ------------------")
-        print("-------------------- Single precision Python code -----------------")
-        print("-------------------------------------------------------------------\n")
+		# Apply forward
+		bornOp.forward(False,modelFloat,dataFloat)
 
-        # Check that data was provided
-        dataFile=parObject.getString("data","noDataFile")
-        if (dataFile == "noDataFile"):
-            print("**** ERROR: User did not provide data file ****\n")
-            quit()
+		# Write data
+		dataFloat.writeVec(dataFile)
 
-        # Read data
-        dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
+	# Adjoint
+	else:
 
-        # Apply adjoint
-        bornOp.adjoint(False,modelFloat,dataFloat)
+		print("-------------------------------------------------------------------")
+		print("-------------------- Running Python Born adjoint ------------------")
+		print("-------------------- Single precision Python code -----------------")
+		print("-------------------------------------------------------------------\n")
 
-        # Write model
-        modelFile=parObject.getString("model","noModelFile")
-        if (modelFile == "noModelFile"):
-            print("**** ERROR: User did not provide model file name ****\n")
-            quit()
-        genericIO.defaultIO.writeVector(modelFile,modelFloat)
+		# Check that data was provided
+		dataFile=parObject.getString("data","noDataFile")
+		if (dataFile == "noDataFile"):
+			raise IOError("**** ERROR: User did not provide data file ****\n")
+		modelFile=parObject.getString("model","noModelFile")
+		if (modelFile == "noModelFile"):
+			raise IOError("**** ERROR: User did not provide model file name ****\n")
 
-        print("-------------------------------------------------------------------")
-        print("--------------------------- All done ------------------------------")
-        print("-------------------------------------------------------------------\n")
+		# Read data
+		dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
+		if(client):
+			#Chunking the data and spreading them across workers if dask was requested
+			dataFloat = Acoustic_iso_float.chunkData(dataFloat,bornOp.getRange())
+
+		# Apply adjoint
+		bornOp.adjoint(False,modelFloatLocal,dataFloat)
+
+		# Write model
+		modelFloatLocal.writeVec(modelFile)
+
+	print("-------------------------------------------------------------------")
+	print("--------------------------- All done ------------------------------")
+	print("-------------------------------------------------------------------\n")

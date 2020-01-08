@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3
 import genericIO
 import SepVector
 import Hypercube
@@ -63,7 +63,7 @@ if __name__ == '__main__':
 				waveletFftNd[iFreq]=0
 
 		# Duplicate, flip spectrum and take the complex conjugate
-		waveletFftNd[nts//2+1:] = np.flip(waveletFftNd[1:nts//2].conj())
+		waveletFftNd[nts//2+1:] = np.flip(waveletFftNd[1:nts//2].conj(),axis=0)
 
 		# Apply inverse FFT
 		if(odd):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3
 import genericIO
 import SepVector
 import Hypercube
@@ -6,7 +6,7 @@ import numpy as np
 import time
 import sys
 import os
-import pyStopperBase as Stopper
+import pyStopper as Stopper
 
 def inversionFullWRIInit(args):
 
