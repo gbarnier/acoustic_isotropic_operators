@@ -12,7 +12,7 @@ import pyDaskOperator as DaskOp
 
 if __name__ == '__main__':
 
-	#Getting parameter object
+	# Getting parameter object
 	parObject=genericIO.io(params=sys.argv)
 
 	# Checking if Dask was requested
@@ -22,7 +22,7 @@ if __name__ == '__main__':
 	modelFloat,dataFloat,velFloat,parObject1,sourcesVector,sourcesSignalsVector,receiversVector,modelFloatLocal=Acoustic_iso_float.BornExtOpInitFloat(sys.argv,client)
 
 	if client:
-		#Instantiating Dask Operator
+		# Instantiating Dask Operator
 		BornExtOp_args = [(modelFloat.vecDask[iwrk],dataFloat.vecDask[iwrk],velFloat[iwrk],parObject1[iwrk],sourcesVector[iwrk],sourcesSignalsVector[iwrk],receiversVector[iwrk]) for iwrk in range(nWrks)]
 		BornExtOp = DaskOp.DaskOperator(client,Acoustic_iso_float.BornExtShotsGpu,BornExtOp_args,[1]*nWrks)
 		#Adding spreading operator and concatenating with Born operator (using modelFloatLocal)
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 		# Construct Born operator object
 		BornExtOp=Acoustic_iso_float.BornExtShotsGpu(modelFloat,dataFloat,velFloat,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
 
-	#Testing dot-product test of the operator
+	# Testing dot-product test of the operator
 	if (parObject.getInt("dpTest",0) == 1):
 		BornExtOp.dotTest(True)
 		quit(0)
