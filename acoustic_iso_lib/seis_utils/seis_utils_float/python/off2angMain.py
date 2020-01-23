@@ -63,6 +63,7 @@ if __name__ == '__main__':
 
 		# Constructing operator
 		off2angOp = off2ang2D(ODCIGs,ADCIGs,z_axis.o,z_axis.d,h_axis.o,h_axis.d,g_axis.o,g_axis.d)
+
 		# Applying transformation
 		off2angOp.forward(False,ODCIGs,ADCIGs)
 		# Writing result
@@ -70,7 +71,7 @@ if __name__ == '__main__':
 
 	# Applying adjoint
 	else:
-				# Read offset-domain image
+		# Read offset-domain image
 		ADCIGs = genericIO.defaultIO.getVector(ang_img_file)
 		# Getting axis
 		z_axis = ADCIGs.getHyper().getAxis(1)
@@ -84,4 +85,4 @@ if __name__ == '__main__':
 		# Applying transformation
 		off2angOp.adjoint(False,ODCIGs,ADCIGs)
 		# Writing result
-		ODCIGs.writeVector(off_img_file)
+		ODCIGs.writeVec(off_img_file)

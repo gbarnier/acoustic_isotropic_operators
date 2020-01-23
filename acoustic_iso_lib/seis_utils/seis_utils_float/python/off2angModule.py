@@ -50,13 +50,15 @@ class off2ang2D(Op.Operator):
 		dkz = 1.0/((self.nz)*self.dz)
 		kz_axis = np.linspace(0.0,(self.nz-1)*dkz,self.nz)
 
+		# Fourier transform of input ODCIGs
 		m_kz = np.fft.fft(m_arr)
+
 		# Precomputing scaling factor for transformation
 		h_axis = np.linspace(self.oh,self.oh+(self.nh-1)*self.dh,self.nh)
-		exp_arg = np.expand_dims(1.0j*np.outer(h_axis,kz_axis),axis=1)
 		tan_vals = np.tan(np.linspace(self.og,self.og+(self.ng-1)*self.dg,self.ng))
-		for g_idx,tg_v in enumerate(tan_vals):
-			d_tmp[g_idx,:,:] = np.sum(m_kz[:,:,:]*np.exp(exp_arg*tg_v),axis=0)*self.dh
+		exp_arg = np.expand_dims(1.0j*np.outer(h_axis,kz_axis),axis=1)
+		for g_idx,tg_val in enumerate(tan_vals):
+			d_tmp[g_idx,:,:] = np.sum(m_kz[:,:,:]*np.exp(exp_arg*tg_val),axis=0) 
 		d_arr += np.real(np.fft.ifft(d_tmp))
 		return
 
@@ -65,4 +67,24 @@ class off2ang2D(Op.Operator):
 		self.checkDomainRange(model,data)
 		if not add:
 			model.zero()
+
+		# Getting Nd arrays
+		m_arr = model.getNdArray()
+		d_arr = data.getNdArray()
+		m_tmp = np.zeros(m_arr.shape, dtype=complex)
+
+		# kz sampling information
+		dkz = 1.0/((self.nz)*self.dz)
+		kz_axis = np.linspace(0.0,(self.nz-1)*dkz,self.nz)
+
+		# Fourier transform of input ADCIGs
+		d_kz = np.fft.fft(d_arr)
+
+		# Precomputing scaling factor for transformation
+		h_axis = np.linspace(self.oh,self.oh+(self.nh-1)*self.dh,self.nh)
+		tan_vals = np.tan(np.linspace(self.og,self.og+(self.ng-1)*self.dg,self.ng))
+		exp_arg = np.expand_dims(-1.0j*np.outer(tan_vals,kz_axis),axis=1)
+		for h_idx,off_val in enumerate(h_axis):
+			m_tmp[h_idx,:,:] = np.sum(d_kz[:,:,:]*np.exp(exp_arg*off_val),axis=0)
+		m_arr += np.real(np.fft.ifft(m_tmp))
 		return
