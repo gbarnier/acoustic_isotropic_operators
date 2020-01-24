@@ -3,7 +3,7 @@
 
 
 USAGE EXAMPLE:
-	off2angMain.py off_img= ang_img= oz= dz= nh= oh= dh= ng= og= dg= adj=
+	off2angMain.py off_img= ang_img= nh= oh= dh= ng= og= dg= adj=
 
 INPUT PARAMETERS:
 """
