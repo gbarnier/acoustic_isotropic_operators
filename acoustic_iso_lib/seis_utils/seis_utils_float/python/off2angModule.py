@@ -47,7 +47,7 @@ class off2ang2D(Op.Operator):
 		d_tmp = np.zeros(d_arr.shape, dtype=complex)
 
 		# kz sampling information
-		dkz = 1.0/((self.nz)*self.dz)
+		dkz = 2.0*np.pi/((self.nz)*self.dz)
 		kz_axis = np.linspace(0.0,(self.nz-1)*dkz,self.nz)
 
 		# Fourier transform of input ODCIGs
@@ -58,7 +58,7 @@ class off2ang2D(Op.Operator):
 		tan_vals = np.tan(np.linspace(self.og,self.og+(self.ng-1)*self.dg,self.ng))
 		exp_arg = np.expand_dims(1.0j*np.outer(h_axis,kz_axis),axis=1)
 		for g_idx,tg_val in enumerate(tan_vals):
-			d_tmp[g_idx,:,:] = np.sum(m_kz[:,:,:]*np.exp(exp_arg*tg_val),axis=0) 
+			d_tmp[g_idx,:,:] = np.sum(m_kz[:,:,:]*np.exp(exp_arg*tg_val),axis=0)
 		d_arr += np.real(np.fft.ifft(d_tmp))
 		return
 
@@ -74,7 +74,7 @@ class off2ang2D(Op.Operator):
 		m_tmp = np.zeros(m_arr.shape, dtype=complex)
 
 		# kz sampling information
-		dkz = 1.0/((self.nz)*self.dz)
+		dkz = 2.0*np.pi/((self.nz)*self.dz)
 		kz_axis = np.linspace(0.0,(self.nz-1)*dkz,self.nz)
 
 		# Fourier transform of input ADCIGs

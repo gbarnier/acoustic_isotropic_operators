@@ -265,7 +265,7 @@ if __name__ == '__main__':
 		nlSolver.stepper = Stepper.ParabolicStepConst()
 
 	####################### Manual initial step length #########################
-	initStep=parObject.getInt("initStep",-1)
+	initStep=parObject.getFloat("initStep",-1.0)
 	if (initStep>0):
 		nlSolver.stepper.alpha=initStep
 
