@@ -53,7 +53,7 @@ if __name__ == '__main__':
 	# Applying forward
 	if adj == 0:
 		# Read offset-domain image
-		ODCIGs = genericIO.defaultIO.getVector(off_img_file)
+		ODCIGs = genericIO.defaultIO.getVector(off_img_file,ndims=3)
 		# Getting axis
 		z_axis = ODCIGs.getHyper().getAxis(1)
 		x_axis = ODCIGs.getHyper().getAxis(2)
@@ -72,7 +72,7 @@ if __name__ == '__main__':
 	# Applying adjoint
 	else:
 		# Read offset-domain image
-		ADCIGs = genericIO.defaultIO.getVector(ang_img_file)
+		ADCIGs = genericIO.defaultIO.getVector(ang_img_file,ndims=3)
 		# Getting axis
 		z_axis = ADCIGs.getHyper().getAxis(1)
 		x_axis = ADCIGs.getHyper().getAxis(2)

@@ -47,8 +47,7 @@ class off2ang2D(Op.Operator):
 		d_tmp = np.zeros(d_arr.shape, dtype=complex)
 
 		# kz sampling information
-		dkz = 2.0*np.pi/((self.nz)*self.dz)
-		kz_axis = np.linspace(0.0,(self.nz-1)*dkz,self.nz)
+		kz_axis = 2.0*np.pi*np.fft.fftfreq(self.nz,self.dz)
 
 		# Fourier transform of input ODCIGs
 		m_kz = np.fft.fft(m_arr)
@@ -74,8 +73,7 @@ class off2ang2D(Op.Operator):
 		m_tmp = np.zeros(m_arr.shape, dtype=complex)
 
 		# kz sampling information
-		dkz = 2.0*np.pi/((self.nz)*self.dz)
-		kz_axis = np.linspace(0.0,(self.nz-1)*dkz,self.nz)
+		kz_axis = 2.0*np.pi*np.fft.fftfreq(self.nz,self.dz)
 
 		# Fourier transform of input ADCIGs
 		d_kz = np.fft.fft(d_arr)
