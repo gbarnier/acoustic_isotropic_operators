@@ -16,7 +16,7 @@ import TpowWfld
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
+from pyLinearSolver import LCGsolver as LCG
 import pyProblem as Prblm
 import pyStopperBase as Stopper
 import inversionUtils
@@ -44,10 +44,17 @@ if __name__ == '__main__':
 	if(pyinfo): print("--------------------------- Wave equation op init --------------------------------")
 	modelFloat,dataFloat,slsqFloat,parObject,tempWaveEquationOp,fftOp,modelFloatTime = Acoustic_iso_float_we_freq.waveEquationOpInitFloat_multi_exp_freq(sys.argv)
 	waveEquationAcousticOp = tempWaveEquationOp
-	#freqMask=0;
-	#maskWidth=parObject.getInt("maskWidth",0)
-	#mask4dOp = Mask4d.mask4d(modelFloat,modelFloat,maskWidth,modelFloat.getHyper().axes[0].n-maskWidth,maskWidth,modelFloat.getHyper().axes[1].n-maskWidth,0,modelFloat.getHyper().axes[2].n-freqMask,0,modelFloat.getHyper().axes[3].n,0)
-	#waveEquationAcousticOp = pyOp.ChainOperator(tempWaveEquationOp,mask4dOp)
+	fmin=parObject.getFloat("fmin",-1)
+	if(fmin==-1):
+		freqMask=1
+	else:
+		freqMask=int(fmin/fftOp.getDomain().getHyper().getAxis(3).d)
+	print("fmin: "+str(fmin)+"windowing out first "+str(freqMask)+" samples.")
+	spaceMask=10
+	laplacianBufferMaskOp = Mask4d.mask4d_complex(modelFloat,modelFloat,spaceMask,modelFloat.getHyper().axes[0].n-(spaceMask+1),spaceMask,modelFloat.getHyper().axes[1].n-(spaceMask+1),freqMask,modelFloat.getHyper().axes[2].n,0,modelFloat.getHyper().axes[3].n,0)
+	freqLowCutMaskOp = Mask4d.mask4d_complex(modelFloat,modelFloat,0,modelFloat.getHyper().axes[0].n,0,modelFloat.getHyper().axes[1].n,freqMask,modelFloat.getHyper().axes[2].n,0,modelFloat.getHyper().axes[3].n,0)
+	waveEquationAcousticOp = pyOp.ChainOperator(freqLowCutMaskOp,pyOp.ChainOperator(tempWaveEquationOp,laplacianBufferMaskOp))
+	#waveEquationAcousticOp = tempWaveEquationOp
 
 	############################# Read files ###################################
 	# Read initial model
@@ -58,12 +65,15 @@ if __name__ == '__main__':
 		#check if provided in time domain
 		inputMode=parObject.getString("inputMode","freq")
 		if (inputMode == 'time'):
-		    print('------ input model in time domain. converting to freq ------')
-		    timeFloat = genericIO.defaultIO.getVector(modelInitFile)
-		    fftOp.adjoint(0,modelFloat,timeFloat)
-		    genericIO.defaultIO.writeVector('freq_model.H',modelFloat)
+			print('------ input model in time domain. converting to freq ------')
+			timeFloat = genericIO.defaultIO.getVector(modelInitFile,ndims=4)
+			modelFloatTmp=modelFloat.clone()
+			fftOp.adjoint(0,modelFloatTmp,timeFloat)
+			freqLowCutMaskOp.forward(0,modelFloatTmp,modelFloat)
+			genericIO.defaultIO.writeVector('freq_model.H',modelFloat)
 		else:
-		    modelFloat=genericIO.defaultIO.getVector(modelInitFile)
+			modelFloatTmp=genericIO.defaultIO.getVector(modelInitFile,ndims=4)
+			freqLowCutMaskOp.forward(0,modelFloatTmp,modelFloat)
 
 	# forcing term op
 	if(pyinfo): print("--------------------------- forcing term op init ------------------------")
@@ -72,10 +82,12 @@ if __name__ == '__main__':
 		print("prior from wavelet")
 		forcingTermOp,priorTimeTmp = wriUtilFloat.forcing_term_op_init_p_multi_exp(sys.argv)
 		#priorTime=priorTimeTmp.clone()
+		priorFreqTmp=dataFloat.clone()
 		prior=dataFloat.clone()
-		#mask4dOp.forward(0,priorTimeTmp,priorTime)
-		fftOp.adjoint(0,prior,priorTimeTmp) # convert to freq
-		genericIO.defaultIO.writeVector('freq_prior.H',prior)
+		#laplacianBufferMaskOp.forward(0,priorTimeTmp,priorTime)
+		fftOp.adjoint(0,priorFreqTmp,priorTimeTmp) # convert to freq
+		freqLowCutMaskOp.forward(0,priorFreqTmp,prior)
+		prior.writeVec('freq_prior.H')
 		genericIO.defaultIO.writeVector('time_prior.H',priorTimeTmp)
 	else:
 		print("full prior")
@@ -132,7 +144,7 @@ if __name__ == '__main__':
 		if(pyinfo): print("--- No preconditioning ---")
 		invProb=Prblm.ProblemL2Linear(modelFloat,prior,waveEquationAcousticOp)
 
-	LCGsolver=LCG.LCGsolver(stop,logger=inv_log)
+	LCGsolver=LCG(stop,logger=inv_log)
 	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver

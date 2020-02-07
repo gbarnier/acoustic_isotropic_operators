@@ -41,18 +41,18 @@ if __name__ == '__main__':
 	inv_log = logger(logFile)
 
 	if(pyinfo): print("-------------------------------------------------------------------")
-	if(pyinfo): print("------------------ gradiometry (multi shots) --------------")
+	if(pyinfo): print("------------------ gradiometry (multi shots) freq domain--------------")
 	if(pyinfo): print("-------------------------------------------------------------------\n")
-	inv_log.addToLog("------------------ gradiometry (multi shots) --------------")
+	inv_log.addToLog("------------------ gradiometry (multi shots) freq domain--------------")
 
 	############################# Initialization ###############################
 	# Wave equation op init
 	if(pyinfo): print("--------------------------- Gradio op init --------------------------------")
-	modelFloat,dataFloat,pressureData,tempGradioOp= Acoustic_iso_float_gradio.gradioOpInitFloat_multi_exp(sys.argv)
+	modelFloat,dataFloat,pressureData,gradioOp,fftOp= Acoustic_iso_float_gradio.gradioOpInitFloat_multi_exp_freq(sys.argv)
 	maskWidth=parObject.getInt("maskWidth",0)
-	mask4dOp = Mask4d.mask4d(dataFloat,dataFloat,maskWidth,dataFloat.getHyper().axes[0].n-maskWidth,maskWidth,dataFloat.getHyper().axes[1].n-maskWidth,0,dataFloat.getHyper().axes[2].n,0,dataFloat.getHyper().axes[3].n,0)
+	# mask4dOp = Mask4d.mask4d(dataFloat,dataFloat,maskWidth,dataFloat.getHyper().axes[0].n-maskWidth,maskWidth,dataFloat.getHyper().axes[1].n-maskWidth,0,dataFloat.getHyper().axes[2].n,0,dataFloat.getHyper().axes[3].n,0)
 	mask2dOp = Mask2d.mask2d(modelFloat,modelFloat,maskWidth,modelFloat.getHyper().axes[0].n-maskWidth,maskWidth,dataFloat.getHyper().axes[1].n-maskWidth,0)
-	gradioOp = pyOp.ChainOperator(tempGradioOp,mask4dOp)
+	# gradioOp = pyOp.ChainOperator(tempGradioOp,mask4dOp)
 
 	################################ DP Test ###################################
 	if (parObject.getInt("dp",0)==1):

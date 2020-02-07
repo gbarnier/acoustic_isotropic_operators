@@ -9,11 +9,11 @@ import os
 import math
 
 # Modeling operators
-import Acoustic_iso_float_we
+import Acoustic_iso_float_we_freq
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
+from pyLinearSolver import LCGsolver as LCG
 import pyProblem as Prblm
 import pyStopperBase as Stopper
 import inversionUtils
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 	############################# Initialization ###############################
 	# Wave equation op init
 	if(pyinfo): print("--------------------------- Wave equation op init --------------------------------")
-	modelFloat,_,slsqFloat,parObject,tempWaveEquationOp,fftOp,modelFloatTime = Acoustic_iso_float_we_freq.waveEquationOpInitFloat_multi_exp_freq(sys.argv)
+	modelFloat,priorFloat,slsqFloat,parObject,tempWaveEquationOp,fftOpWfld,modelFloatTime = Acoustic_iso_float_we_freq.waveEquationOpInitFloat_multi_exp_freq(sys.argv)
 	# timeMask=0;
 	# maskWidth=parObject.getInt("maskWidth",0)
 	# mask4dOp = Mask4d.mask4d(modelFloat,modelFloat,maskWidth,modelFloat.getHyper().axes[0].n-maskWidth,maskWidth,modelFloat.getHyper().axes[1].n-maskWidth,0,modelFloat.getHyper().axes[2].n-timeMask,0,modelFloat.getHyper().axes[3].n,0)
@@ -55,9 +55,10 @@ if __name__ == '__main__':
 		print("prior from wavelet")
 		forcingTermOp,priorTimeTmp = wriUtilFloat.forcing_term_op_init_p_multi_exp(sys.argv)
 		#priorTime=priorTimeTmp.clone()
-		prior=dataFloat.clone()
+		prior=priorFloat.clone()
 		#mask4dOp.forward(0,priorTimeTmp,priorTime)
-		fftOp.adjoint(0,prior,priorTimeTmp) # convert to freq
+		fftOpWfld.adjoint(0,prior,priorTimeTmp) # convert to freq
+		genericIO.defaultIO.writeVector('freq_prior.H',prior)
 	else:
 		print("full prior")
 		prior=genericIO.defaultIO.getVector(fullPrior)
@@ -66,7 +67,7 @@ if __name__ == '__main__':
 	if(pyinfo): print("--------------------------- Data extraction init --------------------------------")
 	sampleFullWfld = parObject.getInt("sampleFullWfld",0)
 	if(sampleFullWfld==0):
-		_,dataFloat,dataSamplingOp,fftOp,dataFloatTime= wriUtilFloat.data_extraction_op_init_multi_exp_freq(sys.argv)
+		_,dataFloat,dataSamplingOp,fftOpData,dataFloatTime= wriUtilFloat.data_extraction_op_init_multi_exp_freq(sys.argv)
 	elif(sampleFullWfld==1):
 		print('Error sampleFullWfld=1 not implimented!')
 		quit()
@@ -81,17 +82,25 @@ if __name__ == '__main__':
 	############################# Read files ###################################
 	# Read initial model
 	modelInitFile=parObject.getString("initial_p_model","None")
+	inputMode=parObject.getString("inputMode","freq")
 	if (modelInitFile=="None"):
 		modelFloat.scale(0.0)
+		timeFloat=fftOpWfld.getRange().clone()
+		timeFloat.zero()
 	else:
 		#check if provided in time domain
-		inputMode=parObject.getString("inputMode","freq")
 		if (inputMode == 'time'):
-		    print('------ input model in time domain. converting to freq ------')
-		    timeFloat = genericIO.defaultIO.getVector(modelFile)
-		    fftOp.adjoint(0,modelFloat,timeFloat)
+			print('------ input model in time domain. converting to freq ------')
+			timeFloat = genericIO.defaultIO.getVector(modelInitFile)
+			print("FFT domain: ", fftOpWfld.getDomain().getNdArray().shape)
+			print("modelFloat: ", modelFloat.getNdArray().shape)
+			print("FFT range: ", fftOpWfld.getRange().getNdArray().shape)
+			print("timeFloat: ", timeFloat.getNdArray().shape)
+			fftOpWfld.adjoint(0,modelFloat,timeFloat)
 		else:
-		    modelFloat=genericIO.defaultIO.getVector(modelFile)
+			modelFloat=genericIO.defaultIO.getVector(modelInitFile)
+			timeFloat=fftOpWfld.getRange().clone()
+			timeFloat.zero()
 
 
 	# Data
@@ -99,7 +108,7 @@ if __name__ == '__main__':
 	if (inputMode == 'time'):
 		print('------ input data in time domain. converting to freq ------')
 		dataFloatTime=genericIO.defaultIO.getVector(dataFile)
-		fftOp.adjoint(0,dataFloat,dataFloatTime)
+		fftOpData.adjoint(0,dataFloat,dataFloatTime)
 		genericIO.defaultIO.writeVector('freq_data.H',dataFloat)
 	else:
 		dataFloat=genericIO.defaultIO.getVector(dataFile)
@@ -110,14 +119,16 @@ if __name__ == '__main__':
 	print("*** domain and range checks *** ")
 	print("* Kp - d * ")
 	print("K domain: ", dataSamplingOp.getDomain().getNdArray().shape)
-	print("p shape: ", modelInit.getNdArray().shape)
+	print("K domain axis 3 sampling: ", dataSamplingOp.getDomain().getHyper().getAxis(3).d)
+	print("p shape: ", modelFloat.getNdArray().shape)
+	print("p axis 3 sampling: ", modelFloat.getHyper().getAxis(3).d)
 	print("K range: ", dataSamplingOp.getRange().getNdArray().shape)
-	print("K range axis 1 sampling: ", dataSamplingOp.getRange().getHyper().getAxis(1).d)
+	print("K range axis 2 sampling: ", dataSamplingOp.getRange().getHyper().getAxis(2).d)
 	print("d shape: ", dataFloat.getNdArray().shape)
-	print("d axis 1 sampling: ", dataFloat.getHyper().getAxis(1).d)
+	print("d axis 2 sampling: ", dataFloat.getHyper().getAxis(2).d)
 	print("* Amp - f * ")
 	print("Am domain: ", waveEquationAcousticOp.getDomain().getNdArray().shape)
-	print("p shape: ", modelInit.getNdArray().shape)
+	print("p shape: ", modelFloat.getNdArray().shape)
 	print("Am range: ", waveEquationAcousticOp.getRange().getNdArray().shape)
 	print("f shape: ", prior.getNdArray().shape)
 
@@ -127,7 +138,7 @@ if __name__ == '__main__':
 	if (epsilonEval==1):
 		if(pyinfo): print("--- Epsilon evaluation ---")
 		inv_log.addToLog("--- Epsilon evaluation ---")
-		epsilon = wriUtilFloat.evaluate_epsilon(modelInit,dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
+		epsilon = wriUtilFloat.evaluate_epsilon(modelFloat,dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject)
 	else:
 		epsilon=parObject.getFloat("eps_p_scale",1.0)*parObject.getFloat("eps_p",1.0)
 	if(pyinfo): print("--- Epsilon value: ",epsilon," ---")
@@ -135,6 +146,13 @@ if __name__ == '__main__':
 
 
 	############################# Preconditioning ###############################
+	precond=parObject.getString("precond","None")
+	if(precond=='invDiag'):
+		if(pyinfo): print("--- Preconditioning w/ inverse diag ---")
+		precondOp=Acoustic_iso_float_we_freq.waveEquationAcousticCpu_multi_exp_freq_precond(modelFloat,prior,slsqFloat)
+	else:
+		if(pyinfo): print("--- No Preconditioning ---")
+		precondOp=None
 	# tpow=parObject.getFloat("tpowPrecond",0.0)
 	# gf=parObject.getInt("gfPrecond",0)
 	# if(tpow != 0.0):
@@ -160,11 +178,11 @@ if __name__ == '__main__':
 	# else:
 	# 	if(pyinfo): print("--- No preconditioning ---")
 	# 	invProb=Prblm.ProblemL2LinearReg(modelInit,dataFloat,dataSamplingOp,epsilon,reg_op=waveEquationAcousticOp,prior_model=prior)
-	invProb=Prblm.ProblemL2LinearReg(modelInit,dataFloat,dataSamplingOp,epsilon,reg_op=waveEquationAcousticOp,prior_model=prior)
+	invProb=Prblm.ProblemL2LinearReg(modelFloat,dataFloat,dataSamplingOp,epsilon,reg_op=waveEquationAcousticOp,prior_model=prior,prec=precondOp)
 
 	############################## Solver ######################################
 	# Solver
-	LCGsolver=LCG.LCGsolver(stop,logger=inv_log)
+	LCGsolver=LCG(stop,logger=inv_log)
 	#LCGsolver=LCG_timer.LCGsolver(stop,logger=inv_log)
 	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
@@ -176,7 +194,7 @@ if __name__ == '__main__':
 	outputMode=parObject.getString("outputMode","freq")
 	if (outputMode == 'time'):
 		print('------ output mode is time domain. converting to time and writing to '+prefix+'_inv_mod_time.H------')
-		fftOp.forward(0,invProb.get_model(),timeFloat)
+		fftOpWfld.forward(0,invProb.get_model(),timeFloat)
 		#write data to disk
 		genericIO.defaultIO.writeVector(prefix+'_inv_mod_time.H',timeFloat)
 

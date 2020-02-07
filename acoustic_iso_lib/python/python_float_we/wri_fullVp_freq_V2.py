@@ -12,7 +12,7 @@ import os.path
 # Modeling operators
 import Acoustic_iso_float_we
 import Acoustic_iso_float_gradio
-import Acoustic_iso_float_we_freq
+import Acoustic_iso_float_we_freq_V2
 
 # Solver library
 import pyOperator as pyOp
@@ -76,13 +76,13 @@ if __name__ == '__main__':
 	# Wave equation w.r.t. p op init #############################
 	printAndLog("\tStarted wave equation op as function of wavefield",pyinfo,inv_log)
 	if(inversionMode=="time"):
-		p_model,priorFloat,slsqFloat,parObject,waveEquationAcousticOpTemp = Acoustic_iso_float_we.waveEquationOpInitFloat_multi_exp(sys.argv)
+		p_model,priorFloat,slsqFloat,parObject,waveEquationAcousticOp = Acoustic_iso_float_we.waveEquationOpInitFloat_multi_exp(sys.argv)
 		# timeMask=0;
 		# maskWidth=parObject.getInt("maskWidth",0)
 		# mask4dOp = Mask4d.mask4d(modelFloat,modelFloat,maskWidth,modelFloat.getHyper().axes[0].n-maskWidth,maskWidth,modelFloat.getHyper().axes[1].n-maskWidth,0,modelFloat.getHyper().axes[2].n-timeMask,0,modelFloat.getHyper().axes[3].n,0)
-		waveEquationAcousticOp = waveEquationAcousticOpTemp
+		# waveEquationAcousticOp = pyOp.ChainOperator(tempWaveEquationOp,mask4dOp)
 	else:
-		p_model,priorFloat,slsqFloat,parObject,waveEquationAcousticOpTemp,_,modelFloatTime = Acoustic_iso_float_we_freq.waveEquationOpInitFloat_multi_exp_freq(sys.argv)
+		p_model,priorFloat,slsqFloat,parObject,waveEquationAcousticOpTemp,_,modelFloatTime = Acoustic_iso_float_we_freq_V2.waveEquationOpInitFloat_multi_exp_freq_V2(sys.argv)
 		fmin=parObject.getFloat("fmin",-1)
 		if(fmin==-1):
 			freqMask=1
@@ -91,8 +91,9 @@ if __name__ == '__main__':
 		printAndLog("\tfmin: "+str(fmin)+"windowing out first "+str(freqMask)+" samples.", pyinfo,inv_log)
 		spaceMask=10
 		laplacianBufferMaskOp = Mask4d.mask4d_complex(p_model,p_model,spaceMask,p_model.getHyper().axes[0].n-(spaceMask+1),spaceMask,p_model.getHyper().axes[1].n-(spaceMask+1),freqMask,p_model.getHyper().axes[2].n,0,p_model.getHyper().axes[3].n,0)
-		freqLowCutMaskOp = Mask4d.mask4d_complex(p_model,p_model,0,p_model.getHyper().axes[0].n,0,p_model.getHyper().axes[1].n,freqMask,p_model.getHyper().axes[2].n,0,p_model.getHyper().axes[3].n,0)
+		freqLowCutMaskOp = Mask4d.mask4d_complex(p_model,p_model,0,p_model.getHyper().axes[0].n,0,p_model.getHyper().axes[1].n,freqMask,p_model.getHyper().axes[2].n-3,0,p_model.getHyper().axes[3].n,0)
 		waveEquationAcousticOp = pyOp.ChainOperator(freqLowCutMaskOp,pyOp.ChainOperator(waveEquationAcousticOpTemp,laplacianBufferMaskOp))
+		#waveEquationAcousticOp = waveEquationAcousticOpTemp
 	printAndLog("\tFinished wave equation op as function of wavefield\n",pyinfo,inv_log)
 
 	# FFT operator #############################
@@ -109,9 +110,10 @@ if __name__ == '__main__':
 	if(inversionMode=="time"):
 		_,p_data,dataSamplingOp=wriUtilFloat.data_extraction_op_init_multi_exp(sys.argv)
 	else:
-		_,p_data,dataSamplingOp,fftOpDataTmp,dataFloatTime=wriUtilFloat.data_extraction_op_init_multi_exp_freq(sys.argv)
-		freqLowCutMaskDataOp= Mask2d.mask2d_complex(fftOpDataTmp.getDomain(),fftOpDataTmp.getDomain(),0,fftOpDataTmp.getDomain().getHyper().axes[0].n,freqMask,fftOpDataTmp.getDomain().getHyper().axes[1].n,0)
+		_,p_data,dataSamplingOpTmp,fftOpDataTmp,dataFloatTime=wriUtilFloat.data_extraction_op_init_multi_exp_freq(sys.argv)
+		freqLowCutMaskDataOp= Mask2d.mask2d_complex(fftOpDataTmp.getDomain(),fftOpDataTmp.getDomain(),0,fftOpDataTmp.getDomain().getHyper().axes[0].n,freqMask,fftOpDataTmp.getDomain().getHyper().axes[1].n-3,0)
 		fftOpData=pyOp.ChainOperator(freqLowCutMaskDataOp,fftOpDataTmp)
+		dataSamplingOp = pyOp.ChainOperator(freqLowCutMaskOp,dataSamplingOpTmp)
 	printAndLog("\tFinished data sampling op\n",pyinfo,inv_log)
 
 	#init forcing term operator to create f #############################
@@ -244,11 +246,11 @@ if __name__ == '__main__':
 	################################ DP Test ###################################
 	if (parObject.getInt("dp",0)==1):
 		if(pyinfo): print("\n------------------------- DP Tests ------------------------------")
-		print("A(m) dot product test")
+		print("A(m)p dot product test")
 		waveEquationAcousticOp.dotTest(1)
 		print("\nK dot product test")
 		dataSamplingOp.dotTest(1)
-		print("\nA(p) dot product test")
+		print("\nA(p)m dot product test")
 		if(current_p_model.norm() == 0):
 			print("\nCurrent p model is zero so we will do DP test with rand p")
 			rand_p_model = current_p_model.clone()
@@ -259,8 +261,15 @@ if __name__ == '__main__':
 		else:
 			gradioOp.args[1].update_wfld(current_p_model) # updates d2p/dt2
 			gradioOp.dotTest(1)
-
-	############################# Regularization ###############################
+	if(parObject.getInt("evalConditionNumber",0)==1):
+		if(pyinfo): print("--------------------------- Evaluating Condition Number --------------------------------")
+		test=waveEquationAcousticOp.H*waveEquationAcousticOp
+		eigen = test.powerMethod(verbose=True,niter=500,eval_min=True)
+		print("Max eigenvalue = %s"%(eigen[0]))
+		print("Min eigenvalue = %s"%(eigen[1]))
+		print("Condition number = %s"%(eigen[0]/eigen[1]))
+		quit()
+		############################# Regularization ###############################
 	# regularization of m inversion
 	minBound=parObject.getFloat("minBound", -100)
 	maxBound=parObject.getFloat("maxBound", 100)
@@ -380,8 +389,8 @@ if __name__ == '__main__':
 			,pyinfo,inv_log)
 	############################# Evaluate epsilon ###############################
 	#need to set earth model in wave equation operator
-	# waveEquationAcousticOp.args[0].args[1].update_slsq(current_m_model)
-	waveEquationAcousticOpTemp.update_slsq(current_m_model)
+	waveEquationAcousticOp.args[0].args[1].update_slsq(current_m_model)
+	#waveEquationAcousticOp.update_slsq(current_m_model)
 	# Evaluate Epsilon for p inversion
 	if (epsilonEval==1):
 		printAndLog("------------------------ Epsilon evaluation -----------------------\n" \
@@ -419,8 +428,8 @@ if __name__ == '__main__':
 		if(pFinished==0):
 			# minimize ||Kp-d||+e^2/2||A(m)p-f|| w.r.t. p
 			# update m
-			# waveEquationAcousticOp.args[0].args[1].update_slsq(current_m_model)
-			waveEquationAcousticOpTemp.update_slsq(current_m_model)
+			waveEquationAcousticOp.args[0].args[1].update_slsq(current_m_model)
+			#waveEquationAcousticOp.update_slsq(current_m_model)
 			#re-evaluate epsilon
 			# if(parObject.getInt("reEvalEpsilon",0)!=0):
 			# 	epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,current_p_data,prior,dataSamplingOp,waveEquationAcousticOp,parObject)

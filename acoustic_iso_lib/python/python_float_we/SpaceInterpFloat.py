@@ -267,14 +267,14 @@ def space_interp_init_rec_multi_exp(args):
 		dx=parObject.getFloat("dx",-1.0)
 
 	# rec geometry
-	nzReceiver=parObject.getInt("nzReceiver")
-	ozReceiver=parObject.getInt("ozReceiver")-1+parObject.getInt("zPadMinus",0)+parObject.getInt("fat")
-	dzReceiver=parObject.getInt("dzReceiver")
-	nxReceiver=parObject.getInt("nxReceiver")
-	oxReceiver=parObject.getInt("oxReceiver")-1+parObject.getInt("xPadMinus",0)+parObject.getInt("fat")
-	dxReceiver=parObject.getInt("dxReceiver")
-	receiverAxis=Hypercube.axis(n=nxReceiver*nzReceiver,o=0,d=1)
-	nRecGeom=1; # Constant receivers' geometry
+	# nzReceiver=parObject.getInt("nzReceiver")
+	# ozReceiver=parObject.getInt("ozReceiver")-1+parObject.getInt("zPadMinus",0)+parObject.getInt("fat")
+	# dzReceiver=parObject.getInt("dzReceiver")
+	# nxReceiver=parObject.getInt("nxReceiver")
+	# oxReceiver=parObject.getInt("oxReceiver")-1+parObject.getInt("xPadMinus",0)+parObject.getInt("fat")
+	# dxReceiver=parObject.getInt("dxReceiver")
+	# receiverAxis=Hypercube.axis(n=nxReceiver*nzReceiver,o=0,d=1)
+	# nRecGeom=1; # Constant receivers' geometry
 
 	##need a hypercube for centerGrid, x shifted, z shifted, and xz shifted grid
 	zAxis=Hypercube.axis(n=nz,o=oz,d=dz)
@@ -367,6 +367,66 @@ class space_interp_multi_exp(Op.Operator):
 		# if("getCpp" in dir(range)):
 		# 	range = range.getCpp()
 		self.pyOp = pySpaceInterpFloat.spaceInterp_multi_exp(zCoord.getCpp(),xCoord.getCpp(),expIndex.getCpp(),vpParamHypercube.getCpp(),nt,interpMethod,nFilt)
+		return
+
+	def forward(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pySpaceInterpFloat.ostream_redirect():
+			self.pyOp.forward(add,model,data)
+		return
+
+	def adjoint(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pySpaceInterpFloat.ostream_redirect():
+			self.pyOp.adjoint(add,model,data)
+		return
+
+	def dotTestCpp(self,verb=False,maxError=.00001):
+		"""Method to call the Cpp class dot-product test"""
+		with pySpaceInterpFloat.ostream_redirect():
+			result=self.pyOp.dotTest(verb,maxError)
+		return result
+
+	def getNDeviceIrreg(self):
+		with pySpaceInterpFloat.ostream_redirect():
+			result = self.pyOp.getNDeviceIrreg()
+		return result
+
+	def getNDeviceReg(self):
+		with pySpaceInterpFloat.ostream_redirect():
+			result = self.pyOp.getNDeviceReg()
+		return result
+
+	def getRegPosUniqueVector(self):
+		with pySpaceInterpFloat.ostream_redirect():
+			result = self.pyOp.getRegPosUniqueVector()
+		return result
+
+	def getIndexMaps(self):
+		with pySpaceInterpFloat.ostream_redirect():
+			result = self.pyOp.getIndexMaps()
+		return result
+
+#handles when wfld/data is complex vector
+class space_interp_multi_exp_complex(Op.Operator):
+	"""Wrapper encapsulating PYBIND11 module"""
+
+	def __init__(self,zCoord,xCoord,expIndex,vpParamHypercube,nt,interpMethod,nFilt):
+		#Checking if getCpp is present
+		# self.setDomainRange(domain,range)
+		# if("getCpp" in dir(domain)):
+		# 	domain = domain.getCpp()
+		# if("getCpp" in dir(range)):
+		# 	range = range.getCpp()
+		self.pyOp = pySpaceInterpFloat.spaceInterp_multi_exp_complex(zCoord.getCpp(),xCoord.getCpp(),expIndex.getCpp(),vpParamHypercube.getCpp(),nt,interpMethod,nFilt)
 		return
 
 	def forward(self,add,model,data):

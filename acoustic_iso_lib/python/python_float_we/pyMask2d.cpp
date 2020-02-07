@@ -26,7 +26,16 @@ PYBIND11_MODULE(pyMask2d, clsGeneric) {
       .def("dotTest",(bool (Mask2d::*)(const bool, const float)) &Mask2d::dotTest,"Dot-Product Test")
 
     ;
+		py::class_<Mask2d_complex, std::shared_ptr<Mask2d_complex>>(clsGeneric,"Mask2d_complex")  //
+			.def(py::init<const std::shared_ptr<complex2DReg>, const std::shared_ptr<complex2DReg>, int, int, int, int, int>(),"Initlialize Mask2d_complex")
+
+			.def("forward",(void (Mask2d_complex::*)(const bool, const std::shared_ptr<complex2DReg>, std::shared_ptr<complex2DReg>)) &Mask2d_complex::forward,"Forward")
+
+			.def("adjoint",(void (Mask2d_complex::*)(const bool, std::shared_ptr<complex2DReg>, const std::shared_ptr<complex2DReg>)) &Mask2d_complex::adjoint,"Adjoint")
+
+			.def("dotTest",(bool (Mask2d_complex::*)(const bool, const float)) &Mask2d_complex::dotTest,"Dot-Product Test")
+
+		;
+
 
 }
-
-

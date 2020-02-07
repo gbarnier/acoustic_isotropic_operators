@@ -15,7 +15,7 @@ import Acoustic_iso_float_gradio
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
+from pyLinearSolver import LCGsolver as LCG
 import pyLCGsolver_timer as LCG_timer
 import pyProblem as Prblm
 import pyStopperBase as Stopper

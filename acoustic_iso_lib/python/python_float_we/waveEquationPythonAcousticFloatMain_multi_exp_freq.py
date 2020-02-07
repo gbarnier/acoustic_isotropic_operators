@@ -6,12 +6,24 @@ import Hypercube
 import Acoustic_iso_float_we_freq
 import pyOperator as pyOp
 import numpy as np
+import Mask4d
 import time
 
 if __name__ == '__main__':
     parObject=genericIO.io(params=sys.argv)
     # Initialize operator
-    modelFloat,dataFloat,slsqFloat,parObject,waveEquationAcousticOp,fftOp,timeFloat = Acoustic_iso_float_we_freq.waveEquationOpInitFloat_multi_exp_freq(sys.argv)
+    modelFloat,dataFloat,slsqFloat,parObject,waveEquationAcousticOpTemp,fftOp,timeFloat = Acoustic_iso_float_we_freq.waveEquationOpInitFloat_multi_exp_freq(sys.argv)
+    # n1min=10
+    # n1max=modelFloat.getHyper().getAxis(1).n-10
+    # n2min=10
+    # n2maxmodelFloat.getHyper().getAxis(2).n-10
+    # n3min=0
+    # n3max=modelFloat.getHyper().getAxis(3).n
+    # n4min=0
+    # n4max=modelFloat.getHyper().getAxis(4).n
+    # mask4dOp=Mask4d.mask4d_complex(modelFloat,dataFloat,n1min,n1max,n2min,n2max,n3min,n3max,n4min,n4max,maskType=0)
+    # waveEquationAcousticOp = pyOp.ChainOperator(waveEquationAcousticOpTemp,mask4dOp)
+    waveEquationAcousticOp=waveEquationAcousticOpTemp
 
     print("*** domain and range checks *** ")
     print("* Amp - f * ")
@@ -46,7 +58,8 @@ if __name__ == '__main__':
         inputMode=parObject.getString("inputMode","freq")
         if (inputMode == 'time'):
             print('------ input model in time domain. converting to freq ------')
-            timeFloat = genericIO.defaultIO.getVector(modelFile)
+            timeFloat = genericIO.defaultIO.getVector(modelFile,ndims=4)
+
             fftOp.adjoint(0,modelFloat,timeFloat)
             genericIO.defaultIO.writeVector('freq_model.H',modelFloat)
         else:
@@ -87,7 +100,7 @@ if __name__ == '__main__':
         inputMode=parObject.getString("inputMode","freq")
         if (inputMode == 'time'):
             print('------ input data in time domain. converting to freq ------')
-            timeFloat = genericIO.defaultIO.getVector(modelFile)
+            timeFloat = genericIO.defaultIO.getVector(modelFile,ndims=4)
             fftOp.adjoint(0,dataFloat,timeFloat)
         else:
             modelFloat=genericIO.defaultIO.getVector(modelFile)

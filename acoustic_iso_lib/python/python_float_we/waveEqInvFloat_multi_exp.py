@@ -16,7 +16,7 @@ import TpowWfld
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
+from pyLinearSolver import LCGsolver as LCG
 import pyProblem as Prblm
 import pyStopperBase as Stopper
 import inversionUtils
@@ -122,7 +122,7 @@ if __name__ == '__main__':
 		if(pyinfo): print("--- No preconditioning ---")
 		invProb=Prblm.ProblemL2Linear(modelInit,prior,waveEquationAcousticOp)
 
-	LCGsolver=LCG.LCGsolver(stop,logger=inv_log)
+	LCGsolver=LCG(stop,logger=inv_log)
 	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver

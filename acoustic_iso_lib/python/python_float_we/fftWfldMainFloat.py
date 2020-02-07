@@ -27,7 +27,7 @@ if __name__ == '__main__':
 	dataFile=parObject.getString("data","noDataFile")
 
 	#get axis
-	axisToFFT = parObject.getInt("axis",0)
+	SEPaxisToFFT = parObject.getInt("axis",0)
 	# Forward
 	if (parObject.getInt("adj",0) == 0):
 		print("-------------------------------------------------------------------")
@@ -36,18 +36,26 @@ if __name__ == '__main__':
 
 		# Read  model
 		modelFloat=genericIO.defaultIO.getVector(modelFile,storage="complex")
-
-		print(modelFloat.getNdArray().dtype)
-
+		ndims = modelFloat.getHyper().getNdim()
+		pythonAxisToFFT = (ndims-SEPaxisToFFT)
+		print("SEPaxisToFFT: "+str(SEPaxisToFFT))
+		print("pythonAxisToFFT: "+str(pythonAxisToFFT))
 		# Time and freq Axes
-		nw=modelFloat.getHyper().getAxis(3).n
+		nw=modelFloat.getHyper().getAxis(SEPaxisToFFT).n
 		ow=0
-		dw=modelFloat.getHyper().getAxis(3).d
+		dw=modelFloat.getHyper().getAxis(SEPaxisToFFT).d
 		nt = 2*(nw)-1
 		ot=0
 		dt = 1./((nt-1)*dw)
 		timeAxis=Hypercube.axis(n=nt,o=ot,d=dt)
-		dataHyper=Hypercube.hypercube(axes=[modelFloat.getHyper().getAxis(1),modelFloat.getHyper().getAxis(2),timeAxis,modelFloat.getHyper().getAxis(4)])
+
+		axes=[]
+		for iaxis in np.arange(ndims):
+			if(iaxis+1==SEPaxisToFFT):
+				axes.append(timeAxis)
+			else:
+				axes.append(modelFloat.getHyper().getAxis(iaxis+1))
+		dataHyper=Hypercube.hypercube(axes=axes)
 
 		dataFloat=SepVector.getSepVector(dataHyper,storage="dataFloat")
 		dataFloat.scale(0.0)
@@ -55,7 +63,7 @@ if __name__ == '__main__':
 		############################# Initialization ###############################
 		# fft_wfld init
 		if(pyinfo): print("--------------------------- FFT Wfld init --------------------------------")
-		fft_wfld_op = fft_wfld.fft_wfld(modelFloat,dataFloat,axisToFFT)
+		fft_wfld_op = fft_wfld.fft_wfld(modelFloat,dataFloat,pythonAxisToFFT)
 
 		print("*** domain and range checks *** ")
 		print("* Fp - d * ")
@@ -82,20 +90,28 @@ if __name__ == '__main__':
 
 		# Data
 		dataFloat=genericIO.defaultIO.getVector(dataFile)
+		ndims = dataFloat.getHyper().getNdim()
+		pythonAxisToFFT = (ndims-SEPaxisToFFT)
+		print("SEPaxisToFFT: "+str(SEPaxisToFFT))
+		print("pythonAxisToFFT: "+str(pythonAxisToFFT))
 
 		# Time and freq Axes
-		nt=dataFloat.getHyper().getAxis(3).n
-		ot=0
-		dt=dataFloat.getHyper().getAxis(3).d
-		#odd
-		if(nt%2 != 0):
-			nw = int((nt+1)/2)
-		else:
-			nw = int(nt/2+1)
-		ow=0
-		dw = 1./((nt-1)*dt)
-		freqAxis=Hypercube.axis(n=nw,o=ow,d=dw)
-		modelHyper=Hypercube.hypercube(axes=[dataFloat.getHyper().getAxis(1),dataFloat.getHyper().getAxis(2),freqAxis,dataFloat.getHyper().getAxis(4)])
+		nts=dataFloat.getHyper().getAxis(SEPaxisToFFT).n
+		ots=dataFloat.getHyper().getAxis(SEPaxisToFFT).o
+		dts=dataFloat.getHyper().getAxis(SEPaxisToFFT).d
+
+		freq_np_axis = np.fft.rfftfreq(nts,dts)
+		df = freq_np_axis[1]-freq_np_axis[0]
+		nf= freq_np_axis.size
+		freqAxis=Hypercube.axis(n=nf,o=ots,d=df)
+
+		axes=[]
+		for iaxis in np.arange(ndims):
+			if(iaxis+1==SEPaxisToFFT):
+				axes.append(freqAxis)
+			else:
+				axes.append(dataFloat.getHyper().getAxis(iaxis+1))
+		modelHyper=Hypercube.hypercube(axes=axes)
 
 		modelFloat=SepVector.getSepVector(modelHyper,storage="dataComplex")
 		modelFloat.zero()
@@ -103,7 +119,7 @@ if __name__ == '__main__':
 		############################# Initialization ###############################
 		# fft_wfld init
 		if(pyinfo): print("--------------------------- fft_wfld init --------------------------------")
-		fft_wfld_op = fft_wfld.fft_wfld(modelFloat,dataFloat,axisToFFT)
+		fft_wfld_op = fft_wfld.fft_wfld(modelFloat,dataFloat,pythonAxisToFFT)
 
 		print("*** domain and range checks *** ")
 		print("* Fp - d * ")

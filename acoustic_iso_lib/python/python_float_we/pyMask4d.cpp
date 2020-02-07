@@ -27,4 +27,14 @@ PYBIND11_MODULE(pyMask4d, clsGeneric) {
 
     ;
 
+	py::class_<Mask4d_complex, std::shared_ptr<Mask4d_complex>>(clsGeneric,"Mask4d_complex")  //
+		.def(py::init<const std::shared_ptr<complex4DReg>, const std::shared_ptr<complex4DReg>, int, int, int, int, int, int, int, int, int>(),"Initlialize Mask4d_complex")
+
+		.def("forward",(void (Mask4d_complex::*)(const bool, const std::shared_ptr<complex4DReg>, std::shared_ptr<complex4DReg>)) &Mask4d_complex::forward,"Forward")
+
+		.def("adjoint",(void (Mask4d_complex::*)(const bool, std::shared_ptr<complex4DReg>, const std::shared_ptr<complex4DReg>)) &Mask4d_complex::adjoint,"Adjoint")
+
+		.def("dotTest",(bool (Mask4d_complex::*)(const bool, const float)) &Mask4d_complex::dotTest,"Dot-Product Test")
+
+	;
 }

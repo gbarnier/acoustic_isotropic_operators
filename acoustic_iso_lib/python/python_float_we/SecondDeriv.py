@@ -149,9 +149,9 @@ def secondDerivOpInitFloat_multi_exp_freq(args):
 	#odd
 	nf=nts//2+1 # number of samples in Fourier domain
 	fs=1/dts #sampling rate of time domain
-	if(nts%2 != 0): #odd input
+	if(nts%2 == 0): #even input
 		f_range = fs/2
-	else: # even input
+	else: # odd input
 		f_range = fs/2*(nts-1)/nts
 	df = f_range/nf
 	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)

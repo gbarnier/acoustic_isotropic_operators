@@ -10,15 +10,16 @@
  #include <operator.h>
  #include <float2DReg.h>
  #include <complex4DReg.h>
+ //#include <complex>
 
  using namespace SEP;
 
 
 
-class WaveRecon_freq_multi_exp : public Operator<SEP::complex4DReg, SEP::complex4DReg> {
+class WaveRecon_freq_multi_exp_V2 : public Operator<SEP::complex4DReg, SEP::complex4DReg> {
 public:
 
-  WaveRecon_freq_multi_exp(const std::shared_ptr<SEP::complex4DReg>model,
+  WaveRecon_freq_multi_exp_V2(const std::shared_ptr<SEP::complex4DReg>model,
               const std::shared_ptr<SEP::complex4DReg>data,
               const std::shared_ptr<SEP::float2DReg>slsqModel,float dt_of_prop);
 
@@ -47,4 +48,5 @@ private:
   int FAT = 5;
 
   float _dt;
+
 };

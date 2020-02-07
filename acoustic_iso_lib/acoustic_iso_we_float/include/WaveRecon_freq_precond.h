@@ -9,18 +9,19 @@
  #pragma once
  #include <operator.h>
  #include <float2DReg.h>
+ #include <float3DReg.h>
  #include <complex4DReg.h>
 
  using namespace SEP;
 
 
 
-class WaveRecon_freq_multi_exp : public Operator<SEP::complex4DReg, SEP::complex4DReg> {
+class WaveRecon_freq_multi_exp_precond : public Operator<SEP::complex4DReg, SEP::complex4DReg> {
 public:
 
-  WaveRecon_freq_multi_exp(const std::shared_ptr<SEP::complex4DReg>model,
+  WaveRecon_freq_multi_exp_precond(const std::shared_ptr<SEP::complex4DReg>model,
               const std::shared_ptr<SEP::complex4DReg>data,
-              const std::shared_ptr<SEP::float2DReg>slsqModel,float dt_of_prop);
+              const std::shared_ptr<SEP::float2DReg>slsqModel);
 
   void forward(const bool                               add,
                const std::shared_ptr<SEP::complex4DReg> model,
@@ -32,17 +33,13 @@ public:
    bool dotTest(const bool verbose = false, const float maxError = .00001) const{
      std::cerr << "cpp dot test not implemented.\n";
    }
-  void set_slsq(std::shared_ptr<SEP::float2DReg>slsq);
+  void update_slsq(std::shared_ptr<SEP::float2DReg>slsq);
 private:
 
   int n1,n2,n3,n4;
-  std::shared_ptr<SEP::float2DReg>_slsq;
+  std::shared_ptr<SEP::float3DReg>_precond;
   float _da, _db, _dw, _ow;
-  float C0z, C1z, C2z, C3z, C4z, C5z, C0x, C1x, C2x, C3x, C4x, C5x;
-  std::shared_ptr<SEP::float2DReg>_gamma;
-  std::shared_ptr<SEP::float2DReg>_gammaSq;
-  int _spongeWidth;
-  float _U_0, _alpha;
+  float C0z, C0x;
 
   int FAT = 5;
 

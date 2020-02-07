@@ -42,6 +42,8 @@ set(SOURCES
   ${SRC_DIR}/WaveReconV9.cpp
   ${SRC_DIR}/WaveReconV10.cpp
   ${SRC_DIR}/WaveRecon_freq.cpp
+  ${SRC_DIR}/WaveRecon_freq_V2.cpp
+  ${SRC_DIR}/WaveRecon_freq_precond.cpp
   ${SRC_DIR}/SphericalSpreadingScale.cpp
   ${SRC_DIR}/GF.cpp
   ${SRC_DIR}/PadModel2d.cpp
@@ -55,6 +57,7 @@ set(SOURCES
   ${SRC_DIR}/Mask2d.cpp
   ${SRC_DIR}/Gradio.cpp
   ${SRC_DIR}/Gradio_multi_exp.cpp
+  ${SRC_DIR}/Gradio_multi_exp_freq.cpp
   ${SRC_DIR}/SampleWfld.cpp
   ${SRC_DIR}/Smooth2d.cpp
   # ${SRC_DIR}/C2_2DCube.cpp
@@ -110,6 +113,8 @@ set(HEADERS
   ${INC_DIR}/WaveReconV9.h
   ${INC_DIR}/WaveReconV10.h
   ${INC_DIR}/WaveRecon_freq.h
+  ${INC_DIR}/WaveRecon_freq_V2.h
+  ${INC_DIR}/WaveRecon_freq_precond.h
   ${INC_DIR}/SphericalSpreadingScale.h
   ${INC_DIR}/GF.h
   ${INC_DIR}/PadModel2d.h
@@ -123,6 +128,7 @@ set(HEADERS
   ${INC_DIR}/Mask2d.h
   ${INC_DIR}/Gradio.h
   ${INC_DIR}/Gradio_multi_exp.h
+  ${INC_DIR}/Gradio_multi_exp_freq.h
   ${INC_DIR}/SampleWfld.h
   ${INC_DIR}/Smooth2d.h
   # ${INC_DIR}/C2_2DCube.h

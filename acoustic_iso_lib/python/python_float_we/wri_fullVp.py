@@ -15,7 +15,7 @@ import Acoustic_iso_float_gradio
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
+from pyLinearSolver import LCGsolver as LCG
 import pyProblem as Prblm
 import pyStopperBase as Stopper
 import inversionUtils
@@ -91,11 +91,11 @@ if __name__ == '__main__':
 
 	############################# Create LCG Solvers ###############################
 	# p Solver
-	p_LCGsolver=LCG.LCGsolver(stop_p,logger=inv_log)
+	p_LCGsolver=LCG(stop_p,logger=inv_log)
 	p_prefix=prefix+"_pinv"
 
 	# p Solver
-	m_LCGsolver=LCG.LCGsolver(stop_m,logger=inv_log)
+	m_LCGsolver=LCG(stop_m,logger=inv_log)
 	m_prefix=prefix+"_minv"
 
 	############################# Initial Models ###############################

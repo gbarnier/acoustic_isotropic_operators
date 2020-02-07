@@ -1,10 +1,10 @@
-#include <WaveRecon_freq.h>
+#include <WaveRecon_freq_V2.h>
 #include <math.h>
 
 /*###########################################################################
                           Multi experiment
 /*###########################################################################*/
-WaveRecon_freq_multi_exp::WaveRecon_freq_multi_exp(const std::shared_ptr<SEP::complex4DReg>model,
+WaveRecon_freq_multi_exp_V2::WaveRecon_freq_multi_exp_V2(const std::shared_ptr<SEP::complex4DReg>model,
                          const std::shared_ptr<SEP::complex4DReg>data,
                          const std::shared_ptr<SEP::float2DReg>slsqModel,float dt_of_prop) {
 
@@ -87,16 +87,18 @@ WaveRecon_freq_multi_exp::WaveRecon_freq_multi_exp(const std::shared_ptr<SEP::co
 
 }
 
-void WaveRecon_freq_multi_exp::set_slsq(std::shared_ptr<SEP::float2DReg>slsq){
+void WaveRecon_freq_multi_exp_V2::set_slsq(std::shared_ptr<SEP::float2DReg>slsq){
 	_slsq=slsq;
 }
 
-void WaveRecon_freq_multi_exp::forward(const bool                         add,
+void WaveRecon_freq_multi_exp_V2::forward(const bool                         add,
                           const std::shared_ptr<SEP::complex4DReg>model,
                           std::shared_ptr<SEP::complex4DReg>      data) const {
 
   assert(checkDomainRange(model, data));
   if (!add) data->scale(0.);
+
+  std::complex<float> _i(0.0,-1.0);
 
   const std::shared_ptr<complex4D> m = ((std::dynamic_pointer_cast<complex4DReg>(model))->_mat);
   std::shared_ptr<complex4D> d = ((std::dynamic_pointer_cast<complex4DReg>(data))->_mat);
@@ -104,9 +106,25 @@ void WaveRecon_freq_multi_exp::forward(const bool                         add,
   // std::shared_ptr<float2D> g = _gamma->_mat;
   // std::shared_ptr<float2D> gs = _gammaSq->_mat;
 
+  for(int is = 0; is < n4; is++) {
+    for (int iw = 0; iw < n3-2; iw++) {
+      #pragma omp parallel for collapse(2)
+      for (int ix = FAT; ix < n2-FAT; ix++) {
+        for (int iz = FAT; iz < n1-FAT; iz++) {
+          float w = 2 * M_PI * (_ow + _dw * iw);
+          std::complex<float> w_c(w,0.0);
+          (*d)[is][n3-2][ix][iz] += (*m)[is][iw][ix][iz];
+          // (*d)[is][n3-1][ix][iz] += -i*w*(*m)[is][iw][ix][iz];
+          //(*d)[is][n3-1][ix][iz] += _i*w*(*m)[is][iw][ix][iz];
+          (*d)[is][n3-1][ix][iz] +=   exp(_i*w*_dt)*(*m)[is][iw][ix][iz];
+        }
+      }
+    }
+  }
+
   #pragma omp parallel for collapse(4)
   for(int is = 0; is < n4; is++) { // experiment
-    for (int iw = 0; iw < n3; iw++) { //freq
+    for (int iw = 0; iw < n3-2; iw++) { //freq
       for (int ix = FAT; ix < n2-FAT; ix++) { //x
         for (int iz = FAT; iz < n1-FAT; iz++) { //z
           float w = 2 * M_PI * (_ow + _dw * iw);
@@ -139,22 +157,39 @@ void WaveRecon_freq_multi_exp::forward(const bool                         add,
 
 }
 
-void WaveRecon_freq_multi_exp::adjoint(const bool                         add,
+void WaveRecon_freq_multi_exp_V2::adjoint(const bool                         add,
                           std::shared_ptr<SEP::complex4DReg>      model,
                           const std::shared_ptr<SEP::complex4DReg>data) const{
   assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
 
+  std::complex<float> _i(0.0,1.0);
+
   std::shared_ptr<complex4D> m = ((std::dynamic_pointer_cast<complex4DReg>(model))->_mat);
   const std::shared_ptr<complex4D> d = ((std::dynamic_pointer_cast<complex4DReg>(data))->_mat);
   std::shared_ptr<float2D> s = ((std::dynamic_pointer_cast<float2DReg>(_slsq))->_mat);
   // std::shared_ptr<float2D> g = _gamma->_mat;
   // std::shared_ptr<float2D> gs = _gammaSq->_mat;
+  #pragma omp parallel for collapse(4)
+  for(int is = 0; is < n4; is++) {
+    for (int iw = 0; iw < n3-2; iw++) {
+      for (int ix = FAT; ix < n2-FAT; ix++) {
+        for (int iz = FAT; iz < n1-FAT; iz++) {
+          float w = 2 * M_PI * (_ow + _dw * iw);
+          std::complex<float> w_c(w,0.0);
+          (*m)[is][iw][ix][iz] += (*d)[is][n3-2][ix][iz];
+          // (*d)[is][n3-1][ix][iz] += -i*w*(*m)[is][iw][ix][iz];
+          //(*m)[is][iw][ix][iz] += _i*w*(*d)[is][n3-1][ix][iz];
+          (*m)[is][iw][ix][iz] += exp(_i*w*_dt)*(*d)[is][n3-1][ix][iz];
+        }
+      }
+    }
+  }
 
   #pragma omp parallel for collapse(4)
   for(int is = 0; is < n4; is++) {
-    for (int iw = 0; iw < n3; iw++) {
+    for (int iw = 0; iw < n3-2; iw++) {
       for (int ix = FAT; ix < n2-FAT; ix++) {
         for (int iz = FAT; iz < n1-FAT; iz++) {
           float w = 2 * M_PI * (_ow + _dw * iw);

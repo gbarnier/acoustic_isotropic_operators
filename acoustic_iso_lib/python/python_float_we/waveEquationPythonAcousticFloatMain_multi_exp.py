@@ -42,7 +42,7 @@ if __name__ == '__main__':
             print("**** ERROR: User did not provide data file name ****\n")
             quit()
         #modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
-        modelFloat=genericIO.defaultIO.getVector(modelFile)
+        modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=4)
 
         #run Nonlinear forward without wavefield saving
         waveEquationAcousticOp.forward(False,modelFloat,dataFloat)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
             print("**** ERROR: User did not provide model file name ****\n")
             quit()
         #modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
-        dataFloat=genericIO.defaultIO.getVector(dataFile)
+        dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=4)
 
         #run Nonlinear forward without wavefield saving
         waveEquationAcousticOp.adjoint(False,modelFloat,dataFloat)

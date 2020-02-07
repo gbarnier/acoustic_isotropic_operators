@@ -16,12 +16,10 @@ import PadTruncateSource
 import SampleWfld
 import GF
 import SphericalSpreadingScale
-import pyOperator as Op
+import pyOperator as pyOp
 import scipy as sp
 import scipy.ndimage
 import fft_wfld
-
-
 
 def fft_wfld_init(args):
 
@@ -32,14 +30,19 @@ def fft_wfld_init(args):
 	nts=parObject.getInt("nts",-1)
 	ots=parObject.getFloat("ots",0.0)
 	dts=parObject.getFloat("dts",-1.0)
-	#odd
-	if(nts%2 != 0):
-		nw = int((nts+1)/2)
-	else:
-		nw = int(nts/2+1)
-	dw = 1./((nts-1)*dts)
+
+	freq_np_axis = np.fft.rfftfreq(nts,dts)
+	df = freq_np_axis[1]
+	nf= freq_np_axis.size
+	# nf=nts//2+1 # number of samples in Fourier domain
+	# fs=1/dts #sampling rate of time domain
+	# if(nts%2 == 0): #even input
+	# 	f_range = fs/2
+	# else: # odd input
+	# 	f_range = fs/2*(nts-1)/nts
+	# df = f_range/nf
 	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
-	wAxis=Hypercube.axis(n=nw,o=ots,d=dw)
+	wAxis=Hypercube.axis(n=nf,o=0,d=df)
 
 	# z Axis model
 	nz=parObject.getInt("nz",-1)
@@ -67,6 +70,74 @@ def fft_wfld_init(args):
 	#apply forward
 	return modelFloat,dataFloat,op
 
+def fft_wfld_multi_exp_init(args):
+
+	# Bullshit stuff
+	parObject=genericIO.io(params=sys.argv)
+
+	# Time and freq Axes
+	nts=parObject.getInt("nts",-1)
+	ots=parObject.getFloat("ots",0.0)
+	dts=parObject.getFloat("dts",-1.0)
+
+	freq_np_axis = np.fft.rfftfreq(nts,dts)
+	df = freq_np_axis[1]
+	nf= freq_np_axis.size
+	# nf=nts//2+1 # number of samples in Fourier domain
+	# fs=1/dts #sampling rate of time domain
+	# if(nts%2 == 0): #even input
+	# 	f_range = fs/2
+	# else: # odd input
+	# 	f_range = fs/2*(nts-1)/nts
+	# df = f_range/nf
+	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+	wAxis=Hypercube.axis(n=nf,o=0,d=df)
+
+	fmax=parObject.getFloat("fmax",-1.0)
+	if(fmax!=-1.0):
+		nf_wind=min(int(fmax/df)+1,nf)
+		print("\tfmax selected: ",fmax)
+		print("\nnew nf selected: ",nf_wind)
+		wAxis_wind=Hypercube.axis(n=nf_wind,o=0,d=df)
+
+	# z Axis model
+	nz=parObject.getInt("nz",-1)
+	oz=parObject.getFloat("oz",-1.0)
+	dz=parObject.getFloat("dz",-1.0)
+	zAxis=Hypercube.axis(n=nz,o=oz,d=dz)
+
+	# x axis model
+	nx=parObject.getInt("nx",-1)
+	ox=parObject.getFloat("ox",-1.0)
+	dx=parObject.getFloat("dx",-1.0)
+	xAxis=Hypercube.axis(n=nx,o=ox,d=dx)
+
+	# shot Axis
+	nExp=parObject.getInt("nExp",1)
+	shotAxis=Hypercube.axis(n=nExp,o=0,d=1)
+
+	# Allocate data
+	dataHyper=Hypercube.hypercube(axes=[zAxis,xAxis,timeAxis,shotAxis])
+	dataFloat=SepVector.getSepVector(dataHyper,storage="dataFloat")
+
+	# Allocate model
+	modelHyper=Hypercube.hypercube(axes=[zAxis,xAxis,wAxis,shotAxis])
+	modelFloat=SepVector.getSepVector(modelHyper,storage="dataComplex")
+
+	# init op
+	fftOpTemp = fft_wfld.fft_wfld(modelFloat,dataFloat,axis=1)
+	if(fmax!=-1.0):
+		modelHyper_wind=Hypercube.hypercube(axes=[zAxis,xAxis,wAxis_wind,shotAxis])
+		modelFloat_wind=SepVector.getSepVector(modelHyper_wind,storage="dataComplex")
+		padTruncateFreqOp=PadTruncateSource.zero_pad_4d(modelFloat_wind,modelFloat)
+		fftOp=fftOpTemp*padTruncateFreqOp
+		modelFloat=modelFloat_wind
+	else:
+		fftOp=fftOpTemp
+
+	#apply forward
+	return modelFloat,dataFloat,fftOp
+
 def grad_edit_mora(gradNdArray):
 	sigma_y=1
 	sigma_x=1
@@ -87,58 +158,32 @@ def grad_edit_diving(gradNdArray):
 	return gradNdArrayOut
 
 def evaluate_epsilon(current_p_model,p_dataFloat,prior,dataSamplingOp,waveEquationAcousticOp,parObject):
-	start=time.time()
-	prev_time=time.time()
 	#make first data residual
-	K_resid = SepVector.getSepVector(dataSamplingOp.getRange().getHyper(),storage="dataFloat")
-	K_resid.scaleAdd(p_dataFloat,0,-1)
-	k_resid_setup_time=time.time()-prev_time
-	prev_time=time.time()
-
-	dataSamplingOp.forward(1,current_p_model,K_resid)
-	dataSamplingOp_forward_time=time.time()-prev_time
-	prev_time=time.time()
+	K_resid = dataSamplingOp.getRange().clone()
+	dataSamplingOp.forward(0,current_p_model,K_resid)
+	K_resid.scaleAdd(p_dataFloat,1,-1) # Kp-d
 
 	#make first model residual
-	A_resid = SepVector.getSepVector(waveEquationAcousticOp.getRange().getHyper(),storage="dataFloat")
-	A_resid.scaleAdd(prior,0,-1)
-	A_resid_setup_time=time.time()-prev_time
-	prev_time=time.time()
-
+	A_resid = waveEquationAcousticOp.getRange().clone()
 	waveEquationAcousticOp.forward(1,current_p_model,A_resid)
-	waveEquationAcousticOp_forward_time=time.time()-prev_time
-	prev_time=time.time()
+	A_resid.scaleAdd(prior,1,-1) # Ap-f
 
-	if(current_p_model.norm()!=0):
+	if(current_p_model.norm()==0): #if initial model is zero, take a step before balancing eps
 		#update model
-		if (isinstance(current_p_model,SepVector.complexVector)):
-			modelOne = SepVector.getSepVector(current_p_model.getHyper(),storage='dataComplex')
-		else:
-			modelOne = SepVector.getSepVector(current_p_model.getHyper(),storage='dataFloat')
+		modelOne = current_p_model.clone()
 		modelOne.zero()
-		scale_modelOne_time=time.time()-prev_time
-		prev_time=time.time()
 
 		dataSamplingOp.adjoint(1,modelOne,K_resid)
-		dataSamplingOp_adjoint_time=time.time()-prev_time
-		prev_time=time.time()
 
 		waveEquationAcousticOp.adjoint(1,modelOne,A_resid)
-		waveEquationAcousticOp_adjoint_time=time.time()-prev_time
-		prev_time=time.time()
 
-		dataSamplingOp.forward(1,modelOne,K_resid)
-		waveEquationAcousticOp.forward(1,modelOne,A_resid)
+		dataSamplingOp.forward(0,modelOne,K_resid)
+		K_resid.scaleAdd(p_dataFloat,1,-1)
+		waveEquationAcousticOp.forward(0,modelOne,A_resid)
+		A_resid.scaleAdd(prior,1,-1) # Ap-f
 
-		print('scale_modelOne_time: ',scale_modelOne_time)
-		print('dataSamplingOp_adjoint_time: ',dataSamplingOp_adjoint_time)
-		print('waveEquationAcousticOp_adjoint_time: ',waveEquationAcousticOp_adjoint_time)
 
-	epsilon_p = parObject.getFloat("eps_p_scale",1.0)*math.sqrt(K_resid.dot(K_resid)/A_resid.dot(A_resid))
-
-	print('k_resid_setup_time: ',k_resid_setup_time)
-	print('dataSamplingOp_forward_time: ',dataSamplingOp_forward_time)
-	print('waveEquationAcousticOp_forward_time: ',waveEquationAcousticOp_forward_time)
+	epsilon_p = math.sqrt(K_resid.dot(K_resid)/A_resid.dot(A_resid))
 
 	return epsilon_p
 
@@ -182,9 +227,9 @@ def forcing_term_op_init_p(args):
 
 	#chain operators
 	spaceInterpOp.setDomainRange(padTruncateDummyModel,input)
-	spaceInterpOp = Op.Transpose(spaceInterpOp)
-	PK_adj = Op.ChainOperator(spaceInterpOp,padTruncateSourceOp)
-	#SPK_adj = Op.ChainOperator(PK_adj,wavefieldStaggerOp)
+	spaceInterpOp = pyOp.Transpose(spaceInterpOp)
+	PK_adj = pyOp.ChainOperator(spaceInterpOp,padTruncateSourceOp)
+	#SPK_adj = pyOp.ChainOperator(PK_adj,wavefieldStaggerOp)
 
 	#read in source
 	# waveletFloat = SepVector.getSepVector(SPK_adj.getDomain().getHyper(),storage="dataFloat")
@@ -242,12 +287,11 @@ def forcing_term_op_init_p_multi_exp(args):
 
 	#chain operators
 	spaceInterpOp.setDomainRange(padTruncateDummyModel,input)
-	spaceInterpOp = Op.Transpose(spaceInterpOp)
-	PK_adj = Op.ChainOperator(spaceInterpOp,padTruncateSourceOp)
-	#SPK_adj = Op.ChainOperator(PK_adj,wavefieldStaggerOp)
+	spaceInterpOp = spaceInterpOp.T
+	PK_adj = pyOp.ChainOperator(spaceInterpOp,padTruncateSourceOp)
+
 
 	#read in source
-	# waveletFloat = SepVector.getSepVector(SPK_adj.getDomain().getHyper(),storage="dataFloat")
 	priorData = SepVector.getSepVector(PK_adj.getRange().getHyper(),storage="dataFloat")
 	priorModel = SepVector.getSepVector(PK_adj.getDomain().getHyper(),storage="dataFloat")
 
@@ -262,6 +306,13 @@ def forcing_term_op_init_p_multi_exp(args):
 	for iShot in range(irregSourceAxis.n):
 		priorModelMat[:,iShot] = waveletSMatT
 
+	# print('here1')
+	# print(priorModel.getNdArray().shape)
+	# print(priorData.getNdArray().shape)
+	# print("spaceInterpOp domain: ", spaceInterpOp.getDomain().getNdArray().shape)
+	# print("spaceInterpOp range: ", spaceInterpOp.getRange().getNdArray().shape)
+	# print("padTruncateSourceOp domain: ", padTruncateSourceOp.getDomain().getNdArray().shape)
+	# print("padTruncateSourceOp range: ", padTruncateSourceOp.getRange().getNdArray().shape)
 	PK_adj.forward(False,priorModel,priorData)
 	#spaceInterpOp.forward(0,priorModel,padTruncateDummyModel)
 
@@ -307,9 +358,9 @@ def forcing_term_op_init_m(args):
 
 	#chain operators
 	spaceInterpOp.setDomainRange(padTruncateDummyModel,input)
-	spaceInterpOp = Op.Transpose(spaceInterpOp)
-	PK_adj = Op.ChainOperator(spaceInterpOp,padTruncateSourceOp)
-	#SPK_adj = Op.ChainOperator(PK_adj,wavefieldStaggerOp)
+	spaceInterpOp = spaceInterpOp.T
+	PK_adj = pyOp.ChainOperator(spaceInterpOp,padTruncateSourceOp)
+	#SPK_adj = pyOp.ChainOperator(PK_adj,wavefieldStaggerOp)
 
 	#read in source
 	# waveletFloat = SepVector.getSepVector(SPK_adj.getDomain().getHyper(),storage="dataFloat")
@@ -367,9 +418,9 @@ def forcing_term_op_init_m_mutli_exp(args):
 
 	#chain operators
 	spaceInterpOp.setDomainRange(padTruncateDummyModel,input)
-	spaceInterpOp = Op.Transpose(spaceInterpOp)
-	PK_adj = Op.ChainOperator(spaceInterpOp,padTruncateSourceOp)
-	#SPK_adj = Op.ChainOperator(PK_adj,wavefieldStaggerOp)
+	spaceInterpOp = spaceInterpOp.T
+	PK_adj = pyOp.ChainOperator(spaceInterpOp,padTruncateSourceOp)
+	#SPK_adj = pyOp.ChainOperator(PK_adj,wavefieldStaggerOp)
 
 	#read in source
 	# waveletFloat = SepVector.getSepVector(SPK_adj.getDomain().getHyper(),storage="dataFloat")
@@ -618,31 +669,50 @@ def data_extraction_op_init_multi_exp_freq(args):
 	nts=parObject.getInt("nts",-1)
 	ots=parObject.getFloat("ots",0.0)
 	dts=parObject.getFloat("dts",-1.0)
-	#odd
-	if(nts%2 != 0):
-		nw = int((nts+1)/2)
-	else:
-		nw = int(nts/2+1)
-	dw = 1./((nts-1)*dts)
+
+	freq_np_axis = np.fft.rfftfreq(nts,dts)
+	df = freq_np_axis[1]
+	nf= freq_np_axis.size
+	# nf=nts//2+1 # number of samples in Fourier domain
+	# fs=1/dts #sampling rate of time domain
+	# if(nts%2 == 0): #even input
+	# 	f_range = fs/2
+	# else: # odd input
+	# 	f_range = fs/2*(nts-1)/nts
+	# df = f_range/nf
 	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
-	wAxis=Hypercube.axis(n=nw,o=ots,d=dw)
+	wAxis_orig=Hypercube.axis(n=nf,o=0,d=df)
+
+	fmax=parObject.getFloat("fmax",-1.0)
+	if(fmax!=-1.0):
+		nf_wind=min(int(fmax/df)+1,nf)
+		print("\tfmax selected: ",fmax)
+		print("\tnew nf selected: ",nf_wind)
+		wAxis_wind=Hypercube.axis(n=nf_wind,o=0,d=df)
+		wAxis=wAxis_wind
+		nf=nf_wind
+	else:
+		wAxis=wAxis_orig
+	# print('nts:'+str(nts)+' ots:'+str(ots)+' dts:' + str(dts))
+	# print('nf:'+str(nf)+'f_range: '+ str(f_range) + ' of:0 df:' + str(df))
 
 	#interp operator instantiate
 	#check which rec injection interp method
 	recInterpMethod = parObject.getString("recInterpMethod","linear")
 	recInterpNumFilters = parObject.getInt("recInterpNumFilters",4)
 
-	spaceInterpOp = SpaceInterpFloat.space_interp_multi_exp(zCoord,xCoord,experimentId,centerHyper,nw,recInterpMethod,recInterpNumFilters)
+	spaceInterpOp = SpaceInterpFloat.space_interp_multi_exp_complex(zCoord,xCoord,experimentId,centerHyper,nf,recInterpMethod,recInterpNumFilters)
 	# pad truncate init
 	tAxis=Hypercube.axis(n=nts,o=0.0,d=dts)
-	wAxis=Hypercube.axis(n=nw,o=0.0,d=dw)
 	nExp = len(spaceInterpOp.getRegPosUniqueVector())
+
 	regReceiverAxis=Hypercube.axis(n=spaceInterpOp.getNDeviceReg(),o=0.0,d=1)
 	irregReceiverAxis=Hypercube.axis(n=spaceInterpOp.getNDeviceIrreg(),o=0.0,d=1)
+	expAxis=Hypercube.axis(n=nExp,o=0.0,d=1)
+
 	regReceiverHyper=Hypercube.hypercube(axes=[regReceiverAxis,wAxis])
 	irregReceiverHyper=Hypercube.hypercube(axes=[irregReceiverAxis,wAxis])
 	irregReceiverHyperTime=Hypercube.hypercube(axes=[irregReceiverAxis,tAxis])
-	expAxis=Hypercube.axis(n=nExp,o=0.0,d=1)
 	regWfldHyper=Hypercube.hypercube(axes=[centerHyper.getAxis(1),centerHyper.getAxis(2),wAxis,expAxis])
 
 	output = SepVector.getSepVector(irregReceiverHyper,storage="dataComplex")
@@ -652,18 +722,26 @@ def data_extraction_op_init_multi_exp_freq(args):
 	sourceGridPositions = spaceInterpOp.getRegPosUniqueVector()
 	sourceGridExpMapping = spaceInterpOp.getIndexMaps()
 
-	padTruncateReceiverOp = PadTruncateSource.pad_truncate_source_multi_exp(padTruncateDummyModel,padTruncateDummyData,sourceGridPositions,sourceGridExpMapping)
-	padTruncateRecOp = Op.Transpose(padTruncateReceiverOp)
+	padTruncateReceiverOp = PadTruncateSource.pad_truncate_source_multi_exp_complex(padTruncateDummyModel,padTruncateDummyData,sourceGridPositions,sourceGridExpMapping)
+	padTruncateRecOp = padTruncateReceiverOp.T
 
 	#chain operators
 	spaceInterpOp.setDomainRange(padTruncateDummyModel,output)
 
 	# init fft op
-	fftOp = fft_wfld.fft_wfld(output,outputTime,axis=0)
+	#fftOpTemp = fft_wfld.fft_wfld(output,outputTime,axis=0)
+	# init fft op
+	#fftOpTemp = fft_wfld.fft_wfld(modelFloat,timeFloat,axis=1)
+	if(fmax!=-1.0):
+		irregReceiverHyper_orig=Hypercube.hypercube(axes=[irregReceiverAxis,wAxis_orig])
+		output_orig = SepVector.getSepVector(irregReceiverHyper_orig,storage="dataComplex")
+		padTruncateFreqOp=PadTruncateSource.zero_pad_2d(output,output_orig)
+		fftOpTemp = fft_wfld.fft_wfld(output_orig,outputTime,axis=0)
+		fftOp=pyOp.ChainOperator(padTruncateFreqOp,fftOpTemp)
+	else:
+		fftOp = fft_wfld.fft_wfld(output,outputTime,axis=0)
 
-	#spaceInterpOp = Op.Transpose(spaceInterpOp)
-	# P_adjS_adj = Op.ChainOperator(wavefieldStaggerOp,padTruncateRecOp)
-	KP_adj = Op.ChainOperator(padTruncateRecOp,spaceInterpOp)
+	KP_adj = pyOp.ChainOperator(padTruncateRecOp,spaceInterpOp)
 
 	#apply forward
 	return padTruncateDummyData,output,KP_adj,fftOp,outputTime
@@ -711,14 +789,12 @@ def data_extraction_op_init_multi_exp(args):
 	sourceGridExpMapping = spaceInterpOp.getIndexMaps()
 
 	padTruncateReceiverOp = PadTruncateSource.pad_truncate_source_multi_exp(padTruncateDummyModel,padTruncateDummyData,sourceGridPositions,sourceGridExpMapping)
-	padTruncateRecOp = Op.Transpose(padTruncateReceiverOp)
+	padTruncateRecOp = padTruncateReceiverOp.T
 
 	#chain operators
 	spaceInterpOp.setDomainRange(padTruncateDummyModel,output)
 
-	#spaceInterpOp = Op.Transpose(spaceInterpOp)
-	# P_adjS_adj = Op.ChainOperator(wavefieldStaggerOp,padTruncateRecOp)
-	KP_adj = Op.ChainOperator(padTruncateRecOp,spaceInterpOp)
+	KP_adj = pyOp.ChainOperator(padTruncateRecOp,spaceInterpOp)
 
 	#apply forward
 	return padTruncateDummyData,output,KP_adj
@@ -765,19 +841,11 @@ def data_extraction_op_init(args):
 	padTruncateDummyData = SepVector.getSepVector(regWfldHyper,storage="dataFloat")
 	recGridPositions = spaceInterpOp.getRegPosUniqueVector()
 	padTruncateRecOp = PadTruncateSource.pad_truncate_source(padTruncateDummyModel,padTruncateDummyData,recGridPositions)
-	padTruncateRecOp = Op.Transpose(padTruncateRecOp)
-
-	# #stagger op
-	# staggerDummyModel = SepVector.getSepVector(padTruncateDummyData.getHyper(),storage="dataFloat")
-	# input = SepVector.getSepVector(padTruncateDummyData.getHyper(),storage="dataFloat")
-	# wavefieldStaggerOp=StaggerFloat.stagger_wfld(staggerDummyModel,input)
-	# wavefieldStaggerOp=Op.Transpose(wavefieldStaggerOp)
+	padTruncateRecOp = padTruncateRecOp.T
 
 	#chain operators
 	spaceInterpOp.setDomainRange(padTruncateDummyModel,output)
-	#spaceInterpOp = Op.Transpose(spaceInterpOp)
-	# P_adjS_adj = Op.ChainOperator(wavefieldStaggerOp,padTruncateRecOp)
-	KP_adj = Op.ChainOperator(padTruncateRecOp,spaceInterpOp)
+	KP_adj = pyOp.ChainOperator(padTruncateRecOp,spaceInterpOp)
 
 	#apply forward
 	return padTruncateDummyData,output,KP_adj

@@ -36,7 +36,7 @@ def inversionFullWRIInit(args):
 	if (bufferSize_m==0): bufferSize_m=None
 	iterSampling_m=par.getInt("iterSampling_m",20)
 	restartFolder=par.getString("restartFolder","None")
-	flushMemory=par.getInt("flushMemory",0)
+	flushMemory=par.getInt("flushMemory",1)
 
 	# Inversion components to save
 	saveObj_p=par.getInt("saveObj_p",1)

@@ -14,9 +14,9 @@ class fft_wfld(Op.Operator):
 		self.setDomainRange(domain,range)
 		self.nt=range.getHyper().getAxis(range.getHyper().getNdim()-axis).n
 		self.axis=axis
-		print('self.axis:',self.axis)
-		print('nt:',self.nt)
-		print('size of chosen "axis": '+str(domain.getNdArray().shape[axis]))
+		# print('self.axis:',self.axis)
+		# print('nt:',self.nt)
+		# print('size of chosen "axis": '+str(domain.getNdArray().shape[axis]))
 		# self.dw = range.getHyper().getAxis(3).d
 		return
 
