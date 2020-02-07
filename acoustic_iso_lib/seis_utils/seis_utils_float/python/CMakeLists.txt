@@ -80,6 +80,7 @@ if (pybind11_FOUND)
   install( TARGETS pyTimeInteg DESTINATION lib/python)
   install( FILES timeIntegModule.py DESTINATION lib/python)
   install( FILES phaseOnlyXkModule.py DESTINATION lib/python)
+	install( FILES off2angModule.py DESTINATION lib/python)
 
   # Installing Python executables
   install( FILES dataTaperMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
@@ -96,6 +97,7 @@ if (pybind11_FOUND)
   install( FILES fftFwiMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES phaseOnlyXkMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
   install( FILES phaseOnlyXkJacMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+	install( FILES off2angMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 
 else(pybind11_FOUND)
   MESSAGE("WARNING!Did not find pybid11. Not compiling ${PROJECT-NAME}")
