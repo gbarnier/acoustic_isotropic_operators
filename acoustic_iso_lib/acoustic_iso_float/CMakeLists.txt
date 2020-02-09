@@ -3,7 +3,7 @@ project(ACOUSTIC_ISO_FLOAT-lib)
 
 #Adding include files
 include_directories(include)
-
+include_directories(${Boost_INCLUDE_DIR})
 #Header files to include during installation
 set(INC_DIR include)
 set(HEADERS ${INC_DIR}/deviceGpu.h

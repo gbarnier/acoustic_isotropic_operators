@@ -3,6 +3,7 @@ project(ACOUSTIC_ISO_DOUBLE-lib)
 
 #Adding include files
 include_directories(include)
+include_directories(${Boost_INCLUDE_DIR})
 # include_directories(${CMAKE_BUILD_DIR}/../external/ioLibs/external/genericIO/external/sepVector/lib/)
 
 #Header files to include during installation
