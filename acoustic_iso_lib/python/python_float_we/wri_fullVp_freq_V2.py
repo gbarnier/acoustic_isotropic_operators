@@ -90,10 +90,13 @@ if __name__ == '__main__':
 			freqMask=int(fmin/p_model.getHyper().getAxis(3).d)
 		printAndLog("\tfmin: "+str(fmin)+"windowing out first "+str(freqMask)+" samples.", pyinfo,inv_log)
 		spaceMask=10
-		laplacianBufferMaskOp = Mask4d.mask4d_complex(p_model,p_model,spaceMask,p_model.getHyper().axes[0].n-(spaceMask+1),spaceMask,p_model.getHyper().axes[1].n-(spaceMask+1),freqMask,p_model.getHyper().axes[2].n,0,p_model.getHyper().axes[3].n,0)
-		freqLowCutMaskOp = Mask4d.mask4d_complex(p_model,p_model,0,p_model.getHyper().axes[0].n,0,p_model.getHyper().axes[1].n,freqMask,p_model.getHyper().axes[2].n-3,0,p_model.getHyper().axes[3].n,0)
-		waveEquationAcousticOp = pyOp.ChainOperator(freqLowCutMaskOp,pyOp.ChainOperator(waveEquationAcousticOpTemp,laplacianBufferMaskOp))
-		#waveEquationAcousticOp = waveEquationAcousticOpTemp
+		# laplacianBufferMaskOp = Mask4d.mask4d_complex(p_model,p_model,spaceMask,p_model.getHyper().axes[0].n-(spaceMask+1),spaceMask,p_model.getHyper().axes[1].n-(spaceMask+1),freqMask,p_model.getHyper().axes[2].n,0,p_model.getHyper().axes[3].n,0)
+		# freqLowCutMaskOp = Mask4d.mask4d_complex(p_model,p_model,0,p_model.getHyper().axes[0].n,0,p_model.getHyper().axes[1].n,freqMask,p_model.getHyper().axes[2].n-3,0,p_model.getHyper().axes[3].n,0)
+		# waveEquationAcousticOp = pyOp.ChainOperator(freqLowCutMaskOp,pyOp.ChainOperator(waveEquationAcousticOpTemp,laplacianBufferMaskOp))
+
+		freqLowCutMaskOp = Mask4d.mask4d_complex(p_model,p_model,0,p_model.getHyper().axes[0].n,0,p_model.getHyper().axes[1].n,freqMask,p_model.getHyper().axes[2].n,0,p_model.getHyper().axes[3].n,0)
+		# waveEquationAcousticOp = pyOp.ChainOperator(freqLowCutMaskOp,waveEquationAcousticOpTemp)
+		waveEquationAcousticOp = waveEquationAcousticOpTemp
 	printAndLog("\tFinished wave equation op as function of wavefield\n",pyinfo,inv_log)
 
 	# FFT operator #############################
@@ -119,12 +122,15 @@ if __name__ == '__main__':
 	#init forcing term operator to create f #############################
 	printAndLog("\tStarted forcing term op",pyinfo,inv_log)
 	forcingTermOp,priorTmp = wriUtilFloat.forcing_term_op_init_p_multi_exp(sys.argv)
-	prior=priorFloat.clone()
-	if(inversionMode=="time" and inputMode == 'freq'):
+	if(inversionMode==inputMode):
+		prior=priorTmp
+	elif(inversionMode=="time" and inputMode == 'freq'):
 		print('\t\tInput wavelet in freq domain. Converting to time.')
+		prior=priorFloat.clone()
 		fftOpWfld.forward(0,priorTmp,prior)
 	elif(inversionMode=="freq" and inputMode == 'time'):
 		print('\t\tInput wavelet in time domain. Converting to freq.')
+		prior=priorFloat.clone()
 		fftOpWfld.adjoint(0,prior,priorTmp)
 	printAndLog("\tFinished forcing term op\n",pyinfo,inv_log)
 
@@ -389,8 +395,8 @@ if __name__ == '__main__':
 			,pyinfo,inv_log)
 	############################# Evaluate epsilon ###############################
 	#need to set earth model in wave equation operator
-	waveEquationAcousticOp.args[0].args[1].update_slsq(current_m_model)
-	#waveEquationAcousticOp.update_slsq(current_m_model)
+	#waveEquationAcousticOp.args[0].args[1].update_slsq(current_m_model)
+	waveEquationAcousticOpTemp.update_slsq(current_m_model)
 	# Evaluate Epsilon for p inversion
 	if (epsilonEval==1):
 		printAndLog("------------------------ Epsilon evaluation -----------------------\n" \
@@ -428,8 +434,8 @@ if __name__ == '__main__':
 		if(pFinished==0):
 			# minimize ||Kp-d||+e^2/2||A(m)p-f|| w.r.t. p
 			# update m
-			waveEquationAcousticOp.args[0].args[1].update_slsq(current_m_model)
-			#waveEquationAcousticOp.update_slsq(current_m_model)
+			# waveEquationAcousticOp.args[0].args[1].update_slsq(current_m_model)
+			waveEquationAcousticOpTemp.update_slsq(current_m_model)
 			#re-evaluate epsilon
 			# if(parObject.getInt("reEvalEpsilon",0)!=0):
 			# 	epsilon_p = wriUtilFloat.evaluate_epsilon(current_p_model,current_p_data,prior,dataSamplingOp,waveEquationAcousticOp,parObject)

@@ -117,12 +117,15 @@ if __name__ == '__main__':
 	#init forcing term operator to create f #############################
 	printAndLog("\tStarted forcing term op",pyinfo,inv_log)
 	forcingTermOp,priorTmp = wriUtilFloat.forcing_term_op_init_p_multi_exp(sys.argv)
-	prior=priorFloat.clone()
-	if(inversionMode=="time" and inputMode == 'freq'):
+	if(inversionMode==inputMode):
+		prior=priorTmp
+	elif(inversionMode=="time" and inputMode == 'freq'):
 		print('\t\tInput wavelet in freq domain. Converting to time.')
+		prior=priorFloat.clone()
 		fftOpWfld.forward(0,priorTmp,prior)
 	elif(inversionMode=="freq" and inputMode == 'time'):
 		print('\t\tInput wavelet in time domain. Converting to freq.')
+		prior=priorFloat.clone()
 		fftOpWfld.adjoint(0,prior,priorTmp)
 	printAndLog("\tFinished forcing term op\n",pyinfo,inv_log)
 
