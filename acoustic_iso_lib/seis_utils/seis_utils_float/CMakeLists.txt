@@ -3,6 +3,7 @@ project(SEIS_UTILS_FLOAT-lib)
 
 # include folder for ACOUSTIC_ISO_DOUBLE library
 include_directories(../../acoustic_iso_float/include)
+include_directories(${Boost_INCLUDE_DIR})
 
 #Adding python programs
 add_subdirectory(python)
