@@ -3,7 +3,7 @@
 
 
 USAGE EXAMPLE:
-	off2angMain.py off_img= ang_img= nh= oh= dh= ng= og= dg= adj=
+	off2angMain.py off_img= ang_img= nh= oh= dh= ng= og= dg= adj=1 p_inv=1
 
 INPUT PARAMETERS:
 """
@@ -26,19 +26,20 @@ if __name__ == '__main__':
 	parObject = genericIO.io(params=sys.argv)
 
 	# Other parameters
-	adj = parObject.getBool("adj",0)
+	adj = parObject.getBool("adj",1)
+	p_inv = parObject.getBool("p_inv",1)
 
 	# Getting axes' info
 	if adj:
-		# subsurface-offset axis (Adjoint)
-		nh = parObject.getInt("nh")
-		dh = parObject.getFloat("dh")
-		oh = parObject.getFloat("oh")
-	else:
 		# angle axis (Forward)
 		ng = parObject.getInt("ng")
 		dg = parObject.getFloat("dg")
 		og = parObject.getFloat("og")
+	else:
+		# subsurface-offset axis (Adjoint)
+		nh = parObject.getInt("nh")
+		dh = parObject.getFloat("dh")
+		oh = parObject.getFloat("oh")
 
 
 	# Check whether file names were provided or not
@@ -51,26 +52,7 @@ if __name__ == '__main__':
 		raise ValueError("**** ERROR: User did not provide angle-domain image file ****")
 
 	# Applying forward
-	if adj == 0:
-		# Read offset-domain image
-		ODCIGs = genericIO.defaultIO.getVector(off_img_file,ndims=3)
-		# Getting axis
-		z_axis = ODCIGs.getHyper().getAxis(1)
-		x_axis = ODCIGs.getHyper().getAxis(2)
-		h_axis = ODCIGs.getHyper().getAxis(3)
-		g_axis = Hypercube.axis(n=ng,o=og,d=dg,label="\F9 g \F-1 [deg]")
-		ADCIGs = SepVector.getSepVector(Hypercube.hypercube(axes=[z_axis,x_axis,g_axis]))
-
-		# Constructing operator
-		off2angOp = off2ang2D(ODCIGs,ADCIGs,z_axis.o,z_axis.d,h_axis.o,h_axis.d,g_axis.o,g_axis.d)
-
-		# Applying transformation
-		off2angOp.forward(False,ODCIGs,ADCIGs)
-		# Writing result
-		ADCIGs.writeVec(ang_img_file)
-
-	# Applying adjoint
-	else:
+	if not adj:
 		# Read offset-domain image
 		ADCIGs = genericIO.defaultIO.getVector(ang_img_file,ndims=3)
 		# Getting axis
@@ -81,8 +63,28 @@ if __name__ == '__main__':
 		ODCIGs = SepVector.getSepVector(Hypercube.hypercube(axes=[z_axis,x_axis,h_axis]))
 
 		# Constructing operator
-		off2angOp = off2ang2D(ODCIGs,ADCIGs,z_axis.o,z_axis.d,h_axis.o,h_axis.d,g_axis.o,g_axis.d)
+		off2angOp = off2ang2D(ADCIGs,ODCIGs,z_axis.o,z_axis.d,h_axis.o,h_axis.d,g_axis.o,g_axis.d,p_inv)
 		# Applying transformation
-		off2angOp.adjoint(False,ODCIGs,ADCIGs)
+		off2angOp.forward(False,ADCIGs,ODCIGs)
 		# Writing result
 		ODCIGs.writeVec(off_img_file)
+
+
+	# Applying adjoint
+	else:
+		# Read offset-domain image
+		ODCIGs = genericIO.defaultIO.getVector(off_img_file,ndims=3)
+		# Getting axis
+		z_axis = ODCIGs.getHyper().getAxis(1)
+		x_axis = ODCIGs.getHyper().getAxis(2)
+		h_axis = ODCIGs.getHyper().getAxis(3)
+		g_axis = Hypercube.axis(n=ng,o=og,d=dg,label="\F9 g \F-1 [deg]")
+		ADCIGs = SepVector.getSepVector(Hypercube.hypercube(axes=[z_axis,x_axis,g_axis]))
+
+		# Constructing operator
+		off2angOp = off2ang2D(ADCIGs,ODCIGs,z_axis.o,z_axis.d,h_axis.o,h_axis.d,g_axis.o,g_axis.d,p_inv)
+
+		# Applying transformation
+		off2angOp.adjoint(False,ADCIGs,ODCIGs)
+		# Writing result
+		ADCIGs.writeVec(ang_img_file)

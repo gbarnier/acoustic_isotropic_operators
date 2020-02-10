@@ -3,7 +3,7 @@ project(ACOUSTIC_ISO_FLOAT-lib)
 
 #Adding include files
 include_directories(include)
-
+include_directories(${Boost_INCLUDE_DIR})
 set(SRC_DIR src)
 set(SOURCES
     ${SRC_DIR}/waveEquationAcousticGpu.cpp
