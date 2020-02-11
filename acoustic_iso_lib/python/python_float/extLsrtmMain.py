@@ -129,11 +129,11 @@ if __name__ == '__main__':
 	if (regType != "dsoPrec"):
 		# Concatenate operators
 		if (spline==1 and dataTaper==0):
-			invOp=pyOp.ChainOperator(splineOp,BornExtOp)
+			invOp=pyOp.ChainOperator(splineOp,invOp)
 		if (spline==0 and dataTaper==1):
-			invOp=pyOp.ChainOperator(BornExtOp,dataTaperOp)
+			invOp=pyOp.ChainOperator(invOp,dataTaperOp)
 		if (spline==1 and dataTaper==1):
-			invOpTemp=pyOp.ChainOperator(splineOp,BornExtOp)
+			invOpTemp=pyOp.ChainOperator(splineOp,invOp)
 			invOp=pyOp.ChainOperator(invOpTemp,dataTaperOp)
 
 	# Preconditioning with DSO inverse
@@ -151,13 +151,13 @@ if __name__ == '__main__':
 		# Concatenate operators
 		if (spline==1 and dataTaper==0):
 			splineTempOp=pyOp.ChainOperator(dsoInvOp,splineOp)
-			invOp=pyOp.ChainOperator(splineTempOp,BornExtOp)
+			invOp=pyOp.ChainOperator(splineTempOp,invOp)
 		if (spline==0 and dataTaper==1):
-			invOpTemp=pyOp.ChainOperator(dsoInvOp,BornExtOp)
+			invOpTemp=pyOp.ChainOperator(dsoInvOp,invOp)
 			invOp=pyOp.ChainOperator(invOpTemp,dataTaperOp)
 		if (spline==1 and dataTaper==1):
 			splineTempOp=pyOp.ChainOperator(dsoInvOp,splineOp)
-			invOpTemp=pyOp.ChainOperator(splineTempOp,BornExtOp)
+			invOpTemp=pyOp.ChainOperator(splineTempOp,invOp)
 			invOp=pyOp.ChainOperator(invOpTemp,dataTaperOp)
 
 	if solver == "lbfgs":

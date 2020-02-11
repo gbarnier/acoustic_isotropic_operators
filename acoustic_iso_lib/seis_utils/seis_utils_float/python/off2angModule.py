@@ -87,8 +87,8 @@ class off2ang2D(Op.Operator):
 		g_vals = np.linspace(self.og,self.og+(self.ng-1)*self.dg,self.ng)
 		exp_arg = np.expand_dims(1.0j*np.outer(h_axis,kz_axis),axis=1)
 		for g_idx,g_val in enumerate(g_vals):
-			# scale = 2.0*np.pi*kz_axis/np.cos(g_val) if self.p_inv else 1.0
-			scale = 2.0*np.pi/np.cos(g_val) if self.p_inv else 1.0
+			# scale = kz_axis/(2.0*np.pi*np.cos(g_val)) if self.p_inv else 1.0
+			scale = 1.0/(2.0*np.pi*np.cos(g_val)) if self.p_inv else 1.0
 			# print("angle=%s cos=%s"%(g_val,np.cos(g_val)))
 			m_tmp[g_idx,:,:] = scale*np.sum(d_kz[:,:,:]*np.exp(exp_arg*np.tan(g_val)),axis=0)
 		m_arr += np.real(np.fft.ifft(m_tmp))

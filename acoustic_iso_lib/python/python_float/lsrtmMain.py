@@ -71,7 +71,7 @@ if __name__ == '__main__':
 		invOp = pyOp.ChainOperator(Sprd,BornOp)
 	else:
 		BornOp=Acoustic_iso_float.BornShotsGpu(modelFineInit,data,vel,parObject1,sourcesVector,sourcesSignalsVector,receiversVector)
-	invOp=BornOp
+		invOp=BornOp
 
 	############################# Read files ###################################
 	# Read initial model
@@ -120,11 +120,11 @@ if __name__ == '__main__':
 
 	# Concatenate operators
 	if (spline==1 and dataTaper==0):
-		invOp=pyOp.ChainOperator(splineOp,BornOp)
+		invOp=pyOp.ChainOperator(splineOp,invOp)
 	if (spline==0 and dataTaper==1):
-		invOp=pyOp.ChainOperator(BornOp,dataTaperOp)
+		invOp=pyOp.ChainOperator(invOp,dataTaperOp)
 	if (spline==1 and dataTaper==1):
-		invOpTemp=pyOp.ChainOperator(splineOp,BornOp)
+		invOpTemp=pyOp.ChainOperator(splineOp,invOp)
 		invOp=pyOp.ChainOperator(invOpTemp,dataTaperOp)
 
 	############################# Regularization ###############################
