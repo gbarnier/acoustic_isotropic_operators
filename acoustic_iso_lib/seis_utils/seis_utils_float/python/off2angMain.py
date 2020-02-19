@@ -3,7 +3,7 @@
 
 
 USAGE EXAMPLE:
-	off2angMain.py off_img= ang_img= nh= oh= dh= ng= og= dg= adj=1 p_inv=1
+	off2angMain.py off_img= ang_img= nh= oh= dh= ng= og= dg= adj=1 p_inv=1 anti_alias=1
 
 INPUT PARAMETERS:
 """
@@ -28,6 +28,8 @@ if __name__ == '__main__':
 	# Other parameters
 	adj = parObject.getBool("adj",1)
 	p_inv = parObject.getBool("p_inv",1)
+	anti_alias = parObject.getBool("anti_alias",1)
+	dp_test = parObject.getBool("dp_test",0)
 
 	# Getting axes' info
 	if adj:
@@ -63,7 +65,12 @@ if __name__ == '__main__':
 		ODCIGs = SepVector.getSepVector(Hypercube.hypercube(axes=[z_axis,x_axis,h_axis]))
 
 		# Constructing operator
-		off2angOp = off2ang2D(ADCIGs,ODCIGs,z_axis.o,z_axis.d,h_axis.o,h_axis.d,g_axis.o,g_axis.d,p_inv)
+		off2angOp = off2ang2D(ADCIGs,ODCIGs,z_axis.o,z_axis.d,h_axis.o,h_axis.d,g_axis.o,g_axis.d,p_inv,anti_alias)
+		if dp_test:
+			# Dot-product test if requested
+			off2angOp.dotTest(True)
+			quit()
+
 		# Applying transformation
 		off2angOp.forward(False,ADCIGs,ODCIGs)
 		# Writing result
@@ -82,7 +89,11 @@ if __name__ == '__main__':
 		ADCIGs = SepVector.getSepVector(Hypercube.hypercube(axes=[z_axis,x_axis,g_axis]))
 
 		# Constructing operator
-		off2angOp = off2ang2D(ADCIGs,ODCIGs,z_axis.o,z_axis.d,h_axis.o,h_axis.d,g_axis.o,g_axis.d,p_inv)
+		off2angOp = off2ang2D(ADCIGs,ODCIGs,z_axis.o,z_axis.d,h_axis.o,h_axis.d,g_axis.o,g_axis.d,p_inv,anti_alias)
+		if dp_test:
+			# Dot-product test if requested
+			off2angOp.dotTest(True)
+			quit()
 
 		# Applying transformation
 		off2angOp.adjoint(False,ADCIGs,ODCIGs)
