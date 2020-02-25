@@ -25,15 +25,15 @@ make install
 ```
 # Install conda
 wget https://repo.anaconda.com/archive/Anaconda3-2019.10-Linux-x86_64.sh
-bash Anaconda3-2019.10-Linux-x86_64.sh 
+bash Anaconda3-2019.10-Linux-x86_64.sh
 
 # Creating necessary environment
+git clone http://zapad.Stanford.EDU/barnier/acoustic_isotropic_operators.git
+cd acoustic_isotropic_operators
 conda env create -f environment.yml
 conda activate EGS
 
-# Installing GPU-wave-equation library 
-git clone http://zapad.Stanford.EDU/barnier/acoustic_isotropic_operators.git
-cd acoustic_isotropic_operators
+# Installing GPU-wave-equation library
 git submodule update --init --recursive -- acoustic_iso_lib/external/ioLibs
 git submodule update --init --recursive -- acoustic_iso_lib/external/pySolver
 mkdir build
@@ -52,15 +52,15 @@ sed -i  's|path-to-EGSlib|'$PWD'|g' module/EGSlib
 ###################################################################
 
 # Changing activation and deactivation env_vars
-touch $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh 
-echo '#!/bin/sh' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh 
-echo "module use ${PWD}/module" >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh 
-echo "module load EGSlib"  >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh 
-touch $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh 
-echo '#!/bin/sh' >> $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh 
-echo "module unload EGSlib"  >> $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh 
+touch $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+echo '#!/bin/sh' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+echo "module use ${PWD}/module" >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+echo "module load EGSlib"  >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+touch $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
+echo '#!/bin/sh' >> $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
+echo "module unload EGSlib"  >> $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
 
-conda deactivate 
+conda deactivate
 conda activate EGS
 ```
 
