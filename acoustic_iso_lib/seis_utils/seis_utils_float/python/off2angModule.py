@@ -105,7 +105,7 @@ class off2ang2D(Op.Operator):
 
 		for g_idx,g_val in enumerate(g_vals):
 			# scale = kz_axis/(2.0*np.pi*np.cos(g_val)) if self.p_inv else 1.0
-			scale = 1.0/(2.0*np.pi*np.cos(g_val)) if self.p_inv else 1.0
+			scale = kz_axis/(2.0*np.pi*np.cos(g_val)) if self.p_inv else 1.0
 			if self.anti_alias:
 				m_tmp[g_idx,:,:] = scale*np.sum(d_kz[:,:,:]*np.exp(exp_arg*np.tan(g_val))*mask[g_idx,:],axis=0)
 			else:
