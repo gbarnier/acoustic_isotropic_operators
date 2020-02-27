@@ -32,6 +32,8 @@ def create_client(parObject):
 	"""
 	hostnames = parObject.getString("hostnames","noHost")
 	pbs_args = parObject.getString("pbs_args","noPBS")
+	if hostnames != "noHost" and pbs_args != "noPBS":
+		raise ValueError("Only one interface can be used for a client! User provided both SSH and PBS parameters!")
 	#Starting Dask client if requested
 	client = None
 	nWrks = None
@@ -43,7 +45,14 @@ def create_client(parObject):
 			args.update({"scheduler_file_prefix":scheduler_file})
 		print("Starting Dask client using the following workers: %s"%(hostnames))
 	elif pbs_args != "noPBS":
-		raise NotImplementedError("PBS Dask interface not implemented yet!")
+		n_wrks = parObject.getInt("n_workers")
+		args = {"n_workers":n_wrks}
+		pbs_dict={elem.split(";")[0] : elem.split(";")[1] for elem in pbs_args.split(",")}
+		if "cores" in pbs_dict.keys():
+			pbs_dict.update({"cores":int(pbs_dict["cores"])})
+		pbs_dict={"pbs_params":pbs_dict}
+		args.update(pbs_dict)
+		print("Starting PBS Dask client using %s workers"%(n_wrks))
 
 	if args:
 		client = DaskClient(**args)
