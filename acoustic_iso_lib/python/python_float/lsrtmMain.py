@@ -94,7 +94,7 @@ if __name__ == '__main__':
 	#Dask interface
 	if(client):
 		#Chunking the data and spreading them across workers if dask was requested
-		data = Acoustic_iso_float.chunkData(data,BornExtOp.getRange())
+		data = Acoustic_iso_float.chunkData(data,BornOp.getRange())
 
 	############################# Instanciation ################################
 
