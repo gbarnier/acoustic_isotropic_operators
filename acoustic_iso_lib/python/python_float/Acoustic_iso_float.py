@@ -50,6 +50,11 @@ def create_client(parObject):
 		pbs_dict={elem.split(";")[0] : elem.split(";")[1] for elem in pbs_args.split(",")}
 		if "cores" in pbs_dict.keys():
 			pbs_dict.update({"cores":int(pbs_dict["cores"])})
+		if "nanny" in pbs_dict.keys():
+			nanny_flag = True
+			if pbs_dict["nanny"] in "0falseFalse":
+				nanny_flag = False
+			pbs_dict.update({"nanny":nanny_flag})
 		pbs_dict={"pbs_params":pbs_dict}
 		args.update(pbs_dict)
 		print("Starting PBS Dask client using %s workers"%(n_wrks))
