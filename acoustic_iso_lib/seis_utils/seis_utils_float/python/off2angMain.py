@@ -76,7 +76,6 @@ if __name__ == '__main__':
 		# Writing result
 		ODCIGs.writeVec(off_img_file)
 
-
 	# Applying adjoint
 	else:
 		# Read offset-domain image
