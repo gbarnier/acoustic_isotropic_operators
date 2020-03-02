@@ -4,7 +4,7 @@
 /*###########################################################################
                           Multi experiment
 /*###########################################################################*/
-WaveRecon_freq_multi_exp::WaveRecon_freq_multi_exp(const std::shared_ptr<SEP::complex4DReg>model,
+WaveRecon_freq::WaveRecon_freq(const std::shared_ptr<SEP::complex4DReg>model,
                          const std::shared_ptr<SEP::complex4DReg>data,
                          const std::shared_ptr<SEP::float2DReg>slsqModel,float dt_of_prop) {
 
@@ -60,49 +60,67 @@ WaveRecon_freq_multi_exp::WaveRecon_freq_multi_exp(const std::shared_ptr<SEP::co
   _slsq=slsqModel;
 
   //calculate gamma
-  // _gamma.reset(new SEP::float2DReg(data->getHyper()->getAxis(1).n,
-  //                                   data->getHyper()->getAxis(2).n));
-  // _gammaSq.reset(new SEP::float2DReg(data->getHyper()->getAxis(1).n,
-  //                                   data->getHyper()->getAxis(2).n));
-  // _gamma->set(0.0);
-  // _gammaSq->set(0.0);
-  // _spongeWidth=50;
-  // // _U_0 = U_0;
-  // // _alpha = alpha;
-  // _U_0 = 0.0002;
-  // _alpha = 0.075;
-  // for (int ix = FAT; ix < n2-FAT; ix++){
-  //   for (int iz = FAT; iz < n1-FAT; iz++) {
-  //     int distToEdge = std::min(std::min(ix-FAT,iz-FAT),std::min(n1-FAT-iz-1,n2-FAT-ix-1));
-  //     if(distToEdge < _spongeWidth){
-  //       float gamma = _U_0/(std::cosh(_alpha*distToEdge)*std::cosh(_alpha*distToEdge));
-  //       (*_gamma->_mat)[ix][iz] = 2*gamma;
-  //       (*_gammaSq->_mat)[ix][iz] = gamma*gamma;
-  //       if(iz==n1/2){
-  //         std::cerr << "\nix: " << ix << "\ngamma:" << (*_gamma->_mat)[ix][iz] << std::endl;
-  //       }
-  //     }
-  //   }
-  // }
+  _gamma.reset(new SEP::float2DReg(data->getHyper()->getAxis(1).n,
+                                    data->getHyper()->getAxis(2).n));
+  _gammaSq.reset(new SEP::float2DReg(data->getHyper()->getAxis(1).n,
+                                    data->getHyper()->getAxis(2).n));
+  _gamma->set(0.0);
+  _gammaSq->set(0.0);
+  _spongeWidth=25;
+  // _U_0 = U_0;
+  // _alpha = alpha;
+  _U_0 = 0.0001;
+  _alpha = 0.18;
+  for (int ix = FAT; ix < n2-FAT; ix++){
+    for (int iz = FAT; iz < n1-FAT; iz++) {
+      int distToEdge = std::min(std::min(ix-FAT,iz-FAT),std::min(n1-FAT-iz-1,n2-FAT-ix-1));
+      if(distToEdge < _spongeWidth){
+        float gamma = _U_0/(std::cosh(_alpha*distToEdge)*std::cosh(_alpha*distToEdge));
+        (*_gamma->_mat)[ix][iz] = 2*gamma;
+        (*_gammaSq->_mat)[ix][iz] = gamma*gamma;
+        //if(iz==n1/2){
+        //  std::cerr << "\nix: " << ix << "\ngamma:" << (*_gamma->_mat)[ix][iz] << std::endl;
+        //}
+      }
+    }
+  }
 
 }
 
-void WaveRecon_freq_multi_exp::set_slsq(std::shared_ptr<SEP::float2DReg>slsq){
+void WaveRecon_freq::set_slsq(std::shared_ptr<SEP::float2DReg>slsq){
 	_slsq=slsq;
 }
 
-void WaveRecon_freq_multi_exp::forward(const bool                         add,
+void WaveRecon_freq::forward(const bool                         add,
                           const std::shared_ptr<SEP::complex4DReg>model,
                           std::shared_ptr<SEP::complex4DReg>      data) const {
 
   assert(checkDomainRange(model, data));
   if (!add) data->scale(0.);
 
+  std::complex<float> _i(0.0,1.0);
+
   const std::shared_ptr<complex4D> m = ((std::dynamic_pointer_cast<complex4DReg>(model))->_mat);
   std::shared_ptr<complex4D> d = ((std::dynamic_pointer_cast<complex4DReg>(data))->_mat);
   std::shared_ptr<float2D> s = ((std::dynamic_pointer_cast<float2DReg>(_slsq))->_mat);
-  // std::shared_ptr<float2D> g = _gamma->_mat;
-  // std::shared_ptr<float2D> gs = _gammaSq->_mat;
+  std::shared_ptr<float2D> g = _gamma->_mat;
+  std::shared_ptr<float2D> gs = _gammaSq->_mat;
+
+  // for(int is = 0; is < n4; is++) {
+  //   for (int iw = 0; iw < n3-2; iw++) {
+  //     #pragma omp parallel for collapse(2)
+  //     for (int ix = FAT; ix < n2-FAT; ix++) {
+  //       for (int iz = FAT; iz < n1-FAT; iz++) {
+  //         float w = 2 * M_PI * (_ow + _dw * iw);
+  //         std::complex<float> w_c(w,0.0);
+  //         (*d)[is][n3-2][ix][iz] += (*m)[is][iw][ix][iz];
+  //         // (*d)[is][n3-1][ix][iz] += -i*w*(*m)[is][iw][ix][iz];
+  //         //(*d)[is][n3-1][ix][iz] += _i*w*(*m)[is][iw][ix][iz];
+  //         (*d)[is][n3-1][ix][iz] +=   exp(_i*w*_dt)*(*m)[is][iw][ix][iz];
+  //       }
+  //     }
+  //   }
+  // }
 
   #pragma omp parallel for collapse(4)
   for(int is = 0; is < n4; is++) { // experiment
@@ -127,11 +145,11 @@ void WaveRecon_freq_multi_exp::forward(const bool                         add,
               C2z * ((*m)[is][iw][ix ][iz + 2 ] + (*m)[is][iw][ix ][iz - 2 ]) + \
               C3z * ((*m)[is][iw][ix ][iz + 3 ] + (*m)[is][iw][ix ][iz - 3 ]) + \
               C4z * ((*m)[is][iw][ix ][iz + 4 ] + (*m)[is][iw][ix ][iz - 4 ]) + \
-              C5z * ((*m)[is][iw][ix ][iz + 5 ] + (*m)[is][iw][ix ][iz - 5 ]));// + \
-              // //sponge first term
-          		// (*g)[ix][iz]*-1*w_est*(*m)[is][iw][ix ][iz ] + \
-          		// //sponge second term
-          		// (*gs)[ix][iz]*(*m)[is][iw][ix ][iz ];
+              C5z * ((*m)[is][iw][ix ][iz + 5 ] + (*m)[is][iw][ix ][iz - 5 ])) + \
+              //sponge first term
+          		(*g)[ix][iz]*w_est*_i*(*m)[is][iw][ix ][iz ] + \
+          		//sponge second term
+          		(*gs)[ix][iz]*(*m)[is][iw][ix ][iz ];
         }
       }
     }
@@ -139,18 +157,35 @@ void WaveRecon_freq_multi_exp::forward(const bool                         add,
 
 }
 
-void WaveRecon_freq_multi_exp::adjoint(const bool                         add,
+void WaveRecon_freq::adjoint(const bool                         add,
                           std::shared_ptr<SEP::complex4DReg>      model,
                           const std::shared_ptr<SEP::complex4DReg>data) const{
   assert(checkDomainRange(model, data));
 
   if (!add) model->scale(0.);
 
+  std::complex<float> _i(0.0,-1.0);
+
   std::shared_ptr<complex4D> m = ((std::dynamic_pointer_cast<complex4DReg>(model))->_mat);
   const std::shared_ptr<complex4D> d = ((std::dynamic_pointer_cast<complex4DReg>(data))->_mat);
   std::shared_ptr<float2D> s = ((std::dynamic_pointer_cast<float2DReg>(_slsq))->_mat);
-  // std::shared_ptr<float2D> g = _gamma->_mat;
-  // std::shared_ptr<float2D> gs = _gammaSq->_mat;
+  std::shared_ptr<float2D> g = _gamma->_mat;
+  std::shared_ptr<float2D> gs = _gammaSq->_mat;
+  // #pragma omp parallel for collapse(4)
+  // for(int is = 0; is < n4; is++) {
+  //   for (int iw = 0; iw < n3-2; iw++) {
+  //     for (int ix = FAT; ix < n2-FAT; ix++) {
+  //       for (int iz = FAT; iz < n1-FAT; iz++) {
+  //         float w = 2 * M_PI * (_ow + _dw * iw);
+  //         std::complex<float> w_c(w,0.0);
+  //         (*m)[is][iw][ix][iz] += (*d)[is][n3-2][ix][iz];
+  //         // (*d)[is][n3-1][ix][iz] += -i*w*(*m)[is][iw][ix][iz];
+  //         //(*m)[is][iw][ix][iz] += _i*w*(*d)[is][n3-1][ix][iz];
+  //         (*m)[is][iw][ix][iz] += exp(_i*w*_dt)*(*d)[is][n3-1][ix][iz];
+  //       }
+  //     }
+  //   }
+  // }
 
   #pragma omp parallel for collapse(4)
   for(int is = 0; is < n4; is++) {
@@ -175,11 +210,11 @@ void WaveRecon_freq_multi_exp::adjoint(const bool                         add,
               C2z * ((*d)[is][iw][ix ][iz + 2 ] + (*d)[is][iw][ix ][iz - 2 ]) + \
               C3z * ((*d)[is][iw][ix ][iz + 3 ] + (*d)[is][iw][ix ][iz - 3 ]) + \
               C4z * ((*d)[is][iw][ix ][iz + 4 ] + (*d)[is][iw][ix ][iz - 4 ]) + \
-              C5z * ((*d)[is][iw][ix ][iz + 5 ] + (*d)[is][iw][ix ][iz - 5 ]));//+ \
-              // // sponge first term
-          		// (*g)[ix][iz]*-1*w_est*(*d)[is][iw][ix][iz] + \
-          		// //sponge second term
-          		// (*gs)[ix][iz]*(*d)[is][iw][ix][iz];
+              C5z * ((*d)[is][iw][ix ][iz + 5 ] + (*d)[is][iw][ix ][iz - 5 ]))+ \
+              //sponge first term
+          		(*g)[ix][iz]*w_est*_i*(*d)[is][iw][ix][iz] + \
+          		//sponge second term
+          		(*gs)[ix][iz]*(*d)[is][iw][ix][iz];
         }
       }
     }

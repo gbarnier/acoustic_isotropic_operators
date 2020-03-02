@@ -16,10 +16,10 @@
 
 
 
-class WaveRecon_freq_multi_exp_precond : public Operator<SEP::complex4DReg, SEP::complex4DReg> {
+class WaveRecon_freq_precond : public Operator<SEP::complex4DReg, SEP::complex4DReg> {
 public:
 
-  WaveRecon_freq_multi_exp_precond(const std::shared_ptr<SEP::complex4DReg>model,
+  WaveRecon_freq_precond(const std::shared_ptr<SEP::complex4DReg>model,
               const std::shared_ptr<SEP::complex4DReg>data,
               const std::shared_ptr<SEP::float2DReg>slsqModel);
 

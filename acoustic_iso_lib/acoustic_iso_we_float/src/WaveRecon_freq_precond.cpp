@@ -4,7 +4,7 @@
 /*###########################################################################
                           Multi experiment
 /*###########################################################################*/
-WaveRecon_freq_multi_exp_precond::WaveRecon_freq_multi_exp_precond(const std::shared_ptr<SEP::complex4DReg>model,
+WaveRecon_freq_precond::WaveRecon_freq_precond(const std::shared_ptr<SEP::complex4DReg>model,
             const std::shared_ptr<SEP::complex4DReg>data,
             const std::shared_ptr<SEP::float2DReg>slsqModel) {
 
@@ -63,7 +63,7 @@ WaveRecon_freq_multi_exp_precond::WaveRecon_freq_multi_exp_precond(const std::sh
 
 }
 
-void WaveRecon_freq_multi_exp_precond::update_slsq(std::shared_ptr<SEP::float2DReg>slsq){
+void WaveRecon_freq_precond::update_slsq(std::shared_ptr<SEP::float2DReg>slsq){
 
   std::shared_ptr<float2D> s = ((std::dynamic_pointer_cast<float2DReg>(slsq))->_mat);
   std::shared_ptr<float3D> p = ((std::dynamic_pointer_cast<float3DReg>(_precond))->_mat);
@@ -79,7 +79,7 @@ void WaveRecon_freq_multi_exp_precond::update_slsq(std::shared_ptr<SEP::float2DR
   }
 }
 
-void WaveRecon_freq_multi_exp_precond::forward(const bool                         add,
+void WaveRecon_freq_precond::forward(const bool                         add,
                           const std::shared_ptr<SEP::complex4DReg>model,
                           std::shared_ptr<SEP::complex4DReg>      data) const {
 
@@ -106,7 +106,7 @@ void WaveRecon_freq_multi_exp_precond::forward(const bool                       
 
 }
 
-void WaveRecon_freq_multi_exp_precond::adjoint(const bool                         add,
+void WaveRecon_freq_precond::adjoint(const bool                         add,
                           std::shared_ptr<SEP::complex4DReg>      model,
                           const std::shared_ptr<SEP::complex4DReg>data) const{
   assert(checkDomainRange(model, data));

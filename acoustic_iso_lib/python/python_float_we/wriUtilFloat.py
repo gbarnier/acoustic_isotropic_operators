@@ -14,7 +14,7 @@ import TruncateSpatialReg
 import SpaceInterpFloat
 import PadTruncateSource
 import SampleWfld
-import GF
+# import GF
 import SphericalSpreadingScale
 import pyOperator as pyOp
 import scipy as sp
@@ -489,60 +489,60 @@ def spherical_spreading_op_init(args):
 	#apply forward
 	return modelFloat,dataFloat,op
 #
-def greens_function_op_init(args):
-
-	# Bullshit stuff
-	parObject=genericIO.io(params=sys.argv)
-
-	#get source locations
-	zCoordSou,xCoordSou,centerHyper = SpaceInterpFloat.space_interp_init_source(args)
-
-	# Time Axis
-	nts=parObject.getInt("nts",-1)
-	ots=parObject.getFloat("ots",0.0)
-	dts=parObject.getFloat("dts",-1.0)
-	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
-
-	# z Axis model
-	nz=parObject.getInt("nz",-1)
-	oz=parObject.getFloat("oz",-1.0)
-	dz=parObject.getFloat("dz",-1.0)
-	zAxis=Hypercube.axis(n=nz,o=oz,d=dz)
-
-	# x axis model
-	nx=parObject.getInt("nx",-1)
-	ox=parObject.getFloat("ox",-1.0)
-	dx=parObject.getFloat("dx",-1.0)
-	xAxis=Hypercube.axis(n=nx,o=ox,d=dx)
-
-	# Allocate model
-	modelHyper=Hypercube.hypercube(axes=[zAxis,xAxis,timeAxis])
-	modelFloat=SepVector.getSepVector(modelHyper,storage="dataFloat")
-
-	# Allocate data
-	dataHyper=Hypercube.hypercube(axes=[zAxis,xAxis,timeAxis])
-	dataFloat=SepVector.getSepVector(dataHyper,storage="dataFloat")
-
-	# calculate max velocity value
-	slsqFile=parObject.getString("slsq", "noVpFile")
-	if (slsqFile == "noVpFile"):
-		print("**** ERROR: User did not provide slsq file, slsq ****\n")
-		sys.exit()
-	slsq=genericIO.defaultIO.getVector(slsqFile)
-	slsqNdArray = slsq.getNdArray()
-	slsqNonzero = slsqNdArray[slsqNdArray>0]
-	minslsq = slsqNonzero.min()
-	maxvel = math.sqrt(1/minslsq)
-	print("maxvel: ", maxvel)
-
-
-	tstart=parObject.getFloat("t_start", 0.0)
-
-	# init op
-	op = GF.gf(modelFloat,dataFloat,zCoordSou,xCoordSou,tstart,maxvel)
-
-	#apply forward
-	return modelFloat,dataFloat,op
+# def greens_function_op_init(args):
+#
+# 	# Bullshit stuff
+# 	parObject=genericIO.io(params=sys.argv)
+#
+# 	#get source locations
+# 	zCoordSou,xCoordSou,centerHyper = SpaceInterpFloat.space_interp_init_source(args)
+#
+# 	# Time Axis
+# 	nts=parObject.getInt("nts",-1)
+# 	ots=parObject.getFloat("ots",0.0)
+# 	dts=parObject.getFloat("dts",-1.0)
+# 	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+#
+# 	# z Axis model
+# 	nz=parObject.getInt("nz",-1)
+# 	oz=parObject.getFloat("oz",-1.0)
+# 	dz=parObject.getFloat("dz",-1.0)
+# 	zAxis=Hypercube.axis(n=nz,o=oz,d=dz)
+#
+# 	# x axis model
+# 	nx=parObject.getInt("nx",-1)
+# 	ox=parObject.getFloat("ox",-1.0)
+# 	dx=parObject.getFloat("dx",-1.0)
+# 	xAxis=Hypercube.axis(n=nx,o=ox,d=dx)
+#
+# 	# Allocate model
+# 	modelHyper=Hypercube.hypercube(axes=[zAxis,xAxis,timeAxis])
+# 	modelFloat=SepVector.getSepVector(modelHyper,storage="dataFloat")
+#
+# 	# Allocate data
+# 	dataHyper=Hypercube.hypercube(axes=[zAxis,xAxis,timeAxis])
+# 	dataFloat=SepVector.getSepVector(dataHyper,storage="dataFloat")
+#
+# 	# calculate max velocity value
+# 	slsqFile=parObject.getString("slsq", "noVpFile")
+# 	if (slsqFile == "noVpFile"):
+# 		print("**** ERROR: User did not provide slsq file, slsq ****\n")
+# 		sys.exit()
+# 	slsq=genericIO.defaultIO.getVector(slsqFile)
+# 	slsqNdArray = slsq.getNdArray()
+# 	slsqNonzero = slsqNdArray[slsqNdArray>0]
+# 	minslsq = slsqNonzero.min()
+# 	maxvel = math.sqrt(1/minslsq)
+# 	print("maxvel: ", maxvel)
+#
+#
+# 	tstart=parObject.getFloat("t_start", 0.0)
+#
+# 	# init op
+# 	op = GF.gf(modelFloat,dataFloat,zCoordSou,xCoordSou,tstart,maxvel)
+#
+# 	#apply forward
+# 	return modelFloat,dataFloat,op
 def wfld_extraction_reg_op_init(args):
 
 	# Bullshit stuff

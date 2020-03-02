@@ -908,7 +908,7 @@ void spaceInterp_multi_exp::adjoint(const bool add, std::shared_ptr<float2DReg> 
 		std::shared_ptr<complex2D> d = signalIrreg->_mat;
 		std::shared_ptr<complex2D> m = signalReg->_mat;
 
-		#pragma omp parallel for collapse(3)
+		//#pragma omp parallel for collapse(3)
 		for (int it = 0; it < _nt; it++){
 			for (int iDevice = 0; iDevice < _nDeviceIrreg; iDevice++){ // Loop over device
 				for (int ifilt = 0; ifilt < _nFiltTotal; ifilt++){ // Loop over neighboring points on regular grid

@@ -5,15 +5,9 @@
 #include <pybind11/stl.h>
 #include <pybind11/iostream.h>
 
-#include "WaveReconV2.h"
-#include "WaveReconV3.h"
-#include "WaveReconV4.h"
-#include "WaveReconV5.h"
-#include "WaveReconV6.h"
-#include "WaveReconV7.h"
-#include "WaveReconV8.h"
-#include "WaveReconV9.h"
-#include "WaveReconV10.h"
+#include "WaveRecon_time.h"
+#include "WaveRecon_freq.h"
+#include "WaveRecon_freq_precond.h"
 #include "PadModel2d.h"
 #include "PadModel3d.h"
 #include "waveEquationAcousticGpu.h"
@@ -46,107 +40,15 @@ PYBIND11_MODULE(pyAcoustic_iso_float_we, clsGeneric) {
       .def("dotTest",(bool (PadModel3d::*)(const bool, const float)) &PadModel3d::dotTest,"Dot-Product Test")
   ;
 
-  // py::class_<WaveReconV2, std::shared_ptr<WaveReconV2>>(clsGeneric,"WaveReconV2")
-  //     .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, int ,int,int,int,int,int,int>(), "Initialize a WaveReconV2")
-  //
-  //     .def("forward", (void (WaveReconV2::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV2::forward, "Forward")
-  //
-  //     .def("adjoint", (void (WaveReconV2::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV2::adjoint, "Adjoint")
-  //
-  //     .def("dotTest",(bool (WaveReconV2::*)(const bool, const float)) &WaveReconV2::dotTest,"Dot-Product Test")
-  // ;
-  py::class_<WaveReconV3, std::shared_ptr<WaveReconV3>>(clsGeneric,"WaveReconV3")
-      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, int,int>(), "Initialize a WaveReconV3")
+  py::class_<WaveRecon_time, std::shared_ptr<WaveRecon_time>>(clsGeneric,"WaveRecon_time")
+      .def(py::init<const std::shared_ptr<SEP::float4DReg>, const std::shared_ptr<SEP::float4DReg>, const std::shared_ptr<SEP::float2DReg>, float,float,int>(), "Initialize a WaveRecon_time")
 
-      .def("forward", (void (WaveReconV3::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV3::forward, "Forward")
+      .def("forward", (void (WaveRecon_time::*)(const bool, const std::shared_ptr<float4DReg>, std::shared_ptr<float4DReg>)) &WaveRecon_time::forward, "Forward")
 
-      .def("adjoint", (void (WaveReconV3::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV3::adjoint, "Adjoint")
+      .def("adjoint", (void (WaveRecon_time::*)(const bool, const std::shared_ptr<float4DReg>, std::shared_ptr<float4DReg>)) &WaveRecon_time::adjoint, "Adjoint")
 
-      .def("dotTest",(bool (WaveReconV3::*)(const bool, const float)) &WaveReconV3::dotTest,"Dot-Product Test")
-  ;
-
-  py::class_<WaveReconV4, std::shared_ptr<WaveReconV4>>(clsGeneric,"WaveReconV4")
-      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, int,int>(), "Initialize a WaveReconV4")
-
-      .def("forward", (void (WaveReconV4::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV4::forward, "Forward")
-
-      .def("adjoint", (void (WaveReconV4::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV4::adjoint, "Adjoint")
-
-      .def("dotTest",(bool (WaveReconV4::*)(const bool, const float)) &WaveReconV4::dotTest,"Dot-Product Test")
-  ;
-
-  py::class_<WaveReconV5, std::shared_ptr<WaveReconV5>>(clsGeneric,"WaveReconV5")
-      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, int,int>(), "Initialize a WaveReconV5")
-
-      .def("forward", (void (WaveReconV5::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV5::forward, "Forward")
-
-      .def("adjoint", (void (WaveReconV5::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV5::adjoint, "Adjoint")
-
-      .def("dotTest",(bool (WaveReconV5::*)(const bool, const float)) &WaveReconV5::dotTest,"Dot-Product Test")
-  ;
-
-  py::class_<WaveReconV6, std::shared_ptr<WaveReconV6>>(clsGeneric,"WaveReconV6")
-      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, int,int>(), "Initialize a WaveReconV6")
-
-      .def("forward", (void (WaveReconV6::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV6::forward, "Forward")
-
-      .def("adjoint", (void (WaveReconV6::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV6::adjoint, "Adjoint")
-
-      .def("dotTest",(bool (WaveReconV6::*)(const bool, const float)) &WaveReconV6::dotTest,"Dot-Product Test")
-  ;
-
-  py::class_<WaveReconV7, std::shared_ptr<WaveReconV7>>(clsGeneric,"WaveReconV7")
-      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, int,int>(), "Initialize a WaveReconV7")
-
-      .def("forward", (void (WaveReconV7::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV7::forward, "Forward")
-
-      .def("adjoint", (void (WaveReconV7::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV7::adjoint, "Adjoint")
-
-      .def("dotTest",(bool (WaveReconV7::*)(const bool, const float)) &WaveReconV7::dotTest,"Dot-Product Test")
-  ;
-
-  py::class_<WaveReconV8, std::shared_ptr<WaveReconV8>>(clsGeneric,"WaveReconV8")
-      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, float,float,int>(), "Initialize a WaveReconV8")
-
-      .def("forward", (void (WaveReconV8::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV8::forward, "Forward")
-
-      .def("adjoint", (void (WaveReconV8::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV8::adjoint, "Adjoint")
-
-      .def("dotTest",(bool (WaveReconV8::*)(const bool, const float)) &WaveReconV8::dotTest,"Dot-Product Test")
-      .def("set_slsq",(void (WaveReconV8::*)(std::shared_ptr<float2DReg>)) &WaveReconV8::set_slsq,"Set slowness squared model")
-  ;
-
-  py::class_<WaveReconV9, std::shared_ptr<WaveReconV9>>(clsGeneric,"WaveReconV9")
-      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, float,float,int>(), "Initialize a WaveReconV9")
-
-      .def("forward", (void (WaveReconV9::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV9::forward, "Forward")
-
-      .def("adjoint", (void (WaveReconV9::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV9::adjoint, "Adjoint")
-
-      .def("dotTest",(bool (WaveReconV9::*)(const bool, const float)) &WaveReconV9::dotTest,"Dot-Product Test")
-      .def("set_slsq",(void (WaveReconV9::*)(std::shared_ptr<float2DReg>)) &WaveReconV9::set_slsq,"Set slowness squared model")
-  ;
-
-  py::class_<WaveReconV10, std::shared_ptr<WaveReconV10>>(clsGeneric,"WaveReconV10")
-      .def(py::init<const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float3DReg>, const std::shared_ptr<SEP::float2DReg>, float,float,int>(), "Initialize a WaveReconV10")
-
-      .def("forward", (void (WaveReconV10::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV10::forward, "Forward")
-
-      .def("adjoint", (void (WaveReconV10::*)(const bool, const std::shared_ptr<float3DReg>, std::shared_ptr<float3DReg>)) &WaveReconV10::adjoint, "Adjoint")
-
-      .def("dotTest",(bool (WaveReconV10::*)(const bool, const float)) &WaveReconV10::dotTest,"Dot-Product Test")
-      .def("set_slsq",(void (WaveReconV10::*)(std::shared_ptr<float2DReg>)) &WaveReconV10::set_slsq,"Set slowness squared model")
-  ;
-
-  py::class_<WaveRecon_multi_exp, std::shared_ptr<WaveRecon_multi_exp>>(clsGeneric,"WaveRecon_multi_exp")
-      .def(py::init<const std::shared_ptr<SEP::float4DReg>, const std::shared_ptr<SEP::float4DReg>, const std::shared_ptr<SEP::float2DReg>, float,float,int>(), "Initialize a WaveRecon_multi_exp")
-
-      .def("forward", (void (WaveRecon_multi_exp::*)(const bool, const std::shared_ptr<float4DReg>, std::shared_ptr<float4DReg>)) &WaveRecon_multi_exp::forward, "Forward")
-
-      .def("adjoint", (void (WaveRecon_multi_exp::*)(const bool, const std::shared_ptr<float4DReg>, std::shared_ptr<float4DReg>)) &WaveRecon_multi_exp::adjoint, "Adjoint")
-
-      .def("dotTest",(bool (WaveRecon_multi_exp::*)(const bool, const float)) &WaveRecon_multi_exp::dotTest,"Dot-Product Test")
-      .def("set_slsq",(void (WaveRecon_multi_exp::*)(std::shared_ptr<float2DReg>)) &WaveRecon_multi_exp::set_slsq,"Set slowness squared model")
+      .def("dotTest",(bool (WaveRecon_time::*)(const bool, const float)) &WaveRecon_time::dotTest,"Dot-Product Test")
+      .def("set_slsq",(void (WaveRecon_time::*)(std::shared_ptr<float2DReg>)) &WaveRecon_time::set_slsq,"Set slowness squared model")
   ;
 
   py::class_<waveEquationAcousticGpu, std::shared_ptr<waveEquationAcousticGpu>>(clsGeneric,"waveEquationAcousticGpu")
@@ -159,4 +61,27 @@ PYBIND11_MODULE(pyAcoustic_iso_float_we, clsGeneric) {
       .def("dotTest",(bool (waveEquationAcousticGpu::*)(const bool, const float)) &waveEquationAcousticGpu::dotTest,"Dot-Product Test")
 
       ;
+
+  py::class_<WaveRecon_freq, std::shared_ptr<WaveRecon_freq>>(clsGeneric,"WaveRecon_freq")
+      .def(py::init<const std::shared_ptr<SEP::complex4DReg>, const std::shared_ptr<SEP::complex4DReg>, const std::shared_ptr<SEP::float2DReg>,float>(), "Initialize a WaveRecon_freq")
+
+      .def("forward", (void (WaveRecon_freq::*)(const bool, const std::shared_ptr<complex4DReg>, std::shared_ptr<complex4DReg>)) &WaveRecon_freq::forward, "Forward")
+
+      .def("adjoint", (void (WaveRecon_freq::*)(const bool, const std::shared_ptr<complex4DReg>, std::shared_ptr<complex4DReg>)) &WaveRecon_freq::adjoint, "Adjoint")
+
+      .def("dotTest",(bool (WaveRecon_freq::*)(const bool, const float)) &WaveRecon_freq::dotTest,"Dot-Product Test")
+      .def("set_slsq",(void (WaveRecon_freq::*)(std::shared_ptr<float2DReg>)) &WaveRecon_freq::set_slsq,"Set slowness squared model")
+  ;
+
+  // py::class_<WaveRecon_freq_precond, std::shared_ptr<WaveRecon_freq_precond>>(clsGeneric,"WaveRecon_freq_precond")
+  //     .def(py::init<const std::shared_ptr<SEP::complex4DReg>, const std::shared_ptr<SEP::complex4DReg>, const std::shared_ptr<SEP::float2DReg>>(), "Initialize a WaveRecon_freq_precond")
+  //
+  //     .def("forward", (void (WaveRecon_freq_precond::*)(const bool, const std::shared_ptr<complex4DReg>, std::shared_ptr<complex4DReg>)) &WaveRecon_freq_precond::forward, "Forward")
+  //
+  //     .def("adjoint", (void (WaveRecon_freq_precond::*)(const bool, const std::shared_ptr<complex4DReg>, std::shared_ptr<complex4DReg>)) &WaveRecon_freq_precond::adjoint, "Adjoint")
+  //
+  //     .def("dotTest",(bool (WaveRecon_freq_precond::*)(const bool, const float)) &WaveRecon_freq_precond::dotTest,"Dot-Product Test")
+  //     .def("update_slsq",(void (WaveRecon_freq_precond::*)(std::shared_ptr<float2DReg>)) &WaveRecon_freq_precond::update_slsq,"Set slowness squared model")
+  // ;
+
 }
