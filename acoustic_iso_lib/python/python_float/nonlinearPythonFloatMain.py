@@ -54,14 +54,23 @@ if __name__ == '__main__':
 		# Read model
 		modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
 
-		# Apply forward
-		nonlinearOp.forward(False,modelFloat,dataFloat)
-
 		# Write data
 		dataFile=parObject.getString("data","noDataFile")
 		if (dataFile == "noDataFile"):
 			raise IOError("**** ERROR: User did not provide data file name ****\n")
 
+		if (parObject.getInt("saveWavefield",0) == 1):
+			wfldFile=parObject.getString("wfldFile","noWfldFile")
+			if (wfldFile == "noWfldFile"):
+				raise IOError("**** ERROR: User specified saveWavefield=1 but did not provide wavefield file name (wfldFile)****")
+			# Run Nonlinear forward with wavefield saving
+			nonlinearOp.forwardWavefield(False,modelFloat,dataFloat)
+			# Save wavefield to disk
+			wavefieldFloat = nonlinearOp.getWfld()
+			wavefieldFloat.writeVec(wfldFile)
+		else:
+			# Apply forward
+			nonlinearOp.forward(False,modelFloat,dataFloat)
 		# genericIO.defaultIO.writeVector(dataFile,dataFloat)
 		dataFloat.writeVec(dataFile)
 

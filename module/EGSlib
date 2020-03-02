@@ -1,0 +1,26 @@
+#%Module1.0#####################################################################
+##
+## EGS propagation and inversion library
+## Authors: Guillaume Barnier, Ettore Biondi, and Stuart Farris
+##  V1
+##
+proc ModulesHelp { } {
+        global version
+
+        puts stderr "\tThis module add EGSlib to your environment"
+}
+
+module-whatis "(Category_______) Seismic software"
+module-whatis "(Name___________) EGSlib"
+module-whatis "(Version________) 1.0"
+module-whatis "(Website________) "
+module-whatis "(Authorship_____) Guillaume Barnier, Ettore Biondi, and Stuart Farris"
+module-whatis "(Compiler_______) gcc 7.1 and nvcc 10.1"
+module-whatis "(Dependencies___) CUDA"
+
+
+set libfolder path-to-EGSlib/local
+prepend-path PATH $libfolder/bin
+prepend-path PYTHONPATH $libfolder/lib/python
+prepend-path LD_LIBRARY_PATH $libfolder/lib
+setenv DATAPATH path-to-folder-to-binary-files/scratch/

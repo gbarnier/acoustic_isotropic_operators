@@ -34,6 +34,10 @@ def dataTaperInit(args):
 
 class datTaper(Op.Operator):
 
+	def __str__(self):
+		"""Name of the operator"""
+		return " dataTap "
+
 	def __init__(self,*args):
 		domain = args[0]
 		range = args[1]
