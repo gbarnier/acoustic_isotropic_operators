@@ -53,7 +53,7 @@ class off2ang2D(Op.Operator):
 
 		# kz sampling information
 		kz_axis = 2.0*np.pi*np.fft.rfftfreq(self.nz,self.dz)
-		khx_max = np.max(kz_axis)
+		khx_max = 2.0*np.pi*np.max(np.fft.rfftfreq(self.nh,self.dh))
 		shape_data = list(d_arr.shape)
 		shape_data[2] = kz_axis.shape[0]
 		d_tmp = np.zeros(shape_data, dtype=complex)
@@ -68,7 +68,7 @@ class off2ang2D(Op.Operator):
 
 		# Applying anti-aliasing filter if requested
 		if self.anti_alias:
-			m_kz *= np.expand_dims((np.abs(np.outer(np.tan(g_vals),kz_axis)) <= np.abs(khx_max)).astype(np.int),axis=1)
+			m_kz *= np.expand_dims((np.abs(np.outer(np.tan(g_vals),kz_axis)) <= khx_max).astype(np.int),axis=1)
 
 		for h_idx,off_val in enumerate(h_axis):
 			d_tmp[h_idx,:,:] = np.sum(m_kz[:,:,:]*np.exp(exp_arg*off_val),axis=0)
@@ -87,7 +87,7 @@ class off2ang2D(Op.Operator):
 
 		# kz sampling information
 		kz_axis = 2.0*np.pi*np.fft.rfftfreq(self.nz,self.dz)
-		khx_max = np.max(kz_axis)
+		khx_max = 2.0*np.pi*np.max(np.fft.rfftfreq(self.nh,self.dh))
 
 		shape_model = list(m_arr.shape)
 		shape_model[2] = kz_axis.shape[0]
