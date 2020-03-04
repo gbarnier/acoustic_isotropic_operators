@@ -195,7 +195,7 @@ if __name__ == '__main__':
 	# Solver
 	if solver == "LCG":
 		Linsolver=LCG(stop,logger=inv_log)
-	elif:
+	elif solver == "LSQR":
 		Linsolver=LSQR(stop,logger=inv_log)
 	else:
 		raise ValueError("Unknown solver: %s"%(solver))
