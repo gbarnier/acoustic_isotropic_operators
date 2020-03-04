@@ -17,6 +17,7 @@ import spatialDerivModule
 # Solver library
 import pyOperator as pyOp
 from pyLinearSolver import LCGsolver as LCG
+from pyLinearSolver import LSQRsolver as LSQR
 import pyProblem as Prblm
 import inversionUtils
 from sys_util import logger
@@ -39,6 +40,7 @@ if __name__ == '__main__':
 	dataTaper=parObject.getInt("dataTaper",0)
 	gradientMask=parObject.getInt("gradientMask",0)
 	regType=parObject.getString("reg","None")
+	solver=parObject.getString("solver","LCG") #[LCG,LSQR]
 	reg=0
 	if (regType != "None"): reg=1
 	epsilonEval=parObject.getInt("epsilonEval",0)
@@ -191,11 +193,16 @@ if __name__ == '__main__':
 
 	############################## Solver ######################################
 	# Solver
-	LCGsolver=LCG(stop,logger=inv_log)
-	LCGsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
+	if solver == "LCG":
+		Linsolver=LCG(stop,logger=inv_log)
+	elif:
+		Linsolver=LSQR(stop,logger=inv_log)
+	else:
+		raise ValueError("Unknown solver: %s"%(solver))
+	Linsolver.setDefaults(save_obj=saveObj,save_res=saveRes,save_grad=saveGrad,save_model=saveModel,prefix=prefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling,flush_memory=flushMemory)
 
 	# Run solver
-	LCGsolver.run(invProb,verbose=True)
+	Linsolver.run(invProb,verbose=True)
 
 	if(pyinfo): print("-------------------------------------------------------------------")
 	if(pyinfo): print("--------------------------- All done ------------------------------")
