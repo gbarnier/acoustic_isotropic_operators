@@ -60,6 +60,8 @@ def create_client(parObject):
 				pbs_dict.update({"dashboard_address":None})
 		if "env_extra" in pbs_dict.keys():
 			pbs_dict.update({"env_extra":pbs_dict["env_extra"].split(":")})
+		if "job_extra" in pbs_dict.keys():
+			pbs_dict.update({"job_extra":pbs_dict["job_extra"].split(":")})
 		pbs_dict={"pbs_params":pbs_dict}
 		args.update(pbs_dict)
 		print("Starting PBS Dask client using %s workers"%(n_wrks))
