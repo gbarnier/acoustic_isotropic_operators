@@ -10,9 +10,9 @@ import os
 
 # Solver library
 import pyOperator as pyOp
-import pyLCGsolver as LCG
+from pyLinearSolver import LCGsolver as LCG
 import pyProblem as Prblm
-import pyStopperBase as Stopper
+import pyStopper as Stopper
 from sys_util import logger
 
 # Template for interpolation optimization (to find a coarse model parameters given a fine model)
@@ -84,7 +84,7 @@ if __name__ == '__main__':
 	if (bufferSize<0): bufferSize=None
 
 	# Solver
-	LCGsolver=LCG.LCGsolver(stop,logger=logger(logFile))
+	LCGsolver=LCG(stop,logger=logger(logFile))
 	LCGsolver.setDefaults(save_obj=True,save_res=True,save_grad=True,save_model=True,prefix=invPrefix,iter_buffer_size=bufferSize,iter_sampling=iterSampling)
 
 	# Run solver

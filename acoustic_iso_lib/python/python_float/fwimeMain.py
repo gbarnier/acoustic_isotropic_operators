@@ -165,15 +165,13 @@ if __name__ == '__main__':
 
 	# Data taper
 	if (dataTaper==1):
-		if(pyinfo): print("--- Using data tapering ---")
-		inv_log.addToLog("--- Using data tapering ---")
 		if client:
 			hypers = client.getClient().map(lambda x: x.getHyper(),data.vecDask,pure=False)
 			dataTaper_args = [(data.vecDask[iwrk],data.vecDask[iwrk],t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,hypers[iwrk],time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth) for iwrk in range(nWrks)]
 			dataTaperOp = DaskOp.DaskOperator(client,dataTaperModule.datTaper,dataTaper_args,[1]*nWrks)
 		else:
 			dataTaperOp=dataTaperModule.datTaper(data,data,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,data.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
-			dataTapered=data.clone()
+		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
 		dataTaperNlOp=pyOp.NonLinearOperator(dataTaperOp,dataTaperOp) # Create dataTaper nonlinear operator
@@ -226,14 +224,14 @@ if __name__ == '__main__':
 
 	# Concatenate operators
 	if (gradientMask==1 and dataTaper==1):
-		tomoTemp1=pyOp.ChainOperator(maskGradientOp,tomoExtOp)
+		tomoTemp1=pyOp.ChainOperator(maskGradientOp,tomoExtInvOp)
 		tomoExtInvOp=pyOp.ChainOperator(tomoTemp1,dataTaperOp)
-		BornExtInvOp=pyOp.ChainOperator(BornExtOp,dataTaperOp)
+		BornExtInvOp=pyOp.ChainOperator(BornExtInvOp,dataTaperOp)
 	if (gradientMask==1 and dataTaper==0):
-		tomoExtInvOp=pyOp.ChainOperator(maskGradientOp,tomoExtOp)
+		tomoExtInvOp=pyOp.ChainOperator(maskGradientOp,tomoExtInvOp)
 	if (gradientMask==0 and dataTaper==1):
-		BornExtInvOp=pyOp.ChainOperator(BornExtOp,dataTaperOp)
-		tomoExtInvOp=pyOp.ChainOperator(tomoExtOp,dataTaperOp)
+		BornExtInvOp=pyOp.ChainOperator(BornExtInvOp,dataTaperOp)
+		tomoExtInvOp=pyOp.ChainOperator(tomoExtInvOp,dataTaperOp)
 
 	# Dso
 	dsoOp=dsoGpuModule.dsoGpu(reflectivityExtInitLocal,reflectivityExtInitLocal,nz,nx,nExt,fat,zeroShift)
