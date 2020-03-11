@@ -30,6 +30,11 @@ import pyDaskOperator as DaskOp
 import pyDaskVector
 import dask.distributed as daskD
 
+def call_add_spline(BornOp,SplineOp):
+	"""Function to add spline to BornExtOp"""
+	BornOp.add_spline(SplineOp)
+	return
+
 # Template for FWIME workflow
 if __name__ == '__main__':
 
@@ -201,9 +206,7 @@ if __name__ == '__main__':
 			xSplineMeshD = pyDaskVector.DaskVector(client,vectors=[xSplineMesh]*nWrks)
 			splineOp_args = [(modelInitD.vecDask[iwrk],modelFineInit.vecDask[iwrk],zOrder,xOrder,zSplineMeshD.vecDask[iwrk],xSplineMeshD.vecDask[iwrk],zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat) for iwrk in range(nWrks)]
 			splineOpD = DaskOp.DaskOperator(client,interpBSplineModule.bSpline2d,splineOp_args,[1]*nWrks)
-			add_spline_ftr = []
-			for idx,spln_op in enumerate(splineOpD.dask_ops):
-				add_spline_ftr.append(client.getClient().submit(lambda obj: obj.add_spline(spln_op),BornExtOp.dask_ops[idx],pure=False))
+			add_spline_ftr = client.getClient().map(call_add_spline,BornExtOp.dask_ops,splineOpD.dask_ops,pure=False)
 			daskD.wait(add_spline_ftr)
 
 		#Instantiating Dask Operator
