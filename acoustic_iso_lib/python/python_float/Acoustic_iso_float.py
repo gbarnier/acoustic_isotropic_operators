@@ -46,7 +46,11 @@ def create_client(parObject):
 		print("Starting Dask client using the following workers: %s"%(hostnames))
 	elif pbs_args != "noPBS":
 		n_wrks = parObject.getInt("n_workers")
+		n_jobs = parObject.getInt("n_jobs",0)
 		args = {"n_workers":n_wrks}
+		if n_jobs > 0:
+			args.update({"n_jobs":n_jobs})
+			n_wrks *= n_jobs
 		pbs_dict={elem.split(";")[0] : elem.split(";")[1] for elem in pbs_args.split(",")}
 		if "cores" in pbs_dict.keys():
 			pbs_dict.update({"cores":int(pbs_dict["cores"])})
