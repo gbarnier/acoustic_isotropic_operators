@@ -31,6 +31,8 @@ bash Anaconda3-2019.10-Linux-x86_64.sh
 git clone http://zapad.Stanford.EDU/barnier/acoustic_isotropic_operators.git
 cd acoustic_isotropic_operators
 conda env create -f environment.yml
+# If the previous command fails with your conda install try the following command
+# conda create --name EGS --file spec-file.txt
 conda activate EGS
 
 # Installing GPU-wave-equation library
