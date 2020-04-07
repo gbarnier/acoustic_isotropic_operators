@@ -400,21 +400,21 @@ def bSplineIter2dInit(args,**kwargs):
 	dataFile=genericIO.defaultIO.getVector(dataFile)
 
 	# z-axis
-	zDataAxis=dataFile.getHyper().axes[0]
+	zDataAxis=dataFile.getHyper().getAxis(1)
 	dzData=zDataAxis.d
 	nzData=zDataAxis.n
 	ozData=zDataAxis.o
 	fzData=ozData+(nzData-1)*dzData
 
 	# x-axis
-	xDataAxis=dataFile.getHyper().axes[1]
+	xDataAxis=dataFile.getHyper().getAxis(2)
 	dxData=xDataAxis.d
 	nxData=xDataAxis.n
 	oxData=xDataAxis.o
 	fxData=oxData+(nxData-1)*dxData
 
 	# iteration-axis
-	iterAxis = xDataAxis=dataFile.getHyper().getAxis(2)
+	iterAxis = dataFile.getHyper().getAxis(3)
 
 	# Mesh for both directions
 	zMeshFile=parObject.getString("zMeshIn","noZMeshFile")
@@ -527,7 +527,6 @@ class bSplineIter2d(Op.Operator):
 		self.dataTmp = SepVector.getSepVector(Hypercube.hypercube(axes=[zDataAxis,xDataAxis]))
 		self.nIter = domain.getHyper().getAxis(3).n
 		self.pyOp = pyInterpBSpline2d.interpBSpline2d(zOrder,xOrder,zControlPoints,xControlPoints,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
-		print("after initialization")
 		return
 
 	def forward(self,add,model,data):
