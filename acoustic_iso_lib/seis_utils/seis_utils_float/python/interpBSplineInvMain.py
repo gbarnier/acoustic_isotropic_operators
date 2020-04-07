@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
 	# IO object
 	parObject=genericIO.io(params=sys.argv)
-	
+
 	nDim=parObject.getInt("nDim")
 
 	# 1d spline
@@ -35,11 +35,23 @@ if __name__ == '__main__':
 	# 2d spline
 	if (nDim==2):
 
-		# Initialize 2d spline
-		model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSplineModule.bSpline2dInit(sys.argv)
+		modelCheck = genericIO.defaultIO.getVector(parObject.getString("vel"))
 
-		# Construc 2d spline operator
-		splineOp=interpBSplineModule.bSpline2d(model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+		if modelCheck.getHyper().getNdim == 3:
+
+			# Initialize 2d spline
+			model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSplineModule.bSplineIter2dInit(sys.argv)
+
+			# Construc 2d spline operator
+			splineOp=interpBSplineModule.bSplineIter2d(model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+
+		else:
+
+			# Initialize 2d spline
+			model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat=interpBSplineModule.bSpline2dInit(sys.argv)
+
+			# Construc 2d spline operator
+			splineOp=interpBSplineModule.bSpline2d(model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
 
 	# 3d spline
 	if (nDim==3):

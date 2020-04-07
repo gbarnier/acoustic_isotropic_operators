@@ -180,7 +180,7 @@ class bSpline1d(Op.Operator):
 		return zMeshVector
 
 # 2d spline
-def bSpline2dInit(args):
+def bSpline2dInit(args,**kwargs):
 
 	# IO object
 	parObject=genericIO.io(params=args)
@@ -193,7 +193,7 @@ def bSpline2dInit(args):
 	scaling=parObject.getInt("scaling",1)
 	zTolerance=parObject.getFloat("zTolerance",0.25)
 	xTolerance=parObject.getFloat("xTolerance",0.25)
-	fat=parObject.getInt("fat",5)
+	fat=kwargs.get("fat", parObject.getInt("fat",5))
 	zSub=parObject.getInt("zSub",1)
 	xSub=parObject.getInt("xSub",1)
 
@@ -340,6 +340,219 @@ class bSpline2d(Op.Operator):
 		with pyInterpBSpline2d.ostream_redirect():
 			self.pyOp.adjoint(add,model,data)
 			return
+
+	def getZMeshModel(self):
+		with pyInterpBSpline2d.ostream_redirect():
+			zMeshVector=self.pyOp.getZMeshModel()
+			zMeshVector=SepVector.floatVector(fromCpp=zMeshVector)
+		return zMeshVector
+
+	def getZMeshModel1d(self):
+		with pyInterpBSpline2d.ostream_redirect():
+			zMeshVector=self.pyOp.getZControlPoints()
+			zMeshVector=SepVector.floatVector(fromCpp=zMeshVector)
+		return zMeshVector
+
+	def getZMeshData(self):
+		with pyInterpBSpline2d.ostream_redirect():
+			zMeshDataVector=self.pyOp.getZMeshData()
+			zMeshDataVector=SepVector.floatVector(fromCpp=zMeshDataVector)
+		return zMeshDataVector
+
+	def getXMeshModel(self):
+		with pyInterpBSpline2d.ostream_redirect():
+			xMeshVector=self.pyOp.getXMeshModel()
+			xMeshVector=SepVector.floatVector(fromCpp=xMeshVector)
+		return xMeshVector
+
+	def getXMeshModel1d(self):
+		with pyInterpBSpline2d.ostream_redirect():
+			xMeshVector=self.pyOp.getXControlPoints()
+			xMeshVector=SepVector.floatVector(fromCpp=xMeshVector)
+		return xMeshVector
+
+	def getXMeshData(self):
+		with pyInterpBSpline2d.ostream_redirect():
+			xMeshDataVector=self.pyOp.getXMeshData()
+			xMeshDataVector=SepVector.floatVector(fromCpp=xMeshDataVector)
+		return xMeshDataVector
+
+
+def bSplineIter2dInit(args,**kwargs):
+
+	# IO object
+	parObject=genericIO.io(params=args)
+
+	# Interpolation parameters
+	zOrder=parObject.getInt("zOrder",3)
+	xOrder=parObject.getInt("xOrder",3)
+	nzParam=parObject.getInt("nzParam",50000)
+	nxParam=parObject.getInt("nxParam",50000)
+	scaling=parObject.getInt("scaling",1)
+	zTolerance=parObject.getFloat("zTolerance",0.25)
+	xTolerance=parObject.getFloat("xTolerance",0.25)
+	fat=kwargs.get("fat", parObject.getInt("fat",5))
+	zSub=parObject.getInt("zSub",1)
+	xSub=parObject.getInt("xSub",1)
+
+	# Read data positions
+	dataFile=parObject.getString("vel")
+	dataFile=genericIO.defaultIO.getVector(dataFile)
+
+	# z-axis
+	zDataAxis=dataFile.getHyper().axes[0]
+	dzData=zDataAxis.d
+	nzData=zDataAxis.n
+	ozData=zDataAxis.o
+	fzData=ozData+(nzData-1)*dzData
+
+	# x-axis
+	xDataAxis=dataFile.getHyper().axes[1]
+	dxData=xDataAxis.d
+	nxData=xDataAxis.n
+	oxData=xDataAxis.o
+	fxData=oxData+(nxData-1)*dxData
+
+	# iteration-axis
+	iterAxis = xDataAxis=dataFile.getHyper().getAxis(2)
+
+	# Mesh for both directions
+	zMeshFile=parObject.getString("zMeshIn","noZMeshFile")
+	xMeshFile=parObject.getString("xMeshIn","noXMeshFile")
+
+	# Error tolerance
+	zMeshTolerance=zTolerance*dzData
+	xMeshTolerance=xTolerance*dxData
+
+	# Compute mesh bounds (mesh should not include the fat layer)
+	ozMesh=zDataAxis.o+fat*dzData
+	fzMesh=zDataAxis.o+(nzData-fat-1)*dzData
+	oxMesh=xDataAxis.o+fat*dxData
+	fxMesh=xDataAxis.o+(nxData-fat-1)*dxData
+
+	# Number of data points without the fat
+	nzDataNf=nzData-2*fat
+	nxDataNf=nxData-2*fat
+
+	# Case where user does not provide a z-mesh
+	if (zMeshFile=="noZMeshFile"):
+
+		# Get mesh parameters
+		zPositions=parObject.getFloats("zPositions",[])
+		zPositions.insert(0,ozMesh)
+		zPositions.append(fzMesh)
+		zSampling=parObject.getFloats("zSampling",[])
+		zMesh=parObject.getString("zMeshType","irreg")
+
+		# Create mesh
+		zSplineMeshNpTemp=generateSplineMesh1d(zPositions,zSampling,zSub,zMesh,zMeshTolerance,nzDataNf)
+		zMeshAxis=Hypercube.axis(n=zSplineMeshNpTemp.size)
+		zMeshHyper=Hypercube.hypercube(axes=[zMeshAxis])
+		zSplineMesh=SepVector.getSepVector(zMeshHyper)
+		zSplineMeshNp=zSplineMesh.getNdArray()
+		zSplineMeshNp[:]=zSplineMeshNpTemp
+
+	# Case where user provides the z-mesh
+	else:
+
+		# Read and create mesh
+		zSplineMesh=genericIO.defaultIO.getVector(zMeshFile)
+		zMeshAxis=Hypercube.axis(n=zSplineMesh.getHyper().axes[0].n)
+
+	if (xMeshFile=="noXMeshFile"):
+
+		# Get mesh parameters
+		xPositions=parObject.getFloats("xPositions",[])
+		xPositions.insert(0,oxMesh)
+		xPositions.append(fxMesh)
+		xSampling=parObject.getFloats("xSampling",[])
+		xMesh=parObject.getString("xMeshType","irreg")
+
+		# Create mesh and convert to double1DReg
+		xSplineMeshNpTemp=generateSplineMesh1d(xPositions,xSampling,xSub,xMesh,xMeshTolerance,nxDataNf)
+		xMeshAxis=Hypercube.axis(n=xSplineMeshNpTemp.size)
+		xMeshHyper=Hypercube.hypercube(axes=[xMeshAxis])
+		xSplineMesh=SepVector.getSepVector(xMeshHyper)
+		xSplineMeshNp=xSplineMesh.getNdArray()
+		xSplineMeshNp[:]=xSplineMeshNpTemp
+
+	# Case where user provides the x-mesh
+	else:
+
+		# Read and create mesh
+		xSplineMesh=genericIO.defaultIO.getVector(xMeshFile)
+		xMeshAxis=Hypercube.axis(n=xSplineMesh.getHyper().axes[0].n)
+
+	# Check that the mesh initial and final values coincide with data bounds
+	zSplineMeshNp=zSplineMesh.getNdArray()
+	xSplineMeshNp=xSplineMesh.getNdArray()
+
+	# zMesh
+	ozMeshOut=zSplineMeshNp[0]
+	fzMeshOut=zSplineMeshNp[zSplineMeshNp.size-1]
+	if ( abs(ozMeshOut-ozMesh) > zMeshTolerance or abs(fzMeshOut-fzMesh) > zMeshTolerance ):
+		print("**** ERROR [zMesh]: zMesh start/end points do not coincide with data grid ****")
+
+	# xMesh
+	oxMeshOut=xSplineMeshNp[0]
+	fxMeshOut=xSplineMeshNp[xSplineMeshNp.size-1]
+	if ( abs(oxMeshOut-oxMesh) > xMeshTolerance or abs(fxMeshOut-fxMesh) > xMeshTolerance ):
+		print("**** ERROR [xMesh]: xMesh start/end points do not coincide with data grid ****")
+
+	# Allocate model and fill with zeros
+	modelHyper=Hypercube.hypercube(axes=[zMeshAxis,xMeshAxis,iterAxis])
+	model=SepVector.getSepVector(modelHyper)
+
+	# Allocate data and fill with zeros
+	dataHyper=Hypercube.hypercube(axes=[zDataAxis,xDataAxis,iterAxis])
+	data=SepVector.getSepVector(dataHyper)
+
+	return model,data,zOrder,xOrder,zSplineMesh,xSplineMesh,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat
+
+class bSplineIter2d(Op.Operator):
+	def __init__(self,domain,range,zOrder,xOrder,zControlPoints,xControlPoints,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat):
+		self.setDomainRange(domain,range)
+		if("getCpp" in dir(zControlPoints)):
+			zControlPoints = zControlPoints.getCpp()
+		if("getCpp" in dir(xControlPoints)):
+			xControlPoints = xControlPoints.getCpp()
+		if("getCpp" in dir(zDataAxis)):
+			zDataAxis = zDataAxis.getCpp()
+		if("getCpp" in dir(xDataAxis)):
+			xDataAxis = xDataAxis.getCpp()
+		# 2D temporary model and data vectors and number of iter
+		zMeshAxis = domain.getHyper().getAxis(1)
+		xMeshAxis = domain.getHyper().getAxis(2)
+		self.modelTmp = SepVector.getSepVector(Hypercube.hypercube(axes=[zMeshAxis,xMeshAxis]))
+		self.dataTmp = SepVector.getSepVector(Hypercube.hypercube(axes=[zDataAxis,xDataAxis]))
+		self.nIter = domain.getHyper().getAxis(3).n
+		self.pyOp = pyInterpBSpline2d.interpBSpline2d(zOrder,xOrder,zControlPoints,xControlPoints,zDataAxis,xDataAxis,nzParam,nxParam,scaling,zTolerance,xTolerance,fat)
+		print("after initialization")
+		return
+
+	def forward(self,add,model,data):
+		modelTmp = self.modelTmp.getCpp() if ("getCpp" in dir(self.modelTmp)) else self.modelTmp
+		dataTmp = self.dataTmp.getCpp() if("getCpp" in dir(data)) else self.dataTmp
+		if not add:
+			data.zero()
+		for iter in range(self.nIter):
+			self.modelTmp.getNdArray()[:] = model.getNdArray()[iter,:,:]
+			with pyInterpBSpline2d.ostream_redirect():
+				self.pyOp.forward(False,modelTmp,dataTmp)
+			data.getNdArray()[iter,:,:] += self.dataTmp.getNdArray()
+		return
+
+	def adjoint(self,add,model,data):
+		modelTmp = self.modelTmp.getCpp() if ("getCpp" in dir(self.modelTmp)) else self.modelTmp
+		dataTmp = self.dataTmp.getCpp() if("getCpp" in dir(data)) else self.dataTmp
+		if not add:
+			model.zero()
+		for iter in range(self.nIter):
+			with pyInterpBSpline2d.ostream_redirect():
+				self.dataTmp.getNdArray()[:] = data.getNdArray()[iter,:,:]
+				self.pyOp.adjoint(False,modelTmp,dataTmp)
+				model.getNdArray()[iter,:,:] += self.modelTmp.getNdArray()
+		return
 
 	def getZMeshModel(self):
 		with pyInterpBSpline2d.ostream_redirect():
