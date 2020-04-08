@@ -37,6 +37,8 @@ add_subdirectory(external/ioLibs)
 find_package(Threads)
 # Adding TBB library
 find_package(TBB REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+include_directories(${TBB_INCLUDE_DIRS})
 
 # Acoustic isotropic operators (Double precision)
 # add_subdirectory(acoustic_iso_double)
