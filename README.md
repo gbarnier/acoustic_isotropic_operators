@@ -60,6 +60,7 @@ echo "module use ${PWD}/module" >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.s
 echo "module load EGSlib"  >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
 
 conda deactivate
+conda activate EGS
 
 touch $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
 echo '#!/bin/sh' >> $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
