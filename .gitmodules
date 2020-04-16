@@ -4,3 +4,6 @@
 [submodule "acoustic_iso_lib/external/pySolver"]
 	path = acoustic_iso_lib/external/pySolver
 	url = http://zapad.Stanford.EDU/ettore88/python-solver.git
+[submodule "acoustic_iso_lib/external/pybind11"]
+	path = acoustic_iso_lib/external/pybind11
+	url = https://github.com/pybind/pybind11.git
