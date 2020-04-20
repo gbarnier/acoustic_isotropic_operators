@@ -32,8 +32,16 @@ def create_client(parObject):
 	"""
 	hostnames = parObject.getString("hostnames","noHost")
 	pbs_args = parObject.getString("pbs_args","noPBS")
-	if hostnames != "noHost" and pbs_args != "noPBS":
-		raise ValueError("Only one interface can be used for a client! User provided both SSH and PBS parameters!")
+	lsf_args = parObject.getString("lsf_args","noLSF")
+	cluster_args = None
+	if pbs_args != "noPBS":
+		cluster_args = pbs_args
+		cluster_name = "pbs_params"
+	elif lsf_args != "noLSF":
+		cluster_args = lsf_args
+		cluster_name = "lsf_params"
+	if hostnames != "noHost" and cluster_args is not None:
+		raise ValueError("Only one interface can be used for a client! User provided both SSH and PBS/LSF parameters!")
 	#Starting Dask client if requested
 	client = None
 	nWrks = None
@@ -44,31 +52,33 @@ def create_client(parObject):
 		if scheduler_file != "noFile":
 			args.update({"scheduler_file_prefix":scheduler_file})
 		print("Starting Dask client using the following workers: %s"%(hostnames))
-	elif pbs_args != "noPBS":
-		n_wrks = parObject.getInt("n_workers")
-		n_jobs = parObject.getInt("n_jobs",0)
-		args = {"n_workers":n_wrks}
-		if n_jobs > 0:
-			args.update({"n_jobs":n_jobs})
-			n_wrks *= n_jobs
-		pbs_dict={elem.split(";")[0] : elem.split(";")[1] for elem in pbs_args.split(",")}
-		if "cores" in pbs_dict.keys():
-			pbs_dict.update({"cores":int(pbs_dict["cores"])})
-		if "nanny" in pbs_dict.keys():
+	elif cluster_args:
+		n_wrks = parObject.getInt("n_wrks",1)
+		n_jobs = parObject.getInt("n_jobs")
+		args = {"n_jobs":n_jobs}
+		args.update({"n_wrks":n_wrks})
+		cluster_dict={elem.split(";")[0] : elem.split(";")[1] for elem in cluster_args.split(",")}
+		if "cores" in cluster_dict.keys():
+			cluster_dict.update({"cores":int(cluster_dict["cores"])})
+		if "mem" in cluster_dict.keys():
+			cluster_dict.update({"mem":int(cluster_dict["mem"])})
+		if "ncpus" in cluster_dict.keys():
+			cluster_dict.update({"ncpus":int(cluster_dict["ncpus"])})
+		if "nanny" in cluster_dict.keys():
 			nanny_flag = True
-			if pbs_dict["nanny"] in "0falseFalse":
+			if cluster_dict["nanny"] in "0falseFalse":
 				nanny_flag = False
-			pbs_dict.update({"nanny":nanny_flag})
-		if "dashboard_address" in pbs_dict.keys():
-			if pbs_dict["dashboard_address"] in "Nonenone":
-				pbs_dict.update({"dashboard_address":None})
-		if "env_extra" in pbs_dict.keys():
-			pbs_dict.update({"env_extra":pbs_dict["env_extra"].split(":")})
-		if "job_extra" in pbs_dict.keys():
-			pbs_dict.update({"job_extra":pbs_dict["job_extra"].split(":")})
-		pbs_dict={"pbs_params":pbs_dict}
-		args.update(pbs_dict)
-		print("Starting PBS Dask client using %s workers"%(n_wrks))
+			cluster_dict.update({"nanny":nanny_flag})
+		if "dashboard_address" in cluster_dict.keys():
+			if cluster_dict["dashboard_address"] in "Nonenone":
+				cluster_dict.update({"dashboard_address":None})
+		if "env_extra" in cluster_dict.keys():
+			cluster_dict.update({"env_extra":cluster_dict["env_extra"].split(":")})
+		if "job_extra" in cluster_dict.keys():
+			cluster_dict.update({"job_extra":cluster_dict["job_extra"].split("|")})
+		cluster_dict={cluster_name:cluster_dict}
+		args.update(cluster_dict)
+		print("Starting jobqueue Dask client using %s workers on %s jobs"%(n_wrks,n_jobs))
 
 	if args:
 		client = DaskClient(**args)
