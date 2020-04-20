@@ -21,6 +21,7 @@ module-whatis "(Dependencies___) CUDA"
 
 set libfolder path-to-EGSlib/local
 prepend-path PATH $libfolder/bin
-prepend-path PYTHONPATH $libfolder/lib/python
+prepend-path PYTHONPATH $libfolder/lib/pythonMAJOR.MINOR
 prepend-path LD_LIBRARY_PATH $libfolder/lib
+prepend-path LD_LIBRARY_PATH $libfolder/lib64
 setenv DATAPATH path-to-folder-to-binary-files/scratch/

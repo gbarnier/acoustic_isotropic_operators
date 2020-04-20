@@ -46,6 +46,7 @@ cd ..
 
 # Setting module file
 sed -i  's|path-to-EGSlib|'$PWD'|g' module/EGSlib
+sed -i  's|MAJOR.MINOR|'`python3 -V | colrm 1 7 | colrm 4`'|g' module/EGSlib
 
 ###################################################################
 # Now edit the file EGSlib in the folder module                   #
