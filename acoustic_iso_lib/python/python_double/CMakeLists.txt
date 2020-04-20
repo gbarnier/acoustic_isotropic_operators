@@ -43,12 +43,13 @@ pybind11_add_module(pyAcoustic_iso_double_wemva MODULE pyAcoustic_iso_double_wem
 target_link_libraries(pyAcoustic_iso_double_wemva PRIVATE ACOUSTIC_ISO_DOUBLE_WEMVA_EXT ${LIBS})
 
 #Installing library
-install( TARGETS pyAcoustic_iso_double_nl DESTINATION lib/python) #Module for non-linear operator
-install( TARGETS pyAcoustic_iso_double_born DESTINATION lib/python) #Module for Born operator
-install( TARGETS pyAcoustic_iso_double_born_ext DESTINATION lib/python) #Module for Extended Born operator
-install( TARGETS pyAcoustic_iso_double_tomo DESTINATION lib/python) #Module for Extended Tomo operator
-install( TARGETS pyAcoustic_iso_double_wemva DESTINATION lib/python) #Module for Extended Wemva operator
-install( FILES Acoustic_iso_double.py DESTINATION lib/python)
+set(PYTHON_DIR "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+install( TARGETS pyAcoustic_iso_double_nl DESTINATION ${PYTHON_DIR}) #Module for non-linear operator
+install( TARGETS pyAcoustic_iso_double_born DESTINATION ${PYTHON_DIR}) #Module for Born operator
+install( TARGETS pyAcoustic_iso_double_born_ext DESTINATION ${PYTHON_DIR}) #Module for Extended Born operator
+install( TARGETS pyAcoustic_iso_double_tomo DESTINATION ${PYTHON_DIR}) #Module for Extended Tomo operator
+install( TARGETS pyAcoustic_iso_double_wemva DESTINATION ${PYTHON_DIR}) #Module for Extended Wemva operator
+install( FILES Acoustic_iso_double.py DESTINATION ${PYTHON_DIR})
 #Installing Python executables
 install( FILES nonlinearPythonDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 install( FILES BornPythonDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)

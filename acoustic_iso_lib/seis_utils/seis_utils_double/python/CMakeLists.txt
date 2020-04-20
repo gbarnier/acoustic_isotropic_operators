@@ -10,7 +10,8 @@ set(PythonModules
     pyDsoDouble.py
 )
 
-install(FILES ${PythonModules} DESTINATION lib/python)
+set(PYTHON_DIR "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+install(FILES ${PythonModules} DESTINATION ${PYTHON_DIR})
 # install(FILES ${PythonMains} PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 
 #PYBIND11 library headers
@@ -47,12 +48,12 @@ pybind11_add_module(pyInterpBSpline2dDouble MODULE pyInterpBSpline2dDouble.cpp)
 target_link_libraries(pyInterpBSpline2dDouble PRIVATE SEIS_UTILS_DOUBLE_LIB ${LIBS})
 
 # Installing library
-install( TARGETS pydataTaperDouble DESTINATION lib/python)
-install( TARGETS pyInterpBSpline1dDouble DESTINATION lib/python)
-install( TARGETS pyInterpBSpline2dDouble DESTINATION lib/python)
-install( FILES dataTaperDoubleModule.py DESTINATION lib/python)
-install( FILES interpBSpline1dDoubleModule.py DESTINATION lib/python)
-install( FILES interpBSpline2dDoubleModule.py DESTINATION lib/python)
+install( TARGETS pydataTaperDouble DESTINATION ${PYTHON_DIR})
+install( TARGETS pyInterpBSpline1dDouble DESTINATION ${PYTHON_DIR})
+install( TARGETS pyInterpBSpline2dDouble DESTINATION ${PYTHON_DIR})
+install( FILES dataTaperDoubleModule.py DESTINATION ${PYTHON_DIR})
+install( FILES interpBSpline1dDoubleModule.py DESTINATION ${PYTHON_DIR})
+install( FILES interpBSpline2dDoubleModule.py DESTINATION ${PYTHON_DIR})
 
 #Installing Python executables
 install( FILES dataTaperDoubleMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)

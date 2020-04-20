@@ -46,15 +46,16 @@ target_link_libraries(pyAcoustic_iso_float_wemva PRIVATE ACOUSTIC_ISO_FLOAT_WEMV
 # target_link_libraries(pyAcoustic_iso_float_we PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
 
 # Installing library
-install( TARGETS pyAcoustic_iso_float_nl DESTINATION lib/python) # Module for non-linear operator
-install( TARGETS pyAcoustic_iso_float_born DESTINATION lib/python) # Module for Born operator
-install( TARGETS pyAcoustic_iso_float_born_ext DESTINATION lib/python) # Module for Extended Born operator
-install( TARGETS pyAcoustic_iso_float_tomo DESTINATION lib/python) # Module for Extended Tomo operator
-install( TARGETS pyAcoustic_iso_float_wemva DESTINATION lib/python) # Module for Extended Wemva operator
-#install( TARGETS pyAcoustic_iso_float_we DESTINATION lib/python) # Module for non-linear operator
-install( FILES Acoustic_iso_float.py DESTINATION lib/python)
-# install( FILES Acoustic_iso_float_we.py DESTINATION lib/python)
-install( FILES inversionUtils.py DESTINATION lib/python)
+set(PYTHON_DIR "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+install( TARGETS pyAcoustic_iso_float_nl DESTINATION ${PYTHON_DIR}) # Module for non-linear operator
+install( TARGETS pyAcoustic_iso_float_born DESTINATION ${PYTHON_DIR}) # Module for Born operator
+install( TARGETS pyAcoustic_iso_float_born_ext DESTINATION ${PYTHON_DIR}) # Module for Extended Born operator
+install( TARGETS pyAcoustic_iso_float_tomo DESTINATION ${PYTHON_DIR}) # Module for Extended Tomo operator
+install( TARGETS pyAcoustic_iso_float_wemva DESTINATION ${PYTHON_DIR}) # Module for Extended Wemva operator
+#install( TARGETS pyAcoustic_iso_float_we DESTINATION ${PYTHON_DIR}) # Module for non-linear operator
+install( FILES Acoustic_iso_float.py DESTINATION ${PYTHON_DIR})
+# install( FILES Acoustic_iso_float_we.py DESTINATION ${PYTHON_DIR})
+install( FILES inversionUtils.py DESTINATION ${PYTHON_DIR})
 
 
 # Installing Python executables

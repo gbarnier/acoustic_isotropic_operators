@@ -78,47 +78,48 @@ pybind11_add_module(pySecondDeriv_multi_exp_freq MODULE pySecondDeriv_multi_exp_
 target_link_libraries(pySecondDeriv_multi_exp_freq PRIVATE ACOUSTIC_ISO_FLOAT_WE ${LIBS})
 
 # Installing library
-# install( TARGETS pyAcoustic_iso_float_nl DESTINATION lib/python) # Module for non-linear operator
-# install( TARGETS pyAcoustic_iso_float_born DESTINATION lib/python) # Module for Born operator
-# install( TARGETS pyAcoustic_iso_float_born_ext DESTINATION lib/python) # Module for Extended Born operator
-# install( TARGETS pyAcoustic_iso_float_tomo DESTINATION lib/python) # Module for Extended Tomo operator
-# install( TARGETS pyAcoustic_iso_float_wemva DESTINATION lib/python) # Module for Extended Wemva operator
-install( TARGETS pyAcoustic_iso_float_we DESTINATION lib/python)
-install( TARGETS pyTruncateSpatialReg DESTINATION lib/python) #
-install( TARGETS pySpaceInterpFloat DESTINATION lib/python)
-install( TARGETS pyPadTruncateSource DESTINATION lib/python)
-install( TARGETS pyTpowWfld DESTINATION lib/python)
-install( TARGETS pyMask4d DESTINATION lib/python)
-install( TARGETS pyMask3d DESTINATION lib/python)
-install( TARGETS pyMask2d DESTINATION lib/python)
-install( TARGETS pyLaplacian2d DESTINATION lib/python)
-install( TARGETS pyGradio DESTINATION lib/python)
-install( TARGETS pySampleWfld DESTINATION lib/python)
-install( TARGETS pySmooth2d DESTINATION lib/python)
-install( TARGETS pyCausalMask DESTINATION lib/python)
-install( TARGETS pySphericalSpreadingScale DESTINATION lib/python)
-install( TARGETS pySecondDeriv_V2 DESTINATION lib/python)
-install( TARGETS pySecondDeriv_multi_exp_V2 DESTINATION lib/python)
-install( TARGETS pySecondDeriv_multi_exp_freq DESTINATION lib/python)
+set(PYTHON_DIR "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+# install( TARGETS pyAcoustic_iso_float_nl DESTINATION ${PYTHON_DIR}) # Module for non-linear operator
+# install( TARGETS pyAcoustic_iso_float_born DESTINATION ${PYTHON_DIR}) # Module for Born operator
+# install( TARGETS pyAcoustic_iso_float_born_ext DESTINATION ${PYTHON_DIR}) # Module for Extended Born operator
+# install( TARGETS pyAcoustic_iso_float_tomo DESTINATION ${PYTHON_DIR}) # Module for Extended Tomo operator
+# install( TARGETS pyAcoustic_iso_float_wemva DESTINATION ${PYTHON_DIR}) # Module for Extended Wemva operator
+install( TARGETS pyAcoustic_iso_float_we DESTINATION ${PYTHON_DIR})
+install( TARGETS pyTruncateSpatialReg DESTINATION ${PYTHON_DIR}) #
+install( TARGETS pySpaceInterpFloat DESTINATION ${PYTHON_DIR})
+install( TARGETS pyPadTruncateSource DESTINATION ${PYTHON_DIR})
+install( TARGETS pyTpowWfld DESTINATION ${PYTHON_DIR})
+install( TARGETS pyMask4d DESTINATION ${PYTHON_DIR})
+install( TARGETS pyMask3d DESTINATION ${PYTHON_DIR})
+install( TARGETS pyMask2d DESTINATION ${PYTHON_DIR})
+install( TARGETS pyLaplacian2d DESTINATION ${PYTHON_DIR})
+install( TARGETS pyGradio DESTINATION ${PYTHON_DIR})
+install( TARGETS pySampleWfld DESTINATION ${PYTHON_DIR})
+install( TARGETS pySmooth2d DESTINATION ${PYTHON_DIR})
+install( TARGETS pyCausalMask DESTINATION ${PYTHON_DIR})
+install( TARGETS pySphericalSpreadingScale DESTINATION ${PYTHON_DIR})
+install( TARGETS pySecondDeriv_V2 DESTINATION ${PYTHON_DIR})
+install( TARGETS pySecondDeriv_multi_exp_V2 DESTINATION ${PYTHON_DIR})
+install( TARGETS pySecondDeriv_multi_exp_freq DESTINATION ${PYTHON_DIR})
 
-# install( FILES Acoustic_iso_float.py DESTINATION lib/python)
-install( FILES Acoustic_iso_float_we.py DESTINATION lib/python)
-install( FILES TruncateSpatialReg.py DESTINATION lib/python)
-install( FILES wriUtilFloat.py DESTINATION lib/python)
-install( FILES SpaceInterpFloat.py DESTINATION lib/python)
-install( FILES PadTruncateSource.py DESTINATION lib/python)
-install( FILES TpowWfld.py DESTINATION lib/python)
-install( FILES Laplacian2d.py DESTINATION lib/python)
-install( FILES Mask4d.py DESTINATION lib/python)
-install( FILES Mask3d.py DESTINATION lib/python)
-install( FILES Mask2d.py DESTINATION lib/python)
-install( FILES Acoustic_iso_float_gradio.py DESTINATION lib/python)
-install( FILES SampleWfld.py DESTINATION lib/python)
-install( FILES Smooth2d.py DESTINATION lib/python)
-install( FILES SphericalSpreadingScale.py DESTINATION lib/python)
-install( FILES SecondDeriv.py DESTINATION lib/python)
-install( FILES wri_gradient_script.py DESTINATION lib/python)
-install( FILES fft_wfld.py DESTINATION lib/python)
+# install( FILES Acoustic_iso_float.py DESTINATION ${PYTHON_DIR})
+install( FILES Acoustic_iso_float_we.py DESTINATION ${PYTHON_DIR})
+install( FILES TruncateSpatialReg.py DESTINATION ${PYTHON_DIR})
+install( FILES wriUtilFloat.py DESTINATION ${PYTHON_DIR})
+install( FILES SpaceInterpFloat.py DESTINATION ${PYTHON_DIR})
+install( FILES PadTruncateSource.py DESTINATION ${PYTHON_DIR})
+install( FILES TpowWfld.py DESTINATION ${PYTHON_DIR})
+install( FILES Laplacian2d.py DESTINATION ${PYTHON_DIR})
+install( FILES Mask4d.py DESTINATION ${PYTHON_DIR})
+install( FILES Mask3d.py DESTINATION ${PYTHON_DIR})
+install( FILES Mask2d.py DESTINATION ${PYTHON_DIR})
+install( FILES Acoustic_iso_float_gradio.py DESTINATION ${PYTHON_DIR})
+install( FILES SampleWfld.py DESTINATION ${PYTHON_DIR})
+install( FILES Smooth2d.py DESTINATION ${PYTHON_DIR})
+install( FILES SphericalSpreadingScale.py DESTINATION ${PYTHON_DIR})
+install( FILES SecondDeriv.py DESTINATION ${PYTHON_DIR})
+install( FILES wri_gradient_script.py DESTINATION ${PYTHON_DIR})
+install( FILES fft_wfld.py DESTINATION ${PYTHON_DIR})
 
 # Installing Python executables
 # install( FILES nonlinearPythonFloatMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
