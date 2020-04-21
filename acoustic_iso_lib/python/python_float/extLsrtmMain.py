@@ -11,6 +11,7 @@ import os
 import Acoustic_iso_float
 import interpBSplineModule
 import dataTaperModule
+import maskGradientModule
 import spatialDerivModule
 import dsoGpuModule
 import dsoInvGpuModule
@@ -40,6 +41,7 @@ if __name__ == '__main__':
 	solver=parObject.getString("solver","LCG")
 	spline=parObject.getInt("spline",0)
 	dataTaper=parObject.getInt("dataTaper",0)
+	gradientMask=parObject.getInt("gradientMask",0)
 	regType=parObject.getString("reg","None")
 	reg=0
 	if (regType != "None"): reg=1
@@ -77,6 +79,11 @@ if __name__ == '__main__':
 	else:
 		BornExtOp=Acoustic_iso_float.BornExtShotsGpu(modelFineInit,data,vel,parObject,sourcesVector,sourcesSignalsVector,receiversVector)
 		invOp=BornExtOp
+
+	# Gradient mask
+	if (gradientMask==1):
+		print("--- Using gradient masking ---")
+		velLocal,bufferUp,bufferDown,taperExp,_,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
 
 	############################# Read files ###################################
 	# Read initial model
@@ -125,6 +132,11 @@ if __name__ == '__main__':
 		dataTapered=data.clone()
 		dataTaperOp.forward(False,data,dataTapered) # Apply tapering to the data
 		data=dataTapered
+
+
+	if (gradientMask==1):
+		maskGradientOp=maskGradientModule.maskGradient(modelFineInitLocal,modelFineInitLocal,velLocal,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
+		invOp=pyOp.ChainOperator(maskGradientOp,invOp)
 
 	if (regType != "dsoPrec"):
 		# Concatenate operators
