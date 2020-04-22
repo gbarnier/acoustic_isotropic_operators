@@ -83,7 +83,7 @@ if __name__ == '__main__':
 	# Gradient mask
 	if (gradientMask==1):
 		print("--- Using gradient masking ---")
-		velLocal,bufferUp,bufferDown,taperExp,_,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
+		velLocal,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile=maskGradientModule.maskGradientInit(sys.argv)
 
 	############################# Read files ###################################
 	# Read initial model

@@ -68,7 +68,7 @@ class maskGradient(Op.Operator):
 			indexUpper=np.zeros((nxVel)) # Upper bound index
 			indexLower=np.zeros((nxVel)) # Lower bound index
 
-			# Convert water bottom hift from km->samples
+			# Convert water bottom shift from km->samples
 			iWbShift=int(wbShift/dzVel)
 
 			for ix in range(nxVel-2*fat):
