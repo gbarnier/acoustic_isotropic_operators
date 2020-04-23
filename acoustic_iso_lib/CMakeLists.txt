@@ -30,6 +30,7 @@ if (OPENMP_FOUND)
 endif()
 
 #adding pybind11
+execute_process(COMMAND git submodule update --init --recursive -- external/pybind11 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(external/pybind11)
 
 #Adding ioLibs submodule
