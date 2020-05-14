@@ -250,7 +250,12 @@ if __name__ == '__main__':
 		nlSolver=NLCG(stop,logger=inv_log)
 	# LBFGS
 	elif (solverType=="lbfgs"):
-		nlSolver=LBFGS(stop,logger=inv_log)
+		illumination_file=parObject.getString("illumination","noIllum")
+		H0_Op = None
+		if illumination_file != "noIllum":
+			illumination=genericIO.defaultIO.getVector(illumination_file,ndims=2)
+			H0_Op = pyOp.DiagonalOp(illumination)
+		nlSolver=LBFGS(stop, H0=H0_Op, logger=inv_log)
 	# Steepest descent
 	elif (solverType=="sd"):
 		nlSolver=NLCG(stop,beta_type="SD",logger=inv_log)

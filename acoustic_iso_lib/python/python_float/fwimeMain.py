@@ -21,7 +21,6 @@ from pyLinearSolver import LCGsolver as LCG
 from pyNonLinearSolver import NLCGsolver as NLCG
 from pyNonLinearSolver import LBFGSsolver as LBFGS
 import pyProblem as Prblm
-import pyVPproblem as pyVp
 from sys_util import logger
 import inversionUtils
 
@@ -251,9 +250,9 @@ if __name__ == '__main__':
 
 	# Variable projection operator for the data fitting term
 	if client:
-		vpOp=pyVp.VpOperator(hNonlinearInvOp,BornExtInvOp,BornExtOp.set_background,tomoExtDask.set_aux)
+		vpOp=pyOp.VpOperator(hNonlinearInvOp,BornExtInvOp,BornExtOp.set_background,tomoExtDask.set_aux)
 	else:
-		vpOp=pyVp.VpOperator(hNonlinearInvOp,BornExtInvOp,BornExtOp.setVel,tomoExtOp.setReflectivityExt)
+		vpOp=pyOp.VpOperator(hNonlinearInvOp,BornExtInvOp,BornExtOp.setVel,tomoExtOp.setReflectivityExt)
 
 	# Regularization operators
 	dsoNonlinearJacobian=pyOp.ZeroOp(modelInit,reflectivityExtInitLocal)
@@ -261,7 +260,7 @@ if __name__ == '__main__':
 	dsoNonlinearOp=pyOp.NonLinearOperator(dsoNonlinearDummy,dsoNonlinearJacobian)
 
 	# Variable projection operator for the regularization term
-	vpRegOp=pyVp.VpOperator(dsoNonlinearOp,dsoOp,pyOp.dummy_set_background,pyOp.dummy_set_background)
+	vpRegOp=pyOp.VpOperator(dsoNonlinearOp,dsoOp,pyOp.dummy_set_background,pyOp.dummy_set_background)
 
 	############################### solver #####################################
 	# Initialize solvers
@@ -277,8 +276,13 @@ if __name__ == '__main__':
 		if (evalParab==0):
 			nlSolver.stepper.eval_parab=False
 	elif(nlSolverType=="lbfgs"):
+		illumination_file=parObject.getString("illumination","noIllum")
+		H0_Op = None
+		if illumination_file != "noIllum":
+			illumination=genericIO.defaultIO.getVector(illumination_file,ndims=2)
+			H0_Op = pyOp.DiagonalOp(illumination)
 		# By default, Lbfgs uses MT stepper
-		nlSolver=LBFGS(stopNl,logger=logger(logFileNl))
+		nlSolver=LBFGS(stopNl, H0=H0_Op, logger=logger(logFileNl))
 	else:
 		print("**** ERROR: User did not provide a nonlinear solver type ****")
 		quit()
@@ -294,7 +298,7 @@ if __name__ == '__main__':
 	minBoundVector,maxBoundVector=Acoustic_iso_float.createBoundVectors(parObject,modelInit)
 
 	######################### Variable projection problem ######################
-	vpProb=pyVp.ProblemL2VpReg(modelInit,reflectivityExtInitLocal,vpOp,data,linSolver,gInvOp,h_op_reg=vpRegOp,epsilon=epsilon,minBound=minBoundVector,maxBound=maxBoundVector)
+	vpProb=Prblm.ProblemL2VpReg(modelInit,reflectivityExtInitLocal,vpOp,data,linSolver,gInvOp,h_op_reg=vpRegOp,epsilon=epsilon,minBound=minBoundVector,maxBound=maxBoundVector)
 
 	################################# Inversion ################################
 	nlSolver.run(vpProb,verbose=info)
