@@ -276,6 +276,7 @@ if __name__ == '__main__':
 		if (evalParab==0):
 			nlSolver.stepper.eval_parab=False
 	elif(nlSolverType=="lbfgs"):
+		print("--- Using illumination as initial Hessian inverse ---")
 		illumination_file=parObject.getString("illumination","noIllum")
 		H0_Op = None
 		if illumination_file != "noIllum":

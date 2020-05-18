@@ -253,6 +253,7 @@ if __name__ == '__main__':
 		illumination_file=parObject.getString("illumination","noIllum")
 		H0_Op = None
 		if illumination_file != "noIllum":
+			print("--- Using illumination as initial Hessian inverse ---")
 			illumination=genericIO.defaultIO.getVector(illumination_file,ndims=2)
 			H0_Op = pyOp.DiagonalOp(illumination)
 		nlSolver=LBFGS(stop, H0=H0_Op, logger=inv_log)
