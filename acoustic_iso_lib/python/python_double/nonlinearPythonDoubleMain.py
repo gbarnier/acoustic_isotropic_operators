@@ -15,6 +15,11 @@ if __name__ == '__main__':
     # Construct nonlinear operator object
     nonlinearOp=Acoustic_iso_double.nonlinearPropShotsGpu(modelDouble,dataDouble,velDouble,parObject.param,sourcesVector,receiversVector)
 
+	#Testing dot-product test of the operator
+	if (parObject.getInt("dpTest",0) == 1):
+		nonlinearOp.dotTest(True)
+		quit(0)
+
     # Forward
     if (parObject.getInt("adj",0) == 0):
 
