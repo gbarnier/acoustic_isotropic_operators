@@ -19,9 +19,10 @@ import phaseOnlyXkModule
 import pyOperator as pyOp
 from pyNonLinearSolver import NLCGsolver as NLCG
 from pyNonLinearSolver import LBFGSsolver as LBFGS
+from pyNonLinearSolver import MCMCsolver as MCMC
 import pyProblem as Prblm
 import pyStepper as Stepper
-from pyStopper import BasicStopper as Stopper
+from pyStopper import SamplingStopper
 from sys_util import logger
 import inversionUtils
 
@@ -246,20 +247,36 @@ if __name__ == '__main__':
 
 	############################# Solver #######################################
 	# Nonlinear conjugate gradient
-	if (solverType=="nlcg"):
-		nlSolver=NLCG(stop,logger=inv_log)
+	if solverType == "nlcg":
+		nlSolver = NLCG(stop,logger=inv_log)
 	# LBFGS
-	elif (solverType=="lbfgs"):
+	elif solverType == "lbfgs":
 		illumination_file=parObject.getString("illumination","noIllum")
 		H0_Op = None
 		if illumination_file != "noIllum":
 			print("--- Using illumination as initial Hessian inverse ---")
-			illumination=genericIO.defaultIO.getVector(illumination_file,ndims=2)
+			illumination=genericIO.defaultIO.getVector(illumination_file, ndims=2)
 			H0_Op = pyOp.DiagonalOp(illumination)
-		nlSolver=LBFGS(stop, H0=H0_Op, logger=inv_log)
+		nlSolver = LBFGS(stop, H0=H0_Op, logger=inv_log)
 	# Steepest descent
-	elif (solverType=="sd"):
-		nlSolver=NLCG(stop,beta_type="SD",logger=inv_log)
+	elif solverType == "sd":
+		nlSolver = NLCG(stop,beta_type="SD",logger=inv_log)
+	elif solverType == "MCMC":
+		# Overwriting user defined parameters
+		saveObj = False
+		saveRes = False
+		saveGrad = False
+		saveModel = True
+		iterSampling = 1
+		stop = SamplingStopper(par.getInt("nIter"))
+		# Getting max and min step vectors
+		maxStepVec = genericIO.defaultIO.getVector(parObject.getString("maxStepMCMC"), ndims=2)
+		minStepVecFile = parObject.getString("minStepMCMC","noMinStep")
+		if minStepVecFile == "noMinStep":
+			minStepVec = maxStepVec.clone().scale(-1.0)
+		else:
+			minStepVec = genericIO.defaultIO.getVector(minStepVecFile, ndims=2)
+		nlSolver = MCMC(stopper=stop, prop_distr="Uni", max_step=maxStepVec.getNdArray(), min_step=minStepVec.getNdArray())
 
 	############################# Stepper ######################################
 	if (stepper == "parabolic"):
