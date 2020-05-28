@@ -263,12 +263,13 @@ if __name__ == '__main__':
 		nlSolver = NLCG(stop,beta_type="SD",logger=inv_log)
 	elif solverType == "MCMC":
 		# Overwriting user defined parameters
-		saveObj = False
+		saveObj = True
 		saveRes = False
 		saveGrad = False
 		saveModel = True
 		iterSampling = 1
-		stop = SamplingStopper(par.getInt("nIter"))
+		stop = SamplingStopper(parObject.getInt("nIter"))
+		T = parObject.getFloat("T") # Temperature of the Metropolis algorithm
 		# Getting max and min step vectors
 		maxStepVec = genericIO.defaultIO.getVector(parObject.getString("maxStepMCMC"), ndims=2)
 		minStepVecFile = parObject.getString("minStepMCMC","noMinStep")
@@ -276,7 +277,7 @@ if __name__ == '__main__':
 			minStepVec = maxStepVec.clone().scale(-1.0)
 		else:
 			minStepVec = genericIO.defaultIO.getVector(minStepVecFile, ndims=2)
-		nlSolver = MCMC(stopper=stop, prop_distr="Uni", max_step=maxStepVec.getNdArray(), min_step=minStepVec.getNdArray())
+		nlSolver = MCMC(stopper=stop, T=T, logger=inv_log, prop_distr="Uni", max_step=maxStepVec.getNdArray(), min_step=minStepVec.getNdArray())
 
 	############################# Stepper ######################################
 	if (stepper == "parabolic"):
