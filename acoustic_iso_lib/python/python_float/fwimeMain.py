@@ -276,10 +276,10 @@ if __name__ == '__main__':
 		if (evalParab==0):
 			nlSolver.stepper.eval_parab=False
 	elif(nlSolverType=="lbfgs"):
-		print("--- Using illumination as initial Hessian inverse ---")
 		illumination_file=parObject.getString("illumination","noIllum")
 		H0_Op = None
 		if illumination_file != "noIllum":
+			print("--- Using illumination as initial Hessian inverse ---")
 			illumination=genericIO.defaultIO.getVector(illumination_file,ndims=2)
 			H0_Op = pyOp.DiagonalOp(illumination)
 		# By default, Lbfgs uses MT stepper
