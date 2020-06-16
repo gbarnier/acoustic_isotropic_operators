@@ -271,6 +271,7 @@ def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
 
 	#Checking if list of shots is consistent with number of workers
 	nWrks = client.getNworkers()
+	wrkIds = client.getWorkerIds()
 	if len(List_Shots) != nWrks:
 		raise ValueError("Number of workers (#nWrk=%s) not consistent with length of the provided list of shots (nShot=%s)"%(nWrks,parObject.getString("nShot")))
 
@@ -286,7 +287,7 @@ def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
 				raise ValueError("Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
 			#Setting source geometry
 			for ishot in range(nShot):
-				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu1, sourceGeomVectorNd[2,ishot],sourceGeomVectorNd[0,ishot], vel[idx], nts, dipole, zDipoleShift, xDipoleShift,pure=False))
+				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu1, sourceGeomVectorNd[2,ishot],sourceGeomVectorNd[0,ishot], vel[idx], nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[idx],pure=False))
 			daskD.wait(sourcesVector[idx])
 			sourceAxis.append(Hypercube.axis(n=nShot,o=1.0,d=1.0))
 
@@ -311,7 +312,7 @@ def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
 			sourceAxis.append(Hypercube.axis(n=nShot,o=ox,d=dx))
 			#Setting source geometry
 			for ishot in range(nShot):
-				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu, nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, vel[idx], nts, dipole, zDipoleShift, xDipoleShift, pure=False))
+				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu, nzSource, ozSource, dzSource, nxSource, oxSource, dxSource, vel[idx], nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[idx],pure=False))
 				oxSource+=spacingShots # Shift source
 			daskD.wait(sourcesVector[idx])
 			#Adding shots offset to origin of shot axis
@@ -446,11 +447,12 @@ def buildReceiversGeometryDask(parObject,vel,hyper_vel,client=None):
 
 	#Getting number of workers
 	nWrks = client.getNworkers()
+	wrkIds = client.getWorkerIds()
 
 	receiverAxis=[Hypercube.axis(n=nxReceiver,o=ox+oxReceiver*dx,d=dxReceiver*dx)]*nWrks
 	receiversVector = [[] for ii in range(nWrks)]
 	for iwrk in range(nWrks):
-		receiversVector[iwrk].append(client.getClient().submit(call_deviceGpu,nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel[iwrk],nts, dipole, zDipoleShift, xDipoleShift))
+		receiversVector[iwrk].append(client.getClient().submit(call_deviceGpu,nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel[iwrk],nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[iwrk],pure=False))
 	daskD.wait(receiversVector)
 
 	return receiversVector,receiverAxis
