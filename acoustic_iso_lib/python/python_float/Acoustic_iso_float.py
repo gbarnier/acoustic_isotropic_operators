@@ -15,6 +15,7 @@ import genericIO
 import SepVector
 import Hypercube
 import numpy as np
+import re
 
 from pyAcoustic_iso_float_nl import deviceGpu
 
@@ -90,9 +91,14 @@ def parfile2pars(args):
 	"""Function to expand arguments in parfile to parameters"""
 	#Check if par argument was provided
 	par_arg = None
-	match = [arg for arg in args if "par" in arg]
+	reg_comp = re.compile("(^par=)(.*)")
+	match = []
+	for arg in args:
+		find = reg_comp.search(arg)
+		if find:
+			match.append(find.group(2))
 	if len(match) > 0:
-		par_arg = match[-1] #Taking last par argument
+		par_arg = "par="+match[-1] #Taking last par argument
 	#If par was found expand arguments
 	if par_arg:
 		par_file = par_arg.split("=")[-1]
@@ -115,10 +121,15 @@ def spreadParObj(client,args,par):
 	parObject = []
 	args1=parfile2pars(args)
 	#Finding index of nShot parameter
-	idx_nshot = [ii for ii,el in enumerate(args1) if "nShot" in el][-1]
+	idx_nshot = [ii for ii,el in enumerate(args1) if "nShot" in el]
+	#Removing all other nExp parameters
+	for idx in idx_nshot[:-1]:
+		args1.pop(idx)
+	#Correcting idx_nshot
+	idx_nshot = [ii for ii,el in enumerate(args1) if "nShot" in el]
 	for idx,wrkId in enumerate(client.getWorkerIds()):
 		#Substituting nShot with the correct number of shots
-		args1[idx_nshot]="nShot=%s"%(List_Shots[idx])
+		args1[idx_nshot[-1]]="nShot=%s"%(List_Shots[idx])
 		parObject.append(client.getClient().submit(create_parObj,args1,workers=[wrkId],pure=False))
 	daskD.wait(parObject)
 	return parObject
@@ -162,7 +173,7 @@ def chunkData(dataVecLocal,dataSpaceRemote):
 	for idx,wrkId in enumerate(wrkIds):
 		arrD = client.scatter(dataArrays[idx],workers=[wrkId])
 		daskD.wait(arrD)
-		daskD.wait(client.submit(pyDaskVector.copy_from_NdArray,dataVecRemote.vecDask[idx],arrD,pure=False))
+		daskD.wait(client.submit(pyDaskVector.copy_from_NdArray,dataVecRemote.vecDask[idx],arrD,workers=[wrkId],pure=False))
 	# daskD.wait(client.map(pyDaskVector.copy_from_NdArray,dataVecRemote.vecDask,dataArrays,pure=False))
 	return dataVecRemote
 
