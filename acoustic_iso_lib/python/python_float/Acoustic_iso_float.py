@@ -235,13 +235,13 @@ def buildSourceGeometry(parObject,vel,client=None):
 	#Reading source geometry from file
 	if(sourceGeomFile != "None"):
 		sourceGeomVectorNd = genericIO.defaultIO.getVector(sourceGeomFile).getNdArray()
-		zCoordFloat=SepVector.getSepVector(ns=[1])
-		xCoordFloat=SepVector.getSepVector(ns=[1])
 		#Check for consistency between number of shots and provided coordinates
 		if(nShot != sourceGeomVectorNd.shape[1]):
 			raise ValueError("Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
 		#Setting source geometry
 		for ishot in range(nShot):
+			zCoordFloat=SepVector.getSepVector(ns=[1])
+			xCoordFloat=SepVector.getSepVector(ns=[1])
 			#Setting z and x position of the source for the given experiment
 			zCoordFloat.set(sourceGeomVectorNd[2,ishot])
 			xCoordFloat.set(sourceGeomVectorNd[0,ishot])
@@ -403,12 +403,11 @@ def buildReceiversGeometry(parObject,vel,client=None):
 		if(nReceiverPerShot != receiverGeomVectorNd.shape[1]):
 				raise ValueError("**** ERROR [buildReceiversGeometry]: Number of receivers from parfile (#nReceiverPerShot=%s) not consistent with receivers' geometry file (#recs=%s) ****\n"%(nReceiverPerShot,receiverGeomVectorNd.shape[1]))
 
-		# Create inputs for deviceGpu constructor
-		zCoordFloat=SepVector.getSepVector(ns=[nReceiverPerShot])
-		xCoordFloat=SepVector.getSepVector(ns=[nReceiverPerShot])
-
 		# Generate vector containing deviceGpu objects
 		for ishot in range(nShot):
+				# Create inputs for deviceGpu constructor
+				zCoordFloat=SepVector.getSepVector(ns=[nReceiverPerShot])
+				xCoordFloat=SepVector.getSepVector(ns=[nReceiverPerShot])
 
 				# Update the receiver's coordinates
 				zCoordFloat.set(receiverGeomVectorNd[2,:,ishot])
