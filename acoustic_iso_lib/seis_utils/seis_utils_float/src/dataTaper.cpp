@@ -218,11 +218,11 @@ void dataTaper::computeTaperMaskOffset(){
 
 			if (ixMinRecMute2True == ixMinRecMute1True){
 				std::cout << "**** ERROR [Offset muting]: Cutoff min indices are identical. Use a larger taperWidth value ****" << std::endl;
-				assert(1==0);
+				throw std::runtime_error("");
 			}
 			if (ixMaxRecMute2True == ixMaxRecMute1True){
 				std::cout << "**** ERROR [Offset muting]: Cutoff min indices are identical. Use a larger taperWidth value ****" << std::endl;
-				assert(1==0);
+				throw std::runtime_error("");
 			}
 
 			// #pragma omp parallel for
@@ -270,7 +270,7 @@ void dataTaper::computeTaperMaskOffset(){
 			// Make sure taperWidth < maxOffset
 			if (_taperWidthOffset > _maxOffset){
 				std::cout << "**** ERROR [Offset muting]: Make sure taperWidthOffset < maxOffset ****" << std::endl;
-				assert(1==0);
+				throw std::runtime_error("");
 			}
 
 			// Compute theoretical index of min1
@@ -291,11 +291,11 @@ void dataTaper::computeTaperMaskOffset(){
 
 			if (ixMinRecMute2True == ixMinRecMute1True){
 				std::cout << "**** ERROR [Offset muting]: Cutoff min indices are identical. Use a larger taperWidth value ****" << std::endl;
-				assert(1==0);
+				throw std::runtime_error("");
 			}
 			if (ixMaxRecMute2True == ixMaxRecMute1True){
 				std::cout << "**** ERROR [Offset muting]: Cutoff min indices are identical. Use a larger taperWidth value ****" << std::endl;
-				assert(1==0);
+				throw std::runtime_error("");
 			}
 
 			// Compute index of max inner bound
@@ -386,7 +386,7 @@ void dataTaper::computeTaperMaskTime(){
 				// Check the cutoff indices are different
 				if (itCutoff2True == itCutoff1True){
 					std::cout << "**** ERROR [Time muting]: Cutoff indices are identical. Use a larger taperWidth value ****" << std::endl;
-					assert(1==0);
+					throw std::runtime_error("");
 				}
 
 				// Loop over time - Second zone where we taper the data
@@ -481,7 +481,7 @@ void dataTaper::computeTaperEndTrace(){
 		// Make sure you're not out of bounds
 		if (tTaperEndTrace < _ots){
 			std::cout << "**** ERROR [End trace muting]: Make sure taperEndTraceWidth < total recording time ****" << std::endl;
-			assert(1==0);
+			throw std::runtime_error("");
 		}
 		// Compute index from which you start tapering
 		int itTaperEndTrace = (tTaperEndTrace-_ots)/_dts; // Index from which we start tapering

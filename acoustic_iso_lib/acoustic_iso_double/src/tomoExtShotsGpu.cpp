@@ -13,7 +13,9 @@ tomoExtShotsGpu::tomoExtShotsGpu(std::shared_ptr<SEP::double2DReg> vel, std::sha
 	createGpuIdList();
 	_info = par->getInt("info", 0);
 	_deviceNumberInfo = par->getInt("deviceNumberInfo", _gpuList[0]);
-	assert(getGpuInfo(_gpuList, _info, _deviceNumberInfo)); // Get info on GPU cluster and check that there are enough available GPUs
+	if( not getGpuInfo(_gpuList, _info, _deviceNumberInfo)){
+		throw std::runtime_error("");
+	}; // Get info on GPU cluster and check that there are enough available GPUs
 	_saveWavefield = _par->getInt("saveWavefield", 0);
 	_wavefieldShotNumber = _par->getInt("wavefieldShotNumber", 0);
 	_sourcesVector = sourcesVector;
@@ -32,7 +34,7 @@ void tomoExtShotsGpu::createGpuIdList(){
 	_gpuList = _par->getInts("iGpu", dummyVector);
 
 	// If the user does not provide nGpu > 0 or a valid list -> break
-	if (_nGpu <= 0 && _gpuList[0]<0){std::cout << "**** ERROR: Please provide a list of GPUs to be used ****" << std::endl; assert(1==2);}
+	if (_nGpu <= 0 && _gpuList[0]<0){std::cout << "**** ERROR: Please provide a list of GPUs to be used ****" << std::endl; throw std::runtime_error("");}
 
 	// If user does not provide a valid list but provides nGpu -> use id: 0,...,nGpu-1
 	if (_nGpu>0 && _gpuList[0]<0){
@@ -49,7 +51,7 @@ void tomoExtShotsGpu::createGpuIdList(){
 		std::vector<int>::iterator it = std::unique(_gpuList.begin(), _gpuList.end());
 		bool isUnique = (it==_gpuList.end());
 		if (isUnique==0) {
-			std::cout << "**** ERROR: Please make sure there are no duplicates in the list ****" << std::endl; assert(1==2);
+			std::cout << "**** ERROR: Please make sure there are no duplicates in the list ****" << std::endl; throw std::runtime_error("");
 		}
 	}
 

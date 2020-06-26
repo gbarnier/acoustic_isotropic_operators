@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
 	axis extAxis;
 	std::string extension = par->getString("extension", "none");
 	int nExt = par->getInt("nExt", 1);
-	if (nExt%2 == 0){std::cout << "**** ERROR: Length of extended axis must be an uneven number ****" << std::endl; assert(1==2);}
+	if (nExt%2 == 0){std::cout << "**** ERROR: Length of extended axis must be an uneven number ****" << std::endl; throw std::runtime_error("");}
 	int hExt = (nExt-1)/2;
 	if (extension == "time"){
 		double dExt = par->getFloat("dExt", dts);

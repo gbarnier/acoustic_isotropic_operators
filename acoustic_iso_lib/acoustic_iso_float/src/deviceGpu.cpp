@@ -268,7 +268,7 @@ void deviceGpu::checkOutOfBounds(const std::shared_ptr<float1DReg> zCoord, const
 	for (int iDevice = 0; iDevice < nDevice; iDevice++){
 		if ( ((*zCoord->_mat)[iDevice] >= zMax) || ((*xCoord->_mat)[iDevice] >= xMax) ){
 			std::cout << "**** ERROR: One of the device is out of bounds ****" << std::endl;
-			assert (1==2);
+			throw std::runtime_error("");
 		}
 	}
 }
@@ -279,7 +279,7 @@ void deviceGpu::checkOutOfBounds(const std::vector<int> &zGridVector, const std:
 	float xIntMax = *max_element(xGridVector.begin(), xGridVector.end());
 	if ( (zIntMax >= _vel->getHyper()->getAxis(1).n) || (xIntMax >= _vel->getHyper()->getAxis(2).n) ){
 		std::cout << "**** ERROR: One of the device is out of bounds ****" << std::endl;
-		assert (1==2);
+		throw std::runtime_error("");
 	}
 }
 
@@ -289,6 +289,6 @@ void deviceGpu::checkOutOfBounds(const int &nzDevice, const int &ozDevice, const
 	float xIntMax = oxDevice + (nxDevice - 1) * dxDevice;
 	if ( (zIntMax >= _vel->getHyper()->getAxis(1).n) || (xIntMax >= _vel->getHyper()->getAxis(2).n) ){
 		std::cout << "**** ERROR: One of the device is out of bounds ****" << std::endl;
-		assert (1==2);
+		throw std::runtime_error("");
 	}
 }

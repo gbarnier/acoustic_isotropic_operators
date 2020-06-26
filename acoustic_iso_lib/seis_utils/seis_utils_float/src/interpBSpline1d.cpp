@@ -181,7 +181,7 @@ std::shared_ptr<float1DReg> interpBSpline1d::computeParamVectorZ(){
             std::cout << "**** ERROR: Could not find a parameter for data point in the z-direction #" << izData << " " << (*_zData->_mat)[izData] << " [km]. Try increasing the number of samples! ****" << std::endl;
             std::cout << "Error = " << error << std::endl;
             std::cout << "Tolerance = " << _zTolerance << " [km]" << std::endl;
-            assert(1==2);
+            throw std::runtime_error("");
         }
     }
     return paramVector;

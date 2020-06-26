@@ -213,7 +213,7 @@ void initWemvaExtGpu(float dz, float dx, int nz, int nx, int nts, float dts, int
 	// Check the subsampling coefficient is smaller than the maximum allowed
 	if (sub>=SUB_MAX){
 		std::cout << "**** ERROR: Subsampling parameter too high ****" << std::endl;
-		assert (1==2);
+		throw std::runtime_error("");
 	}
 
 	// Allocate and fill interpolation filter
@@ -228,7 +228,7 @@ void initWemvaExtGpu(float dz, float dx, int nz, int nx, int nts, float dts, int
 	/************************* COMPUTE COSINE DAMPING COEFFICIENTS **********************/
 	if (minPad>=PAD_MAX){
 		std::cout << "**** ERROR: Padding value is too high ****" << std::endl;
-		assert (1==2);
+		throw std::runtime_error("");
 	}
 	float cosDampingCoeff[minPad];
 
@@ -242,7 +242,7 @@ void initWemvaExtGpu(float dz, float dx, int nz, int nx, int nts, float dts, int
 	// Check that the block size is consistent between parfile and "varDeclare.h"
 	if (blockSize != BLOCK_SIZE) {
 		std::cout << "**** ERROR: Block size for time stepper is not consistent with parfile ****" << std::endl;
-		assert (1==2);
+		throw std::runtime_error("");
 	}
 
 	/**************************** COPY TO CONSTANT MEMORY *******************************/

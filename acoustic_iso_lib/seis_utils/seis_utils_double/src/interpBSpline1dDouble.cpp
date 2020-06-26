@@ -249,7 +249,7 @@ std::shared_ptr<double1DReg> interpBSpline1dDouble::computeParamVector() {
             std::cout << "**** ERROR: Could not find a parameter for data point #" << iData << " " << (*_xData->_mat)[iData]<< " [km]. Try increasing the number of samples! ****" << std::endl;
             std::cout << "Error = " << error <<" [km]" << std::endl;
             std::cout << "Tolerance = " << _tolerance << " [km]" << std::endl;
-            assert(1==2);
+            throw std::runtime_error("");
         }
     }
 
@@ -466,7 +466,7 @@ double interpBSpline1dDouble::bspline1d(int iControl, double uValue, int order, 
     /********************************* Order error ****************************/
     else {
         std::cout << "**** ERROR: Order not supported. Please choose from 0->3 (included) ****" << std::endl;
-        assert(1==2);
+        throw std::runtime_error("");
     }
     return weight;
 }

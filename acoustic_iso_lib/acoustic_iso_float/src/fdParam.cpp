@@ -44,7 +44,7 @@ fdParam::fdParam(const std::shared_ptr<float2DReg> vel, const std::shared_ptr<pa
 
 	/***** Extended axis *****/
 	_nExt = _par->getInt("nExt", 1);
-	if (_nExt % 2 == 0) {std::cout << "**** ERROR: Length of extended axis must be an uneven number ****" << std::endl; assert(1==2); }
+	if (_nExt % 2 == 0) {std::cout << "**** ERROR: Length of extended axis must be an uneven number ****" << std::endl; throw std::runtime_error(""); }
 	_hExt = (_nExt-1)/2;
 	_extension = par->getString("extension", "none");
 	if (_nExt>1 && _extension=="time"){
@@ -68,7 +68,9 @@ fdParam::fdParam(const std::shared_ptr<float2DReg> vel, const std::shared_ptr<pa
 	_errorTolerance = par->getFloat("errorTolerance", 0.000001);
 
 	/***** QC *****/
-	assert(checkParfileConsistencySpace(_vel, "Velocity file")); // Parfile - velocity file consistency
+	if( not checkParfileConsistencySpace(_vel, "Velocity file")){
+		throw std::runtime_error("");
+	}; // Parfile - velocity file consistency
 	axis nzSmallAxis(_nz-2*_fat, 0.0, _dz);
 	axis nxSmallAxis(_nx-2*_fat, 0.0, _dx);
 	std::shared_ptr<SEP::hypercube> smallVelHyper(new hypercube(nzSmallAxis, nxSmallAxis));
@@ -79,9 +81,15 @@ fdParam::fdParam(const std::shared_ptr<float2DReg> vel, const std::shared_ptr<pa
 		}
 	}
 
-	assert(checkFdStability());
-	assert(checkFdDispersion());
-	assert(checkModelSize());
+	if( not checkFdStability()){
+		throw std::runtime_error("");
+	};
+	if( not checkFdDispersion()){
+		throw std::runtime_error("");
+	};
+	if( not checkModelSize()){
+		throw std::runtime_error("");
+	};
 
 	/***** Scaling for propagation *****/
 	// v^2 * dtw^2

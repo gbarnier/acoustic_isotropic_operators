@@ -9,7 +9,7 @@ dsoInvGpu::dsoInvGpu(int nz, int nx, int nExt, int fat, float zeroShift){
     _nz = nz;
     _nx = nx;
     _nExt = nExt;
-	if (_nExt % 2 == 0) {std::cout << "**** ERROR: Length of extended axis must be an uneven number ****" << std::endl; assert(1==2); }
+	if (_nExt % 2 == 0) {std::cout << "**** ERROR: Length of extended axis must be an uneven number ****" << std::endl; throw std::runtime_error(""); }
     _hExt = (_nExt-1) / 2;
     _zeroShift = zeroShift;
     _fat = fat;

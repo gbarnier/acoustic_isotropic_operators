@@ -321,7 +321,7 @@ double interpBSpline2dDouble::bspline1d(int iControl, double uValue, int order, 
     /********************************* Order error ****************************/
     else {
         std::cout << "**** ERROR: Order not supported. Please choose between {0,1,2,3} ****" << std::endl;
-        assert(1==2);
+        throw std::runtime_error("");
     }
     return weight;
 }
@@ -501,7 +501,7 @@ std::shared_ptr<double1DReg> interpBSpline2dDouble::computeParamVectorZ(){
             std::cout << "**** ERROR: Could not find a parameter for data point in the z-direction #" << izData << " " << (*_zData->_mat)[0][izData] << " [km]. Try increasing the number of samples! ****" << std::endl;
             std::cout << "Error = " << error << std::endl;
             std::cout << "Tolerance = " << _zTolerance << " [km]" << std::endl;
-            assert(1==2);
+            throw std::runtime_error("");
         }
     }
     return paramVector;
@@ -680,7 +680,7 @@ std::shared_ptr<double1DReg> interpBSpline2dDouble::computeParamVectorX(){
             std::cout << "**** ERROR: Could not find a parameter for data point in the x-direction #" << ixData << " " << (*_xData->_mat)[ixData][0]<< " [km]. Try increasing the number of samples! ****" << std::endl;
             std::cout << "Error = " << error << std::endl;
             std::cout << "Tolerance = " << _xTolerance << " [km]" << std::endl;
-            assert(1==2);
+            throw std::runtime_error("");
         }
     }
     return paramVector;

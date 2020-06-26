@@ -64,7 +64,9 @@ void wemvaExtGpu::setAcquisition(std::shared_ptr<deviceGpu> sources, std::shared
 	setSources(sources, sourcesSignals);
 	setReceivers(receivers, receiversSignals);
 	this->setDomainRange(model, data);
-	assert(checkParfileConsistency(model, data));
+	if( not checkParfileConsistency(model, data)){
+		throw std::runtime_error("");
+	};
 
 }
 
