@@ -14,7 +14,7 @@ To build library run:
 ```
 cd build
 
-cmake -DCMAKE_INSTALL_PREFIX=installation_path -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc -DCMAKE_BUILD_TYPE=Debug ../acoustic_iso_lib/
+cmake -DCMAKE_INSTALL_PREFIX=installation_path -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc ../acoustic_iso_lib/
 
 make install
 
@@ -40,7 +40,7 @@ git submodule update --init --recursive -- acoustic_iso_lib/external/ioLibs
 git submodule update --init --recursive -- acoustic_iso_lib/external/pySolver
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=${CONDA_PREFIX}/bin/nvcc -DCMAKE_BUILD_TYPE=Debug ../acoustic_iso_lib/ -DCMAKE_CXX_COMPILER=${CONDA_PREFIX}/bin/g++ -DCMAKE_C_COMPILER=${CONDA_PREFIX}/bin/gcc -DCMAKE_Fortran_COMPILER=${CONDA_PREFIX}/bin/gfortran -DPYTHON_EXECUTABLE=${CONDA_PREFIX}/bin/python3
+cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=${CONDA_PREFIX}/bin/nvcc ../acoustic_iso_lib/ -DCMAKE_CXX_COMPILER=${CONDA_PREFIX}/bin/g++ -DCMAKE_C_COMPILER=${CONDA_PREFIX}/bin/gcc -DCMAKE_Fortran_COMPILER=${CONDA_PREFIX}/bin/gfortran -DPYTHON_EXECUTABLE=${CONDA_PREFIX}/bin/python3
 make install -j16
 cd ..
 

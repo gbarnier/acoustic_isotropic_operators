@@ -52,7 +52,7 @@ add_subdirectory(acoustic_iso_we_float)
 # include folder for pyAcousticIsotropic library
 # add_subdirectory(python/python_double)
 add_subdirectory(python/python_float)
-add_subdirectory(python/python_float_we)
+#add_subdirectory(python/python_float_we)
 
 # include folder for Seismic utilities
 add_subdirectory(seis_utils/seis_utils_double/)
