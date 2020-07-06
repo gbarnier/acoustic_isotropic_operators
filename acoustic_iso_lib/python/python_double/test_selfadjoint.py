@@ -69,12 +69,12 @@ class waveEquation1(Op.Operator):
 		m_arr[:,:,-1]=0.0
 		for it in range(nt):
 			if it > 1:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						d_arr[it,idx,idz] += (d_arr[it-1,idx,idz-1]+d_arr[it-1,idx,idz+1]-4.0*d_arr[it-1,idx,idz]+d_arr[it-1,idx-1,idz]+d_arr[it-1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*d_arr[it-1,idx,idz] - d_arr[it-2,idx,idz] + m_arr[it-1,idx,idz]
 			elif it == 1:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						d_arr[it,idx,idz] += (d_arr[it-1,idx,idz-1]+d_arr[it-1,idx,idz+1]-4.0*d_arr[it-1,idx,idz]+d_arr[it-1,idx-1,idz]+d_arr[it-1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*d_arr[it-1,idx,idz] + m_arr[it-1,idx,idz]
 		data.scaleAdd(data_tmp)
 
@@ -95,12 +95,12 @@ class waveEquation1(Op.Operator):
 		d_arr[:,:,-1]=0.0
 		for it in range(nt,-1,-1):
 			if it < nt-2:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						m_arr[it,idx,idz] += (m_arr[it+1,idx,idz-1]*self.vel2dt[idx,idz+1]+m_arr[it+1,idx,idz+1]*self.vel2dt[idx,idz+1]-4.0*m_arr[it+1,idx,idz]*self.vel2dt[idx,idz]+m_arr[it+1,idx-1,idz]*self.vel2dt[idx-1,idz]+m_arr[it+1,idx+1,idz]*self.vel2dt[idx+1,idz])*self.ds2_inv + 2.0*m_arr[it+1,idx,idz] - m_arr[it+2,idx,idz] + d_arr[it+1,idx,idz]
 			elif it == nt-2:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						m_arr[it,idx,idz] += (m_arr[it+1,idx,idz-1]*self.vel2dt[idx,idz-1]+m_arr[it+1,idx,idz+1]*self.vel2dt[idx,idz+1]-4.0*m_arr[it+1,idx,idz]*self.vel2dt[idx,idz]+m_arr[it+1,idx-1,idz]*self.vel2dt[idx-1,idz]+m_arr[it+1,idx+1,idz]*self.vel2dt[idx+1,idz])*self.ds2_inv + 2.0*m_arr[it+1,idx,idz] + d_arr[it+1,idx,idz]
 		# Scaling the output
 		m_arr *= self.vel2dt
@@ -133,12 +133,12 @@ class waveEquation2(Op.Operator):
 		m_arr[:,:,-1]=0.0
 		for it in range(nt):
 			if it > 1:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						d_arr[it,idx,idz] += (d_arr[it-1,idx,idz-1]+d_arr[it-1,idx,idz+1]-4.0*d_arr[it-1,idx,idz]+d_arr[it-1,idx-1,idz]+d_arr[it-1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*d_arr[it-1,idx,idz] - d_arr[it-2,idx,idz] + m_arr[it-1,idx,idz]
 			elif it == 1:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						d_arr[it,idx,idz] += (d_arr[it-1,idx,idz-1]+d_arr[it-1,idx,idz+1]-4.0*d_arr[it-1,idx,idz]+d_arr[it-1,idx-1,idz]+d_arr[it-1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*d_arr[it-1,idx,idz] + m_arr[it-1,idx,idz]
 		data.scaleAdd(data_tmp)
 
@@ -160,12 +160,12 @@ class waveEquation2(Op.Operator):
 		d_arr[:,:,-1]=0.0
 		for it in range(nt,-1,-1):
 			if it < nt-2:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						m_arr[it,idx,idz] += (m_arr[it+1,idx,idz-1]+m_arr[it+1,idx,idz+1]-4.0*m_arr[it+1,idx,idz]+m_arr[it+1,idx-1,idz]+m_arr[it+1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*m_arr[it+1,idx,idz] - m_arr[it+2,idx,idz] + d_arr[it+1,idx,idz]
 			elif it == nt-2:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						m_arr[it,idx,idz] += (m_arr[it+1,idx,idz-1]+m_arr[it+1,idx,idz+1]-4.0*m_arr[it+1,idx,idz]+m_arr[it+1,idx-1,idz]+m_arr[it+1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*m_arr[it+1,idx,idz] + d_arr[it+1,idx,idz]
 		model.scaleAdd(model_tmp)
 
@@ -199,12 +199,12 @@ class waveEquation3(Op.Operator):
 		m_arr[:,:,-1]=0.0
 		for it in range(nt):
 			if it > 1:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						d_arr[it,idx,idz] += (d_arr[it-1,idx,idz-1]+d_arr[it-1,idx,idz+1]-4.0*d_arr[it-1,idx,idz]+d_arr[it-1,idx-1,idz]+d_arr[it-1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*d_arr[it-1,idx,idz] - d_arr[it-2,idx,idz] + m_arr[it-1,idx,idz]
 			elif it == 1:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						d_arr[it,idx,idz] += (d_arr[it-1,idx,idz-1]+d_arr[it-1,idx,idz+1]-4.0*d_arr[it-1,idx,idz]+d_arr[it-1,idx-1,idz]+d_arr[it-1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*d_arr[it-1,idx,idz] + m_arr[it-1,idx,idz]
 		for rec,id_pos in enumerate(self.r_pos):
 			data.getNdArray()[rec,:] += d_arr[:,id_pos[0],id_pos[1]]
@@ -229,12 +229,12 @@ class waveEquation3(Op.Operator):
 		d_arr[:,:,-1]=0.0
 		for it in range(nt,-1,-1):
 			if it < nt-2:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						m_arr[it,idx,idz] += (m_arr[it+1,idx,idz-1]+m_arr[it+1,idx,idz+1]-4.0*m_arr[it+1,idx,idz]+m_arr[it+1,idx-1,idz]+m_arr[it+1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*m_arr[it+1,idx,idz] - m_arr[it+2,idx,idz] + d_arr[it+1,idx,idz]
 			elif it == nt-2:
-				for idx in range(1,m_arr.shape[0]-1):
-					for idz in range(1,m_arr.shape[1]-1):
+				for idx in range(1,nx-1):
+					for idz in range(1,nz-1):
 						m_arr[it,idx,idz] += (m_arr[it+1,idx,idz-1]+m_arr[it+1,idx,idz+1]-4.0*m_arr[it+1,idx,idz]+m_arr[it+1,idx-1,idz]+m_arr[it+1,idx+1,idz])*self.ds2_inv*self.vel2dt[idx,idz] + 2.0*m_arr[it+1,idx,idz] + d_arr[it+1,idx,idz]
 		for id_pos in self.s_pos:
 			model.getNdArray()[:] += m_arr[:,id_pos[0],id_pos[1]]
