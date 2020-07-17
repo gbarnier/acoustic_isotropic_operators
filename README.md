@@ -1,5 +1,5 @@
 ##DESCRIPTION
-Note use cmake 3.14
+Note use cmake 3.14 or higher
 
 ##COMPILATION
 
