@@ -52,9 +52,9 @@ void seismicOperator2D <V1, V2>::setAcquisition(std::shared_ptr<deviceGpu> sourc
 	setSources(sources);
 	setReceivers(receivers);
 	this->setDomainRange(model, data);
-	if(not checkParfileConsistency(model, data)){
+	if( not checkParfileConsistency(model, data)){
 		throw std::runtime_error("");
-	}
+	};
 }
 
 // Set acquisiton for Born and Tomo
@@ -63,9 +63,9 @@ void seismicOperator2D <V1, V2>::setAcquisition(std::shared_ptr<deviceGpu> sourc
 	setSources(sources, sourcesSignals);
 	setReceivers(receivers);
 	this->setDomainRange(model, data);
-	if(not checkParfileConsistency(model, data)){
+	if( not checkParfileConsistency(model, data)){
 		throw std::runtime_error("");
-	}
+	};
 }
 
 // Scale seismic source

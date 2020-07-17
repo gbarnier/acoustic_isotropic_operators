@@ -2,14 +2,14 @@
 #include <cmath>
 #include <iostream>
 #include "Vector.h"
-#include <iomanip> 
+#include <iomanip>
 
-template <class V1, class V2> 
-class Operator 
+template <class V1, class V2>
+class Operator
 {
 	private:
 		/****************************** Member variables ********************************/
-  		std::shared_ptr<V1> _domain; 
+  		std::shared_ptr<V1> _domain;
   		std::shared_ptr<V2> _range;
 
 	protected:
@@ -19,7 +19,7 @@ class Operator
 
 	public:
 
-		/********************************* Deconstructors *******************************/	
+		/********************************* Deconstructors *******************************/
  		virtual ~Operator<V1, V2>() { ; }
 
 		/********************************* Other functions ******************************/
@@ -38,7 +38,7 @@ class Operator
 				std::cerr << "Domains do not match" << std::endl;
 				ret = false;
 			}
-			if (!_range->checkSame(data)) 
+			if (!_range->checkSame(data))
 			{
 				std::cerr << "Ranges do not match" << std::endl;
 				ret = false;
@@ -47,48 +47,47 @@ class Operator
   		}
 
 		/* Dot product test */
-		bool dotTest(const bool verbose = false, const float maxError = .00001) const
+		bool dotTest(const bool verbose = false, const double maxError = .00001) const
 		{
 
 			std::shared_ptr<V1> d1 = _domain->clone(), d2 = _domain->clone();
 			std::shared_ptr<V2> r1 = _range->clone(), r2 = _range->clone();
 			d1->random();
 			r1->random();
-	
+
 			/* Compute dot product WITHOUT "add" */
 			forward(false, d1, r2);
 			adjoint(false, d2, r1);
-									
 			double dot1 = r1->dot(r2), dot2 = d1->dot(d2);
-			double errorNoAdd = fabs((dot1 - dot2)/dot2); /* fabs is absolute value for float */
-			if(verbose) 
+			double errorNoAdd = fabs((dot1 - dot2)/dot2); /* fabs is absolute value for double */
+			if(verbose)
 			{
 				std::cout << "WITHOUT ADD: " << std::endl;
 				std::cout << "dot1: " << std::setprecision(16) << dot1 << std::endl;
 				std::cout << "dot2: " << std::setprecision(16) << dot2 << std::endl;
 				std::cout << "error WITHOUT ADD: " << std::setprecision(16) << errorNoAdd << std::endl;
-			} 
+			}
 
 			/* Compute dot product WITH "add" */
 			forward(true, d1, r2);
 			adjoint(true, d2, r1);
 			double dot3 = r1->dot(r2), dot4 = d1->dot(d2);
 			double errorAdd = fabs((dot3 - dot4)/dot4);
-			if(verbose) 
+			if(verbose)
 			{
-				std::cout << "WITH ADD: " << std::endl;			
+				std::cout << "WITH ADD: " << std::endl;
 				std::cout << "dot3: " << std::setprecision(16) << dot3 << std::endl;
 				std::cout << "dot4: " << std::setprecision(16) << dot4 << std::endl;
 				std::cout << "error with ADD: " << std::setprecision(16) << errorAdd << std::endl;
-			} 
+			}
 
 			if ( errorNoAdd > maxError) return false;
 			if ( errorAdd > maxError) return false;
 
 			return true;
-		}		
+		}
 
-		/********************************* Modifiers *************************************/		
+		/********************************* Modifiers *************************************/
 		// Set domain and range of operator
   		void setDomainRange(const std::shared_ptr<V1> dom, const std::shared_ptr<V2> rang){
     		_domain = dom->cloneSpace();
@@ -99,4 +98,3 @@ class Operator
 		std::shared_ptr<V1> getDomain() { return _domain; }
   		std::shared_ptr<V2> getRange() { return _range; }
 };
-

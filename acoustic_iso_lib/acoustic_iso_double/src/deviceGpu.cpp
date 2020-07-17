@@ -18,7 +18,7 @@ deviceGpu::deviceGpu(const std::shared_ptr<double1DReg> zCoord, const std::share
 	_nt = nt;
 	int _nz = vel->getHyper()->getAxis(1).n;
 
-	_gridPointIndex = new int[_nbCorner*_nDeviceIrreg]; // Index of all the neighboring points of each device (non-unique) on the regular "1D" grid
+	_gridPointIndex = new int[_nbCorner*_nDeviceIrreg]; // Index of all the neighboring points of each device (non-unique) on the regular "1D" grid that are going to be used in the interpolation
 	_weight = new double[_nbCorner*_nDeviceIrreg]; // Weights for spatial interpolation
 
 	for (int iDevice = 0; iDevice < _nDeviceIrreg; iDevice++) {
@@ -232,10 +232,9 @@ void deviceGpu::forward(const bool add, const std::shared_ptr<double2DReg> signa
 	std::shared_ptr<double2D> m = signalReg->_mat;
 
 	for (int iDevice = 0; iDevice < _nDeviceIrreg; iDevice++){ // Loop over device
-		// std::cout << "iDevice = " << iDevice << std::endl;
 		for (int iCorner = 0; iCorner < _nbCorner; iCorner++){ // Loop over neighboring points on regular grid
-			int i1 = iDevice * _nbCorner + iCorner;
-			int i2 = _indexMap.find(_gridPointIndex[i1])->second;
+			int i1 = iDevice * _nbCorner + iCorner; // Index of the corner on a 1D-representation
+			int i2 = _indexMap.find(_gridPointIndex[i1])->second; // Find the index of the trace from the model space that corresponds to that grid point
 			for (int it = 0; it < _nt; it++){
 				(*d)[iDevice][it] += _weight[i1] * (*m)[i2][it];
 			}
@@ -269,7 +268,7 @@ void deviceGpu::checkOutOfBounds(const std::shared_ptr<double1DReg> zCoord, cons
 	for (int iDevice = 0; iDevice < nDevice; iDevice++){
 		if ( ((*zCoord->_mat)[iDevice] >= zMax) || ((*xCoord->_mat)[iDevice] >= xMax) ){
 			std::cout << "**** ERROR: One of the device is out of bounds ****" << std::endl;
-			throw std::runtime_error("");;
+			throw std::runtime_error("");
 		}
 	}
 }
@@ -280,7 +279,7 @@ void deviceGpu::checkOutOfBounds(const std::vector<int> &zGridVector, const std:
 	double xIntMax = *max_element(xGridVector.begin(), xGridVector.end());
 	if ( (zIntMax >= _vel->getHyper()->getAxis(1).n) || (xIntMax >= _vel->getHyper()->getAxis(2).n) ){
 		std::cout << "**** ERROR: One of the device is out of bounds ****" << std::endl;
-		throw std::runtime_error("");;
+		throw std::runtime_error("");
 	}
 }
 
@@ -290,6 +289,6 @@ void deviceGpu::checkOutOfBounds(const int &nzDevice, const int &ozDevice, const
 	double xIntMax = oxDevice + (nxDevice - 1) * dxDevice;
 	if ( (zIntMax >= _vel->getHyper()->getAxis(1).n) || (xIntMax >= _vel->getHyper()->getAxis(2).n) ){
 		std::cout << "**** ERROR: One of the device is out of bounds ****" << std::endl;
-		throw std::runtime_error("");;
+		throw std::runtime_error("");
 	}
 }

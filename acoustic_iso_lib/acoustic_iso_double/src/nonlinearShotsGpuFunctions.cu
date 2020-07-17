@@ -121,18 +121,18 @@ void initNonlinearGpu(double dz, double dx, int nz, int nx, int nts, double dts,
 	double xCoeff[COEFF_SIZE];
 
 	zCoeff[0] = -2.927222222 / (dz * dz);
-	zCoeff[1] = 1.666666667 / (dz * dz);
-	zCoeff[2] = -0.238095238 / (dz * dz);
-	zCoeff[3] = 0.039682539 / (dz * dz);
-	zCoeff[4] = -0.004960317 / (dz * dz);
-	zCoeff[5] = 0.000317460 / (dz * dz);
+  	zCoeff[1] = 1.666666667 / (dz * dz);
+  	zCoeff[2] = -0.238095238 / (dz * dz);
+  	zCoeff[3] = 0.039682539 / (dz * dz);
+  	zCoeff[4] = -0.004960317 / (dz * dz);
+  	zCoeff[5] = 0.000317460 / (dz * dz);
 
-	xCoeff[0] = -2.927222222 / (dx * dx);
-	xCoeff[1] = 1.666666667 / (dx * dx);
-	xCoeff[2] = -0.238095238 / (dx * dx);
-	xCoeff[3] = 0.039682539 / (dx * dx);
-	xCoeff[4] = -0.004960317 / (dx * dx);
-	xCoeff[5] = 0.000317460 / (dx * dx);
+  	xCoeff[0] = -2.927222222 / (dx * dx);
+  	xCoeff[1] = 1.666666667 / (dx * dx);
+  	xCoeff[2] = -0.238095238 / (dx * dx);
+  	xCoeff[3] = 0.039682539 / (dx * dx);
+  	xCoeff[4] = -0.004960317 / (dx * dx);
+  	xCoeff[5] = 0.000317460 / (dx * dx);
 
 	/**************************** COMPUTE TIME-INTERPOLATION FILTER *********************/
 	// Time interpolation filter length / half length
@@ -142,7 +142,7 @@ void initNonlinearGpu(double dz, double dx, int nz, int nx, int nts, double dts,
 	// Check the subsampling coefficient is smaller than the maximum allowed
 	if (sub>=SUB_MAX){
 		std::cout << "**** ERROR: Subsampling parameter too high ****" << std::endl;
-		throw std::runtime_error("");;
+		throw std::runtime_error("");
 	}
 
 	// Allocate and fill interpolation filter
@@ -157,7 +157,7 @@ void initNonlinearGpu(double dz, double dx, int nz, int nx, int nts, double dts,
 	/************************* COMPUTE COSINE DAMPING COEFFICIENTS **********************/
 	if (minPad>=PAD_MAX){
 		std::cout << "**** ERROR: Padding value is too high ****" << std::endl;
-		throw std::runtime_error("");;
+		throw std::runtime_error("");
 	}
 	double cosDampingCoeff[minPad];
 
@@ -166,12 +166,13 @@ void initNonlinearGpu(double dz, double dx, int nz, int nx, int nts, double dts,
 		double arg = M_PI / (1.0 * minPad) * 1.0 * (minPad-iFilter+FAT);
 		arg = alphaCos + (1.0-alphaCos) * cos(arg);
 		cosDampingCoeff[iFilter-FAT] = arg;
+		//std::cerr << "index: " << iFilter-FAT << " coeff: " << arg << std::endl;
 	}
 
 	// Check that the block size is consistent between parfile and "varDeclare.h"
 	if (blockSize != BLOCK_SIZE) {
 		std::cout << "**** ERROR: Block size for time stepper is not consistent with parfile ****" << std::endl;
-		throw std::runtime_error("");;
+		throw std::runtime_error("");
 	}
 
 	/**************************** COPY TO CONSTANT MEMORY *******************************/
@@ -237,15 +238,15 @@ void propShotsFwdGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
 
 	// Model
-	cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate input on device
+  	cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate input on device
 	cuda_call(cudaMemcpy(dev_modelRegDtw[iGpu], modelRegDtw, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy input signals on device
 
 	// Data
-	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate output on device
-	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize output on device
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate output on device
+  	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize output on device
 
 	// Time slices
-	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
 	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
 
 	// Laplacian grid and blocks
@@ -298,10 +299,10 @@ void propShotsFwdGpu(double *modelRegDtw, double *dataRegDts, int *sourcesPositi
 	cuda_call(cudaMemcpy(dataRegDts, dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 
 	// Deallocate
-  cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
-  cuda_call(cudaFree(dev_dataRegDts[iGpu]));
-  cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
-  cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 
 }
 void propShotsFwdGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *wavefieldDts, int iGpu, int iGpuId) {
@@ -320,19 +321,19 @@ void propShotsFwdGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sour
 	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
 
 	// Model
-	cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate input on device
+  	cuda_call(cudaMalloc((void**) &dev_modelRegDtw[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate input on device
 	cuda_call(cudaMemcpy(dev_modelRegDtw[iGpu], modelRegDtw, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy input signals on device
 
 	// Data
-	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate output on device
-	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize output on device
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate output on device
+  	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize output on device
 
  	// Wavefield
 	cuda_call(cudaMalloc((void**) &dev_wavefieldDts, host_nz*host_nx*host_nts*sizeof(double))); // Allocate on device
 	cuda_call(cudaMemset(dev_wavefieldDts, 0, host_nz*host_nx*host_nts*sizeof(double))); // Initialize wavefield on device
 
 	// Time slices
-	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double))); // Initialize time slices on device
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double))); // Initialize time slices on device
 	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
 
 	// Laplacian grid and blocks
@@ -383,10 +384,10 @@ void propShotsFwdGpuWavefield(double *modelRegDtw, double *dataRegDts, int *sour
 	cuda_call(cudaMemcpy(wavefieldDts, dev_wavefieldDts, host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 
 	// Deallocate all slices
-  cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
-  cuda_call(cudaFree(dev_dataRegDts[iGpu]));
-  cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
-  cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_modelRegDtw[iGpu]));
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 	cuda_call(cudaFree(dev_wavefieldDts));
 
 }

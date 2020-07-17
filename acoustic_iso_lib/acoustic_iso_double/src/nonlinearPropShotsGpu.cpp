@@ -15,7 +15,7 @@ nonlinearPropShotsGpu::nonlinearPropShotsGpu(std::shared_ptr<SEP::double2DReg> v
 	_deviceNumberInfo = par->getInt("deviceNumberInfo", _gpuList[0]);
 	if( not getGpuInfo(_gpuList, _info, _deviceNumberInfo)){
 		throw std::runtime_error("");
-	}
+	};
 	_saveWavefield = _par->getInt("saveWavefield", 0);
 	_wavefieldShotNumber = _par->getInt("wavefieldShotNumber", 0);
 	if (_info == 1 && _saveWavefield == 1){std::cout << "Saving wavefield(s) for shot # " << _wavefieldShotNumber << std::endl;}
@@ -83,7 +83,7 @@ void nonlinearPropShotsGpu::forward(const bool add, const std::shared_ptr<double
 	std::vector<std::shared_ptr<nonlinearPropGpu>> propObjectVector;
 
 	// Initialization for each GPU:
-	// (1) Creation of vector of objects, model, and data.
+	// (1) Creation of vector of objects, model, and data
 	// (2) Memory allocation on GPU
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
@@ -244,7 +244,6 @@ void nonlinearPropShotsGpu::forwardWavefield(const bool add, const std::shared_p
 		// Get the wavefield
 		if (iShot == _wavefieldShotNumber) {
 			_wavefield = propObjectVector[iGpu]->getWavefield();
-
 		}
 	}
 

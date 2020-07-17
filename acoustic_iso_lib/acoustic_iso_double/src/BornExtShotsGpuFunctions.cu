@@ -157,7 +157,7 @@ void initBornExtGpu(double dz, double dx, int nz, int nx, int nts, double dts, i
 	// Check the subsampling coefficient is smaller than the maximum allowed
 	if (sub>=SUB_MAX){
 		std::cout << "**** ERROR: Subsampling parameter is too high ****" << std::endl;
-		throw std::runtime_error("");;
+		throw std::runtime_error("");
 	}
 
 	// Allocate and fill interpolation filter
@@ -173,7 +173,7 @@ void initBornExtGpu(double dz, double dx, int nz, int nx, int nts, double dts, i
 	// Check padding is smaller than maximum allowed
 	if (minPad>=PAD_MAX){
 		std::cout << "**** ERROR: Padding value is too high ****" << std::endl;
-		throw std::runtime_error("");;
+		throw std::runtime_error("");
 	}
 	double cosDampingCoeff[minPad];
 
@@ -187,7 +187,7 @@ void initBornExtGpu(double dz, double dx, int nz, int nx, int nts, double dts, i
 	// Check that the block size is consistent between parfile and "varDeclare.h"
 	if (blockSize != BLOCK_SIZE) {
 		std::cout << "**** ERROR: Block size for time stepper is not consistent with parfile ****" << std::endl;
-		throw std::runtime_error("");;
+		throw std::runtime_error("");
 	}
 
 	/**************************** COPY TO CONSTANT MEMORY *******************************/
@@ -397,7 +397,7 @@ void BornTimeShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSigna
 		dev_ssLeft[iGpu] = dev_ssRight[iGpu];
 		dev_ssRight[iGpu] = dev_ssTemp1[iGpu];
 		dev_ssTemp1[iGpu] = NULL;
-  		cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double))); // Reinitialize slice for coarse time-sampling before time derivative
+  	cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double))); // Reinitialize slice for coarse time-sampling before time derivative
 	}
 
 	// Copy data back to host
@@ -553,7 +553,7 @@ void BornTimeShotsFwdGpuWavefield(double *model, double *dataRegDts, double *sou
 		dev_ssLeft[iGpu] = dev_ssRight[iGpu];
 		dev_ssRight[iGpu] = dev_ssTemp1[iGpu];
 		dev_ssTemp1[iGpu] = NULL;
-  		cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double))); // Reinitialize slice for coarse time-sampling before time derivative
+  	cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double))); // Reinitialize slice for coarse time-sampling before time derivative
 	}
 
 	// Copy data back to host

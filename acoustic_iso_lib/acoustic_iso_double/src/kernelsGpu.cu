@@ -363,17 +363,16 @@ __global__ void imagingOffsetFwdGpu(double *dev_model, double *dev_timeSlice, do
 
 __global__ void imagingOffsetAdjGpu(double *dev_model, double *dev_timeSlice, double *dev_srcWavefieldDts, int its){
 
-	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate on main grid
-	int ix = FAT + dev_hExt + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate on main grid for the model where we evaluate the image
-	int iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // offset coordinate (iOffset = 0, ..., dev_nOffset-1)
+	long long iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate on main grid
+	long long ix = FAT + dev_hExt + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate on main grid for the model where we evaluate the image
+	long long iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // offset coordinate (iOffset = 0, ..., dev_nOffset-1)
 
 	if ( (ix < dev_nx-FAT-dev_hExt) && (iExt < dev_nExt) ){
-		int iExtShift=iExt-dev_hExt;
-		int iModel = dev_nz * dev_nx * iExt + dev_nz * ix + iz; // Model index
-		int iSrcWavefield = dev_nz * dev_nx * its + dev_nz * (ix-iExtShift) + iz; // Source wavefield index
-		int iRecWavefield = dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
+		long long iExtShift=iExt-dev_hExt;
+		long long iModel = dev_nz * dev_nx * iExt + dev_nz * ix + iz; // Model index
+		long long iSrcWavefield = dev_nz * dev_nx * its + dev_nz * (ix-iExtShift) + iz; // Source wavefield index
+		long long iRecWavefield = dev_nz * (ix+iExtShift) + iz; // Receiver wavefield index
 		dev_model[iModel] += dev_timeSlice[iRecWavefield] * dev_srcWavefieldDts[iSrcWavefield];
-
 	}
 }
 
@@ -415,7 +414,7 @@ __global__ void imagingTimeTomoAdjGpu(double *dev_wavefieldIn, double *dev_timeS
 	int ix = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
 	int iSpace = dev_nz * ix + iz; // 1D array index for the model on the global memory
 	int iWavefield = its * dev_nz * dev_nx + iSpace; // Index for source wavefield at its
-
+	// Put pragma unroll statement for speed up
 	for (int iExt = iExtMin; iExt < iExtMax; iExt++){
 
 		int iModelExt = iExt * dev_nz * dev_nx + iSpace; // Compute index for extended model
@@ -472,6 +471,7 @@ __global__ void imagingOffsetWemvaAdjGpu(double *dev_wavefieldIn, double *dev_ti
 		dev_timeSliceOut[iSpace] += dev_extReflectivityIn[iModel] * dev_wavefieldIn[iSrcWavefield];
 	}
 }
+
 /****************************************************************************************/
 /*********************************** Forward steppers ***********************************/
 /****************************************************************************************/
@@ -486,6 +486,7 @@ __global__ void stepFwdGpu(double *dev_o, double *dev_c, double *dev_n, double *
 	int iGlobal = dev_nz * ixGlobal + izGlobal; // 1D array index for the model on the global memory
 
 	// Copy current slice from global to shared memory
+	// Each thread is going to perform this operation
 	shared_c[ixLocal][izLocal] = dev_c[iGlobal];
 
 	// Copy current slice from global to shared -- edges
@@ -497,7 +498,9 @@ __global__ void stepFwdGpu(double *dev_o, double *dev_c, double *dev_n, double *
 		shared_c[ixLocal][izLocal-FAT] = dev_c[iGlobal-FAT]; // Up
 		shared_c[ixLocal][izLocal+BLOCK_SIZE] = dev_c[iGlobal+BLOCK_SIZE]; // Down
 	}
-	__syncthreads(); // Synchronise all threads within each block -- look new sync options
+	__syncthreads(); // Synchronise all threads within each block
+	// For a given block, we have now loaded the entire "block slice" plus the halos on both directions into the shared memory
+	// We can now compute the Laplacian value at each point of the entire block slice
 
 	dev_n[iGlobal] =  dev_vel2Dtw2[iGlobal] * ( dev_zCoeff[0] * shared_c[ixLocal][izLocal]
 				   +  dev_zCoeff[1] * ( shared_c[ixLocal][izLocal-1] + shared_c[ixLocal][izLocal+1] )

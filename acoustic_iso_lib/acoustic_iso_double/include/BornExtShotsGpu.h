@@ -49,9 +49,11 @@ class BornExtShotsGpu : public Operator<SEP::double3DReg, SEP::double3DReg> {
 		/* Accessor */
 		std::shared_ptr<double3DReg> getSrcWavefield(){ return _srcWavefield; }
 		std::shared_ptr<double3DReg> getSecWavefield(){ return _secWavefield; }
+		std::shared_ptr<double2DReg> getVel(){ return _vel; }
 
 		/* Mutators */
 		void setVel(std::shared_ptr<SEP::double2DReg> vel){ _vel = vel; }
+
 
 };
 

@@ -9,7 +9,7 @@
 #define COEFF_SIZE 6 // Laplacian coefficient array for 10th order
 #define PI_CUDA M_PI // Import the number "Pi" from the math library
 #define PAD_MAX 200 // Maximum number of points for padding (on one side)
-#define SUB_MAX 30 // Maximum subsampling value
+#define SUB_MAX 100 // Maximum subsampling value
 
 #define min2(v1,v2) (((v1)<(v2))?(v1):(v2)) /* Minimum function */
 #define max2(v1,v2) (((v1)>(v2))?(v1):(v2)) /* Minimum function */
@@ -31,8 +31,8 @@ __constant__ int dev_ntw; // Number of time steps at the fine time sampling on D
 __constant__ int dev_nz; // nz on Device
 __constant__ int dev_nx; // nx on Device
 __constant__ int dev_sub; // Subsampling in time
- __constant__ int dev_nExt; // Length of extension axis
- __constant__ int dev_hExt; // Half-length of extension axis
+__constant__ int dev_nExt; // Length of extension axis
+__constant__ int dev_hExt; // Half-length of extension axis
 
 __constant__ int dev_nSourcesReg; // Nb of source grid points
 __constant__ int dev_nReceiversReg; // Nb of receiver grid points

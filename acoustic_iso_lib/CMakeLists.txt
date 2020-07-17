@@ -45,12 +45,12 @@ include_directories(${Boost_INCLUDE_DIR})
 include_directories(${TBB_INCLUDE_DIRS})
 
 # Acoustic isotropic operators (Double precision)
-# add_subdirectory(acoustic_iso_double)
+add_subdirectory(acoustic_iso_double)
 add_subdirectory(acoustic_iso_float)
 add_subdirectory(acoustic_iso_we_float)
 
 # include folder for pyAcousticIsotropic library
-# add_subdirectory(python/python_double)
+add_subdirectory(python/python_double)
 add_subdirectory(python/python_float)
 #add_subdirectory(python/python_float_we)
 

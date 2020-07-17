@@ -267,7 +267,7 @@ bool fdParam::checkParfileConsistencySpace(const std::shared_ptr<double3DReg> mo
 	if ( std::abs(_dz - modelExt->getHyper()->getAxis(1).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dz not consistent with parfile ****" << std::endl; return false;}
 	if ( std::abs(_oz - modelExt->getHyper()->getAxis(1).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: oz not consistent with parfile ****" << std::endl; return false;}
 
-	// Vertical axis
+	// Horizontal axis
 	if (_nx != modelExt->getHyper()->getAxis(2).n) {std::cout << "**** [" << fileToCheck << "] ERROR: nx not consistent with parfile ****" << std::endl; return false;}
 	if ( std::abs(_dx - modelExt->getHyper()->getAxis(2).d) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: dx not consistent with parfile ****" << std::endl; return false;}
 	if ( std::abs(_ox - modelExt->getHyper()->getAxis(2).o) > _errorTolerance ) {std::cout << "**** [" << fileToCheck << "] ERROR: ox not consistent with parfile ****" << std::endl; return false;}
