@@ -24,23 +24,46 @@ make install
 
 ```
 # Install conda
+# Follow the easy instructions at https://docs.conda.io/projects/conda/en/latest/user-guide/install/
+# or simply use the following two commands
 wget https://repo.anaconda.com/archive/Anaconda3-2019.10-Linux-x86_64.sh
 bash Anaconda3-2019.10-Linux-x86_64.sh
 
 # Creating necessary environment
-git clone http://zapad.Stanford.EDU/barnier/acoustic_isotropic_operators.git
-cd acoustic_isotropic_operators
-conda env create -f environment.yml
-# If the previous command fails with your conda install try the following command
-# conda create --name EGS --file spec-file.txt
+conda create -n EGS
 conda activate EGS
+conda install -c anaconda cmake
+conda install -c anaconda boost
+conda install -c statiskit libboost-dev
+conda install -c conda-forge tbb tbb-devel
+conda install -c conda-forge pybind11
+conda install dask
+conda install -c conda-forge dask-jobqueue
+conda install -c anaconda scipy
+conda install -c conda-forge matplotlib
+conda install -c anaconda jupyter
+conda install h5py
+conda install -c conda-forge scikit-build
+# The code installation requires that C++, CC, FORTRAN, and CUDA compilers are installed (e.g., g++, gcc, gfortran, nvcc)
 
 # Installing GPU-wave-equation library
+git clone http://zapad.Stanford.EDU/barnier/acoustic_isotropic_operators.git
+cd acoustic_isotropic_operators
 git submodule update --init --recursive -- acoustic_iso_lib/external/ioLibs
 git submodule update --init --recursive -- acoustic_iso_lib/external/pySolver
+git submodule update --init --recursive -- acoustic_iso_lib/external/pybind11
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=${CONDA_PREFIX}/bin/nvcc ../acoustic_iso_lib/ -DCMAKE_CXX_COMPILER=${CONDA_PREFIX}/bin/g++ -DCMAKE_C_COMPILER=${CONDA_PREFIX}/bin/gcc -DCMAKE_Fortran_COMPILER=${CONDA_PREFIX}/bin/gfortran -DPYTHON_EXECUTABLE=${CONDA_PREFIX}/bin/python3
+
+# Now try to run the following cmake command
+cmake -DCMAKE_INSTALL_PREFIX=../local ../acoustic_iso_lib/
+# If this command breaks, try to set compiler paths manually
+cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=PATH-TO-NVCC -DCMAKE_CXX_COMPILER=PATH-TO-C++-COMPILER -DCMAKE_C_COMPILER=PATH-TO-CC-COMPILER -DCMAKE_Fortran_COMPILER=PATH-TO-FORTRAN-COMPILER -DPYTHON_EXECUTABLE=${CONDA_PREFIX}/bin/python3 ../acoustic_iso_lib/
+# If that also breaks, run the following conda command, manually set the nvcc full path, and run
+conda install gcc_linux-64 gxx_linux-64 gfortran_linux-64
+cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=PATH-TO-NVCC ../acoustic_iso_lib/ -DCMAKE_CXX_COMPILER=`ls ${CONDA_PREFIX}/bin/*g++` -DCMAKE_C_COMPILER=`ls ${CONDA_PREFIX}/bin/*gcc` -DCMAKE_Fortran_COMPILER=`ls ${CONDA_PREFIX}/bin/*gfortran` -DPYTHON_EXECUTABLE=${CONDA_PREFIX}/bin/python3
+
+# Now let's install the library. If it breaks, try to set different compilers using the previous commands
 make install -j16
 cd ..
 
