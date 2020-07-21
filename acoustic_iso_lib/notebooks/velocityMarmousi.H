@@ -110,3 +110,4 @@ Cp:   ettore@jarvis   Fri Jan  4 08:54:42 2019
 		copy_intag="/homes/sep/gbarnier/code/gpu/gpuDouble/velocityMarmousi.H"
 		data_format="xdr_float"
 in='/homes/sep/ettore/research/packages/acoustic_isotropic_operators/acoustic_iso_lib/notebooks/velocityMarmousi.H@'
+in='./velocityMarmousi.H@'
