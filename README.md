@@ -33,6 +33,7 @@ bash Anaconda3-2019.10-Linux-x86_64.sh
 conda create -n EGS
 conda activate EGS
 conda install -c anaconda cmake
+conda install -c conda-forge flex
 conda install -c anaconda boost
 conda install -c statiskit libboost-dev
 conda install -c conda-forge tbb tbb-devel
