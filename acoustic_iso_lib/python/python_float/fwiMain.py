@@ -129,7 +129,9 @@ if __name__ == '__main__':
 
 	if (gradientMask==1):
 		maskGradientOp=maskGradientModule.maskGradient(modelFineInitLocal,modelFineInitLocal,velLocal,bufferUp,bufferDown,taperExp,fat,wbShift,gradientMaskFile)
-		BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
+		if reg != 1:
+			# Chain mask if problem is not regularized 
+			BornInvOp=pyOp.ChainOperator(maskGradientOp,BornOp)
 		gMask=maskGradientOp.getMask()
 
 	# Conventional FWI
