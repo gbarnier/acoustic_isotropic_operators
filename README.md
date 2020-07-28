@@ -14,9 +14,9 @@ To build library run:
 ```
 cd build
 
-cmake -DCMAKE_INSTALL_PREFIX=installation_path -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc ../acoustic_iso_lib/
+cmake -DCMAKE_INSTALL_PREFIX=installation_path -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc -DBUILD_SHARED_LIBS=True ../acoustic_iso_lib/
 
-make install
+make install -j8
 
 ```
 
@@ -57,12 +57,12 @@ mkdir build
 cd build
 
 # Now try to run the following cmake command
-cmake -DCMAKE_INSTALL_PREFIX=../local ../acoustic_iso_lib/
+cmake -DCMAKE_INSTALL_PREFIX=../local ../acoustic_iso_lib/ -DBUILD_SHARED_LIBS=True
 # If this command breaks, try to set compiler paths manually
-cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=PATH-TO-NVCC -DCMAKE_CXX_COMPILER=PATH-TO-C++-COMPILER -DCMAKE_C_COMPILER=PATH-TO-CC-COMPILER -DCMAKE_Fortran_COMPILER=PATH-TO-FORTRAN-COMPILER -DPYTHON_EXECUTABLE=${CONDA_PREFIX}/bin/python3 ../acoustic_iso_lib/
+cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=PATH-TO-NVCC -DCMAKE_CXX_COMPILER=PATH-TO-C++-COMPILER -DCMAKE_C_COMPILER=PATH-TO-CC-COMPILER -DCMAKE_Fortran_COMPILER=PATH-TO-FORTRAN-COMPILER -DPYTHON_EXECUTABLE=${CONDA_PREFIX}/bin/python3 -DBUILD_SHARED_LIBS=True ../acoustic_iso_lib/
 # If that also breaks, run the following conda command, manually set the nvcc full path, and run
 conda install gcc_linux-64 gxx_linux-64 gfortran_linux-64
-cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=PATH-TO-NVCC ../acoustic_iso_lib/ -DCMAKE_CXX_COMPILER=`ls ${CONDA_PREFIX}/bin/*g++` -DCMAKE_C_COMPILER=`ls ${CONDA_PREFIX}/bin/*gcc` -DCMAKE_Fortran_COMPILER=`ls ${CONDA_PREFIX}/bin/*gfortran` -DPYTHON_EXECUTABLE=${CONDA_PREFIX}/bin/python3
+cmake -DCMAKE_INSTALL_PREFIX=../local -DCMAKE_CUDA_COMPILER=PATH-TO-NVCC ../acoustic_iso_lib/ -DCMAKE_CXX_COMPILER=`ls ${CONDA_PREFIX}/bin/*g++` -DCMAKE_C_COMPILER=`ls ${CONDA_PREFIX}/bin/*gcc` -DCMAKE_Fortran_COMPILER=`ls ${CONDA_PREFIX}/bin/*gfortran` -DPYTHON_EXECUTABLE=${CONDA_PREFIX}/bin/python3 -DBUILD_SHARED_LIBS=True
 
 # Now let's install the library. If it breaks, try to set different compilers using the previous commands
 make install -j16
