@@ -5,7 +5,7 @@
 using namespace SEP;
 
 // Constructor for both time and offset
-dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTime, std::string moveout, int reverseTime, float maxOffset, float expOffset, float taperWidthOffset, int reverseOffset, std::shared_ptr<SEP::hypercube> dataHyper, float taperEndTraceWidth){
+dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTime, std::string moveout, int reverseTime, float maxOffset, float expOffset, float taperWidthOffset, int reverseOffset, std::shared_ptr<SEP::hypercube> dataHyper, float taperEndTraceWidth, int streamers){
 
 	// Shots geometry
 	_dataHyper = dataHyper;
@@ -35,7 +35,13 @@ dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTim
 	_tMax = _ots+(_nts-1)*_dts; // Max time for recording
 
 	// Offset mask parameters
-	_maxOffset=std::abs(maxOffset);
+	_streamers = streamers; // Whether to use streamers or not
+	if (_streamers == 0){
+		_maxOffset=std::abs(maxOffset);
+	} else {
+		// Sign necessary to check if right- or left-moving streamers
+		_maxOffset=maxOffset;
+	}
 	_expOffset=expOffset;
 	_taperWidthOffset=std::abs(taperWidthOffset);
 	_reverseOffset=reverseOffset;
@@ -44,7 +50,11 @@ dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTim
 	computeTaperMaskTime();
 
 	// Compute offset taper mask
-	computeTaperMaskOffset();
+	if (_streamers == 0){
+		computeTaperMaskOffset();
+	} else {
+		computeTaperMaskOffsetStreamers();
+	}
 
 	// Compute total mask
 	_taperMask=_taperMaskTime;
@@ -72,10 +82,8 @@ dataTaper::dataTaper(std::shared_ptr<SEP::hypercube> dataHyper, float taperEndTr
 	_ots=_dataHyper->getAxis(1).o; // Initial time
 	_dts = _dataHyper->getAxis(1).d; // Time sampling
 	_tMax = _ots+(_nts-1)*_dts; // Max time for recording
-	std::cout << "Inside 1" << std::endl;
 	// Compute weighting for end of trace
 	_taperEndTraceWidth = taperEndTraceWidth; // Taper width [s]
-	std::cout << "_taperEndTraceWidth" << _taperEndTraceWidth << std::endl;
 	computeTaperEndTrace();
 
 }
@@ -123,7 +131,7 @@ dataTaper::dataTaper(float t0, float velMute, float expTime, float taperWidthTim
 }
 
 // Constructor for offset only
-dataTaper::dataTaper(float maxOffset, float expOffset, float taperWidthOffset, std::shared_ptr<SEP::hypercube> dataHyper, int reverseOffset, float taperEndTraceWidth){
+dataTaper::dataTaper(float maxOffset, float expOffset, float taperWidthOffset, std::shared_ptr<SEP::hypercube> dataHyper, int reverseOffset, float taperEndTraceWidth, int streamers){
 
 	// Shots geometry
 	_dataHyper = dataHyper;
@@ -145,13 +153,23 @@ dataTaper::dataTaper(float maxOffset, float expOffset, float taperWidthOffset, s
 	_tMax = _ots+(_nts-1)*_dts; // Max time for recording
 
 	// Offset mask parameters
-	_maxOffset=std::abs(maxOffset);
+	_streamers = streamers; // Whether to use streamers or not
+	if (_streamers == 0){
+		_maxOffset=std::abs(maxOffset);
+	} else {
+		// Sign necessary to check if right- or left-moving streamers
+		_maxOffset=maxOffset;
+	}
 	_expOffset=expOffset;
 	_taperWidthOffset=std::abs(taperWidthOffset);
 	_reverseOffset=reverseOffset;
 
 	// Compute offset taper mask
-	computeTaperMaskOffset();
+	if (_streamers == 0){
+		computeTaperMaskOffset();
+	} else {
+		computeTaperMaskOffsetStreamers();
+	}
 
 	// Total mask
 	_taperMask=_taperMaskOffset;
@@ -335,6 +353,68 @@ void dataTaper::computeTaperMaskOffset(){
 		}
 	}
 }
+void dataTaper::computeTaperMaskOffsetStreamers(){
+
+	// Allocate and computer taper mask
+	_taperMaskOffset=std::make_shared<float3DReg>(_dataHyper);
+	_taperMaskOffset->set(1.0); // Set mask value to 1
+
+	// Generate taper mask for offset muting and tapering
+	for (int iShot=0; iShot<_nShot; iShot++){
+
+		if (_reverseOffset==0) {
+
+			// Compute shot position
+			float s=_xMinShot+iShot*_dShot;
+			float xMinRecMute1, xMaxRecMute1;
+			int ixMinRecMute1, ixMaxRecMute1;
+			int ixMinRecMute1True, ixMaxRecMute1True;
+
+			//     |------- 0 ------||----------- 1 -----------||----- 0 --------|
+			// _xMinRec--------xMinRecMute1--------s------xMaxRecMute1---------_xMaxRec
+
+			// If _maxOffset > 0 then, streamer are moving towards the left-hand side of the model: xMaxRecMute1 = s
+			// If _maxOffset < 0 then, streamer are moving towards the right-hand side of the model: xMinRecMute1 = s
+
+			// Compute cutoff position [km] of the receivers from each side of the source
+			if (_maxOffset > 0){
+				xMinRecMute1=s; // Inner bounds
+				xMaxRecMute1=s+_maxOffset;
+			} else if (_maxOffset < 0) {
+				xMinRecMute1=s+_maxOffset; // Inner bounds
+				xMaxRecMute1=s;
+			} else {
+				throw std::runtime_error("**** ERROR [Offset muting]: maxOffset must be different than zero ****");
+			}
+
+			// Compute theoretical index of min1
+			if (xMinRecMute1-_xMinRec >= 0){
+				ixMinRecMute1True=(xMinRecMute1-_xMinRec)/_dRec+0.5;
+			} else {
+				ixMinRecMute1True=(xMinRecMute1-_xMinRec)/_dRec-0.5;
+			}
+			ixMinRecMute1=std::max(ixMinRecMute1True, 0);
+
+			// Compute index of max inner bound
+			ixMaxRecMute1True=(xMaxRecMute1-_xMinRec)/_dRec+0.5;
+			ixMaxRecMute1=std::min(ixMaxRecMute1True, _nRec-1);
+
+			// #pragma omp parallel for
+			for (int iRec=0; iRec<_nRec; iRec++){
+
+				// Outside
+				if( (iRec<ixMinRecMute1) || (iRec>ixMaxRecMute1) ){
+					for (int its=0; its<_dataHyper->getAxis(1).n; its++){
+						(*_taperMaskOffset->_mat)[iShot][iRec][its] = 0.0;
+					}
+				}
+
+			}
+		} else {
+			throw std::runtime_error("**** ERROR [Offset muting]: Reverse option not implemented! ****");
+		}
+	}
+}
 void dataTaper::computeTaperMaskTime(){
 
 	// Allocate and computer taper mask
@@ -469,14 +549,10 @@ void dataTaper::computeTaperEndTrace(){
 	_taperEndTrace->set(1.0); // Set mask value to 1
 
 	// Compute trace taper mask
-	std::cout << "_taperEndTraceWidth" << _taperEndTraceWidth << std::endl;
 	if (_taperEndTraceWidth>0.0){
 
 		// Time after which we start tapering the trace [s]
 		float tTaperEndTrace = _tMax - _taperEndTraceWidth;
-		std::cout << "tMax = " << _tMax << std::endl;
-		std::cout << "taperEndTraceWidth = " << _taperEndTraceWidth << std::endl;
-		std::cout << "tTaperEndTrace = " << tTaperEndTrace << std::endl;
 
 		// Make sure you're not out of bounds
 		if (tTaperEndTrace < _ots){

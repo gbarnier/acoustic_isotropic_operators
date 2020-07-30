@@ -15,11 +15,11 @@ PYBIND11_MODULE(pyDataTaper, clsGeneric) {
 
   py::class_<dataTaper, std::shared_ptr<dataTaper>>(clsGeneric,"dataTaper")
 
-      .def(py::init<float,float,float,float,std::string,int,float,float,float,int,std::shared_ptr<SEP::hypercube>,float>(), "Initialize a dataTaper for time and offset muting")
+      .def(py::init<float,float,float,float,std::string,int,float,float,float,int,std::shared_ptr<SEP::hypercube>,float,int>(), "Initialize a dataTaper for time and offset muting")
 
       .def(py::init<float,float,float,float,std::shared_ptr<SEP::hypercube>,std::string,int,float>(), "Initialize a dataTaper for time muting")
 
-      .def(py::init<float,float,float,std::shared_ptr<SEP::hypercube>,int,float>(), "Initialize a dataTaper for offset muting")
+      .def(py::init<float,float,float,std::shared_ptr<SEP::hypercube>,int,float,int>(), "Initialize a dataTaper for offset muting")
 
       .def(py::init<std::shared_ptr<SEP::hypercube>,float>(), "Initialize a dataTaper for only end of trace muting")
 

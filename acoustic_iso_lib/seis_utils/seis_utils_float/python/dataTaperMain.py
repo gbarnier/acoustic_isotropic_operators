@@ -16,12 +16,10 @@ if __name__ == '__main__':
 	model=genericIO.defaultIO.getVector(modelFile,ndims=3)
 
 	# Initialize operator
-	t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth=dataTaperModule.dataTaperInit(sys.argv)
-
-	print("trace taper width = ",taperEndTraceWidth)
+	t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth,streamers=dataTaperModule.dataTaperInit(sys.argv)
 
 	# Instanciate operator
-	dataTaperOb=dataTaperModule.datTaper(model,model,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,model.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth)
+	dataTaperOb=dataTaperModule.datTaper(model,model,t0,velMute,expTime,taperWidthTime,moveout,reverseTime,maxOffset,expOffset,taperWidthOffset,reverseOffset,model.getHyper(),time,offset,shotRecTaper,taperShotWidth,taperRecWidth,expShot,expRec,edgeValShot,edgeValRec,taperEndTraceWidth,streamers)
 
 	# Get tapering mask
 	maskFile=parObject.getString("mask","noMaskFile")
