@@ -111,6 +111,17 @@ if __name__ == '__main__':
 		#Chunking the data and spreading them across workers if dask was requested
 		data = Acoustic_iso_float.chunkData(data,BornExtOp.getRange())
 
+	# Diagonal Preconditioning
+	PrecFile = parObject.getString("PrecFile","None")
+	Precond = None
+	if PrecFile != "None":
+		if(pyinfo): print("--- Using diagonal preconditioning ---")
+		inv_log.addToLog("--- Using diagonal preconditioning ---")
+		PrecVec=genericIO.defaultIO.getVector(PrecFile)
+		if not PrecVec.checkSame(modelInit):
+			raise ValueError("ERROR! Preconditioning diagonal inconsistent with model vector")
+		Precond = pyOp.DiagonalOp(PrecVec)
+
 	############################# Instantiation ################################
 
 	# Spline
@@ -190,7 +201,7 @@ if __name__ == '__main__':
 			if solver == "lbfgs":
 				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon)
 			else:
-				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
+				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,prec=Precond)
 
 		# Dso
 		elif (regType=="dso"):
@@ -211,15 +222,15 @@ if __name__ == '__main__':
 			if solver == "lbfgs":
 				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon,reg_op=pyOp.NonLinearOperator(dsoOp,dsoOp))
 			else:
-				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp)
+				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=dsoOp,prec=Precond)
 
 		elif (regType=="dsoPrec"):
 			if(pyinfo): print("--- DSO regularization with preconditioning ---")
 			inv_log.addToLog("--- DSO regularization with preconditioning ---")
 			if solver == "lbfgs":
-				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon)
+				invProb=Prblm.ProblemL2NonLinearReg(modelInit,data,invOp,epsilon,prec=Precond)
 			else:
-				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
+				invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,prec=Precond)
 
 		else:
 			if(pyinfo): print("--- Regularization that you have required is not supported by our code ---")
@@ -239,14 +250,14 @@ if __name__ == '__main__':
 		if solver == "lbfgs":
 			invProb=Prblm.ProblemL2NonLinear(modelInit,data,invOp)
 		else:
-			invProb=Prblm.ProblemL2Linear(modelInit,data,invOp)
+			invProb=Prblm.ProblemL2Linear(modelInit,data,invOp,prec=Precond)
 
 	############################## Solver ######################################
 	# Solver
 	if solver == "LCG":
 		linSolver=LCG(stop,logger=inv_log)
 	elif solver == "lbfgs":
-		linSolver=LBFGS(stop,logger=inv_log)
+		linSolver=LBFGS(stop,logger=inv_log,H0=Precond)
 	else:
 		raise ValueError("Provided requested solver (%s) not supported!"%(solver))
 
