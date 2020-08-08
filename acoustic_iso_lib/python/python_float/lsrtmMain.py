@@ -105,6 +105,17 @@ if __name__ == '__main__':
 		#Chunking the data and spreading them across workers if dask was requested
 		data = Acoustic_iso_float.chunkData(data,BornOp.getRange())
 
+	# Diagonal Preconditioning
+	PrecFile = parObject.getString("PrecFile","None")
+	Precond = None
+	if PrecFile != "None":
+		if(pyinfo): print("--- Using diagonal preconditioning ---")
+		inv_log.addToLog("--- Using diagonal preconditioning ---")
+		PrecVec=genericIO.defaultIO.getVector(PrecFile)
+		if not PrecVec.checkSame(modelInit):
+			raise ValueError("ERROR! Preconditioning diagonal inconsistent with model vector")
+		Precond = pyOp.DiagonalOp(PrecVec)
+
 	############################# Instanciation ################################
 
 	# Spline
@@ -152,7 +163,7 @@ if __name__ == '__main__':
 		if (regType=="id"):
 			if(pyinfo): print("--- Identity regularization ---")
 			inv_log.addToLog("--- Identity regularization ---")
-			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
+			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,prec=Precond)
 
 		# Spatial gradient in z-direction
 		if (regType=="zGrad"):
@@ -160,7 +171,7 @@ if __name__ == '__main__':
 			inv_log.addToLog("--- Vertical gradient regularization ---")
 			fat=spatialDerivModule.zGradInit(sys.argv)
 			gradOp=spatialDerivModule.zGradPython(modelInit,modelInit,fat)
-			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon)
+			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,prec=Precond)
 
 		# Spatial gradient in x-direction
 		if (regType=="xGrad"):
@@ -168,7 +179,7 @@ if __name__ == '__main__':
 			inv_log.addToLog("--- Horizontal gradient regularization ---")
 			fat=spatialDerivModule.xGradInit(sys.argv)
 			gradOp=spatialDerivModule.xGradPython(modelInit,modelInit,fat)
-			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=gradOp)
+			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=gradOp,prec=Precond)
 
 		# Sum of spatial gradients in z and x-directions
 		if (regType=="zxGrad"):
@@ -176,7 +187,7 @@ if __name__ == '__main__':
 			inv_log.addToLog("--- Gradient regularization in both directions ---")
 			fat=spatialDerivModule.zxGradInit(sys.argv)
 			gradOp=spatialDerivModule.zxGradPython(modelInit,modelInit,fat)
-			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=gradOp)
+			invProb=Prblm.ProblemL2LinearReg(modelInit,data,invOp,epsilon,reg_op=gradOp,prec=Precond)
 
 		# Evaluate Epsilon
 		if (epsilonEval==1):
@@ -189,7 +200,7 @@ if __name__ == '__main__':
 
 	# No regularization
 	else:
-		invProb=Prblm.ProblemL2Linear(modelInit,data,invOp)
+		invProb=Prblm.ProblemL2Linear(modelInit,data,invOp,prec=Precond)
 
 	############################## Solver ######################################
 	# Solver

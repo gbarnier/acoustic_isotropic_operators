@@ -160,6 +160,17 @@ if __name__ == '__main__':
 		#Chunking the data and spreading them across workers if dask was requested
 		data = Acoustic_iso_float.chunkData(data,BornOp.getRange())
 
+	# Diagonal Preconditioning
+	PrecFile = parObject.getString("PrecFile","None")
+	Precond = None
+	if PrecFile != "None":
+		if(pyinfo): print("--- Using diagonal preconditioning ---")
+		inv_log.addToLog("--- Using diagonal preconditioning ---")
+		PrecVec=genericIO.defaultIO.getVector(PrecFile)
+		if not PrecVec.checkSame(modelInit):
+			raise ValueError("ERROR! Preconditioning diagonal inconsistent with model vector")
+		Precond = pyOp.DiagonalOp(PrecVec)
+
 	############################# Auxiliary operators ##########################
 	if (spline==1):
 		if client:
@@ -299,7 +310,7 @@ if __name__ == '__main__':
 	minBoundVector,maxBoundVector=Acoustic_iso_float.createBoundVectors(parObject,modelInit)
 
 	######################### Variable projection problem ######################
-	vpProb=Prblm.ProblemL2VpReg(modelInit,reflectivityExtInitLocal,vpOp,data,linSolver,gInvOp,h_op_reg=vpRegOp,epsilon=epsilon,minBound=minBoundVector,maxBound=maxBoundVector)
+	vpProb=Prblm.ProblemL2VpReg(modelInit,reflectivityExtInitLocal,vpOp,data,linSolver,gInvOp,h_op_reg=vpRegOp,epsilon=epsilon,minBound=minBoundVector,maxBound=maxBoundVector,prec=Precond)
 
 	################################# Inversion ################################
 	nlSolver.run(vpProb,verbose=info)
