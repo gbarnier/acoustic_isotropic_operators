@@ -164,10 +164,9 @@ if __name__ == '__main__':
 	PrecFile = parObject.getString("PrecFile","None")
 	Precond = None
 	if PrecFile != "None":
-		if(pyinfo): print("--- Using diagonal preconditioning ---")
-		inv_log.addToLog("--- Using diagonal preconditioning ---")
+		print("--- Using diagonal preconditioning ---")
 		PrecVec=genericIO.defaultIO.getVector(PrecFile)
-		if not PrecVec.checkSame(modelInit):
+		if not PrecVec.checkSame(reflectivityExtInitLocal):
 			raise ValueError("ERROR! Preconditioning diagonal inconsistent with model vector")
 		Precond = pyOp.DiagonalOp(PrecVec)
 
