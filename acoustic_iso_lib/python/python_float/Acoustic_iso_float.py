@@ -34,6 +34,7 @@ def create_client(parObject):
 	hostnames = parObject.getString("hostnames","noHost")
 	pbs_args = parObject.getString("pbs_args","noPBS")
 	lsf_args = parObject.getString("lsf_args","noLSF")
+	slurm_args = parObject.getString("slurm_args","noSLURM")
 	cluster_args = None
 	if pbs_args != "noPBS":
 		cluster_args = pbs_args
@@ -41,8 +42,11 @@ def create_client(parObject):
 	elif lsf_args != "noLSF":
 		cluster_args = lsf_args
 		cluster_name = "lsf_params"
+	elif slurm_args != "noSLURM":
+		cluster_args = slurm_args
+		cluster_name = "slurm_params"
 	if hostnames != "noHost" and cluster_args is not None:
-		raise ValueError("Only one interface can be used for a client! User provided both SSH and PBS/LSF parameters!")
+		raise ValueError("Only one interface can be used for a client! User provided both SSH and PBS/LSF/SLURM parameters!")
 	#Starting Dask client if requested
 	client = None
 	nWrks = None
