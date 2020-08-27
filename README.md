@@ -47,6 +47,7 @@ conda install h5py
 conda install -c conda-forge scikit-build
 conda install -c conda-forge setuptools_scm
 conda install -c anaconda pytest
+conda install numba
 # The code installation requires that C++, CC, FORTRAN, and CUDA compilers are installed (e.g., g++, gcc, gfortran, nvcc)
 
 # Installing GPU-wave-equation library
