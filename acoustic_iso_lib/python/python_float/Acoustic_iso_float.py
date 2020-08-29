@@ -156,6 +156,15 @@ def call_deviceGpu1(z_dev, x_dev, vel, nts, dipole, zDipoleShift, xDipoleShift):
 	obj = deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift)
 	return obj
 
+def call_deviceGpu2(z_dev, x_dev, vel, nts, dipole, zDipoleShift, xDipoleShift):
+	"""Function to construct device using its absolute positions"""
+	zCoordFloat=SepVector.getSepVector(ns=[z_dev.shape[0]])
+	xCoordFloat=SepVector.getSepVector(ns=[x_dev.shape[0]])
+	zCoordFloat.getNdArray()[:]=z_dev
+	xCoordFloat.getNdArray()[:]=x_dev
+	obj = deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift)
+	return obj
+
 def chunkData(dataVecLocal,dataSpaceRemote):
 	"""Function to chunk and spread the data vector across dask workers"""
 	dask_client = dataSpaceRemote.dask_client #Getting Dask client
@@ -296,13 +305,17 @@ def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
 	#Reading source geometry from file
 	if(sourceGeomFile != "None"):
 		sourceGeomVectorNd = genericIO.defaultIO.getVector(sourceGeomFile).getNdArray()
+		nShot = np.sum(List_Shots)
+		#Check for consistency between number of shots and provided coordinates
+		if(nShot != sourceGeomVectorNd.shape[1]):
+			raise ValueError("Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
+
+		shotIdx = 0
 		for idx,nShot in enumerate(List_Shots):
-			#Check for consistency between number of shots and provided coordinates
-			if(nShot != sourceGeomVectorNd.shape[1]):
-				raise ValueError("Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
 			#Setting source geometry
-			for ishot in range(nShot):
-				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu1, sourceGeomVectorNd[2,ishot],sourceGeomVectorNd[0,ishot], vel[idx], nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[idx],pure=False))
+			for _ in range(nShot):
+				sourcesVector[idx].append(client.getClient().submit(call_deviceGpu1, sourceGeomVectorNd[2,shotIdx],sourceGeomVectorNd[0,shotIdx], vel[idx], nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[idx],pure=False))
+				shotIdx += 1
 			daskD.wait(sourcesVector[idx])
 			sourceAxis.append(Hypercube.axis(n=nShot,o=1.0,d=1.0))
 
@@ -414,8 +427,8 @@ def buildReceiversGeometry(parObject,vel,client=None):
 				xCoordFloat=SepVector.getSepVector(ns=[nReceiverPerShot])
 
 				# Update the receiver's coordinates
-				zCoordFloat.set(receiverGeomVectorNd[2,:,ishot])
-				xCoordFloat.set(receiverGeomVectorNd[0,:,ishot])
+				zCoordFloat.getNdArray()[:]=receiverGeomVectorNd[2,:,ishot]
+				xCoordFloat.getNdArray()[:]=receiverGeomVectorNd[0,:,ishot]
 				receiversVector.append(deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift))
 
 		# Generate receiver axis
@@ -465,9 +478,44 @@ def buildReceiversGeometryDask(parObject,vel,hyper_vel,client=None):
 
 	receiverAxis=[Hypercube.axis(n=nxReceiver,o=ox+oxReceiver*dx,d=dxReceiver*dx)]*nWrks
 	receiversVector = [[] for ii in range(nWrks)]
-	for iwrk in range(nWrks):
-		receiversVector[iwrk].append(client.getClient().submit(call_deviceGpu,nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel[iwrk],nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[iwrk],pure=False))
-	daskD.wait(receiversVector)
+
+	if (receiverGeomFile != "None"):
+
+		# Read geometry file: 3 axes
+		# First (fast) axis: spatial coordinates
+		# Second axis: receiver index !!! The number of receivers per shot must be constant
+		# Third axis: shot index
+
+		receiverGeomVectorNd = genericIO.defaultIO.getVector(receiverGeomFile).getNdArray()
+
+		# Check consistency with total number of shots
+		List_Shots = parObject.getInts("nShot",0)
+
+		if len(List_Shots) != nWrks:
+			raise ValueError("Number of workers (#nWrk=%s) not consistent with length of the provided list of shots (nShot=%s)"%(nWrks,parObject.getString("nShot")))
+
+		nShot = np.sum(List_Shots)
+		if (nShot != receiverGeomVectorNd.shape[2]):
+				raise ValueError("**** ERROR [buildReceiversGeometry]: Number of shots from parfile (#shot=%s) not consistent with receivers' geometry file (#shots=%s) ****\n"%(nShot,receiverGeomVectorNd.shape[2]))
+
+		# Read size of receivers' geometry file
+		nReceiverPerShot = parObject.getInt("nReceiverPerShot",-1) # -> might move this call to the irregular geometry case
+		if(nReceiverPerShot != receiverGeomVectorNd.shape[1]):
+				raise ValueError("**** ERROR [buildReceiversGeometry]: Number of receivers from parfile (#nReceiverPerShot=%s) not consistent with receivers' geometry file (#recs=%s) ****\n"%(nReceiverPerShot,receiverGeomVectorNd.shape[1]))
+
+		shotIdx = 0
+		for idx,nShot in enumerate(List_Shots):
+			#Setting source geometry
+			for _ in range(nShot):
+				receiversVector[idx].append(client.getClient().submit(call_deviceGpu2, receiverGeomVectorNd[2,:,shotIdx],receiverGeomVectorNd[0,:,shotIdx], vel[idx], nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[idx],pure=False))
+				shotIdx += 1
+			daskD.wait(receiversVector[idx])
+	
+	else:
+
+		for iwrk in range(nWrks):
+			receiversVector[iwrk].append(client.getClient().submit(call_deviceGpu,nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel[iwrk],nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[iwrk],pure=False))
+		daskD.wait(receiversVector)
 
 	return receiversVector,receiverAxis
 
