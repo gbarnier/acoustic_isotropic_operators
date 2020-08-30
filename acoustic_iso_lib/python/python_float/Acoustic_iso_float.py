@@ -464,19 +464,12 @@ def buildReceiversGeometryDask(parObject,vel,hyper_vel,client=None):
 	dipole = parObject.getInt("dipole",0)
 	zDipoleShift = parObject.getInt("zDipoleShift",2)
 	xDipoleShift = parObject.getInt("xDipoleShift",0)
-
-	nzReceiver=1
-	ozReceiver=parObject.getInt("depthReceiver")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
-	dzReceiver=1
-	nxReceiver=parObject.getInt("nReceiver")
-	oxReceiver=parObject.getInt("oReceiver")-1+parObject.getInt("xPadMinus")+parObject.getInt("fat")
-	dxReceiver=parObject.getInt("dReceiver")
+	receiverGeomFile = parObject.getString("receiverGeomFile","None")
 
 	#Getting number of workers
 	nWrks = client.getNworkers()
 	wrkIds = client.getWorkerIds()
 
-	receiverAxis=[Hypercube.axis(n=nxReceiver,o=ox+oxReceiver*dx,d=dxReceiver*dx)]*nWrks
 	receiversVector = [[] for ii in range(nWrks)]
 
 	if (receiverGeomFile != "None"):
@@ -503,6 +496,8 @@ def buildReceiversGeometryDask(parObject,vel,hyper_vel,client=None):
 		if(nReceiverPerShot != receiverGeomVectorNd.shape[1]):
 				raise ValueError("**** ERROR [buildReceiversGeometry]: Number of receivers from parfile (#nReceiverPerShot=%s) not consistent with receivers' geometry file (#recs=%s) ****\n"%(nReceiverPerShot,receiverGeomVectorNd.shape[1]))
 
+		receiverAxis=[Hypercube.axis(n=nReceiverPerShot,o=1.0,d=1.0)]*nWrks
+
 		shotIdx = 0
 		for idx,nShot in enumerate(List_Shots):
 			#Setting source geometry
@@ -510,8 +505,17 @@ def buildReceiversGeometryDask(parObject,vel,hyper_vel,client=None):
 				receiversVector[idx].append(client.getClient().submit(call_deviceGpu2, receiverGeomVectorNd[2,:,shotIdx],receiverGeomVectorNd[0,:,shotIdx], vel[idx], nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[idx],pure=False))
 				shotIdx += 1
 			daskD.wait(receiversVector[idx])
-	
+
 	else:
+
+		nzReceiver=1
+		ozReceiver=parObject.getInt("depthReceiver")-1+parObject.getInt("zPadMinus")+parObject.getInt("fat")
+		dzReceiver=1
+		nxReceiver=parObject.getInt("nReceiver")
+		oxReceiver=parObject.getInt("oReceiver")-1+parObject.getInt("xPadMinus")+parObject.getInt("fat")
+		dxReceiver=parObject.getInt("dReceiver")
+
+		receiverAxis=[Hypercube.axis(n=nxReceiver,o=ox+oxReceiver*dx,d=dxReceiver*dx)]*nWrks
 
 		for iwrk in range(nWrks):
 			receiversVector[iwrk].append(client.getClient().submit(call_deviceGpu,nzReceiver,ozReceiver,dzReceiver,nxReceiver,oxReceiver,dxReceiver,vel[iwrk],nts, dipole, zDipoleShift, xDipoleShift,workers=wrkIds[iwrk],pure=False))
