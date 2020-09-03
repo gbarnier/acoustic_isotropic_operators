@@ -9,84 +9,91 @@ import sys
 
 if __name__ == '__main__':
 
-    # Seismic operator object initialization
-    modelDouble,dataDouble,velDouble,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityDouble=Acoustic_iso_double.tomoExtOpInitDouble(sys.argv)
+	# Seismic operator object initialization
+	modelDouble,dataDouble,velDouble,parObject,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityDouble=Acoustic_iso_double.tomoExtOpInitDouble(sys.argv)
 
-    # Construct Born operator object
-    tomoExtOp=Acoustic_iso_double.tomoExtShotsGpu(modelDouble,dataDouble,velDouble,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityDouble)
+	# Construct Born operator object
+	tomoExtOp=Acoustic_iso_double.tomoExtShotsGpu(modelDouble,dataDouble,velDouble,parObject.param,sourcesVector,sourcesSignalsVector,receiversVector,reflectivityDouble)
 
-    # Launch forward modeling
-    if (parObject.getInt("adj", 0) == 0):
+	# Testing dot-product test of the operator
+	if (parObject.getInt("dpTest",0) == 1):
+		tomoExtOp.dotTest(True)
+		tomoExtOp.dotTest(True)
+		tomoExtOp.dotTest(True)
+		quit(0)
 
-        print("-------------------------------------------------------------------")
-        print("--------------- Running Python tomo extended forward --------------")
-        print("-------------------- Double precision Python code -----------------")
-        print("-------------------------------------------------------------------\n")
+	# Launch forward modeling
+	if (parObject.getInt("adj", 0) == 0):
 
-        # Check that model was provided
-        modelFile=parObject.getString("model","noModelFile")
-        if (modelFile == "noModelFile"):
-            print("**** ERROR: User did not provide model file ****\n")
-            quit()
+		print("-------------------------------------------------------------------")
+		print("--------------- Running Python tomo extended forward --------------")
+		print("-------------------- Double precision Python code -----------------")
+		print("-------------------------------------------------------------------\n")
 
-        # Read model
-        modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=2)
-        modelDMat=modelDouble.getNdArray()
-        modelSMat=modelFloat.getNdArray()
-        modelDMat[:]=modelSMat
+		# Check that model was provided
+		modelFile=parObject.getString("model","noModelFile")
+		if (modelFile == "noModelFile"):
+			print("**** ERROR: User did not provide model file ****\n")
+			quit()
 
-        # Apply forward
-        tomoExtOp.forward(False,modelDouble,dataDouble)
+		# Read model
+		modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=2)
+		modelDMat=modelDouble.getNdArray()
+		modelSMat=modelFloat.getNdArray()
+		modelDMat[:]=modelSMat
 
-        # Write data
-        dataFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
-        dataFloatNp=dataFloat.getNdArray()
-        dataDoubleNp=dataDouble.getNdArray()
-        dataFloatNp[:]=dataDoubleNp
-        dataFile=parObject.getString("data","noDataFile")
-        if (dataFile == "noDataFile"):
-            print("**** ERROR: User did not provide data file name ****\n")
-            quit()
-        genericIO.defaultIO.writeVector(dataFile,dataFloat)
+		# Apply forward
+		tomoExtOp.forward(False,modelDouble,dataDouble)
 
-        print("-------------------------------------------------------------------")
-        print("--------------------------- All done ------------------------------")
-        print("-------------------------------------------------------------------\n")
+		# Write data
+		dataFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
+		dataFloatNp=dataFloat.getNdArray()
+		dataDoubleNp=dataDouble.getNdArray()
+		dataFloatNp[:]=dataDoubleNp
+		dataFile=parObject.getString("data","noDataFile")
+		if (dataFile == "noDataFile"):
+			print("**** ERROR: User did not provide data file name ****\n")
+			quit()
+		genericIO.defaultIO.writeVector(dataFile,dataFloat)
 
-    # Launch adjoint modeling
-    else:
+		print("-------------------------------------------------------------------")
+		print("--------------------------- All done ------------------------------")
+		print("-------------------------------------------------------------------\n")
 
-        print("-------------------------------------------------------------------")
-        print("---------------- Running Python tomo extended adjoint -------------")
-        print("-------------------- Double precision Python code -----------------")
-        print("-------------------------------------------------------------------\n")
+	# Launch adjoint modeling
+	else:
 
-        # Check that data was provided
-        dataFile=parObject.getString("data","noDataFile")
-        if (dataFile == "noDataFile"):
-            print("**** ERROR: User did not provide data file ****\n")
-            quit()
+		print("-------------------------------------------------------------------")
+		print("---------------- Running Python tomo extended adjoint -------------")
+		print("-------------------- Double precision Python code -----------------")
+		print("-------------------------------------------------------------------\n")
 
-        # Read data
-        dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
-        dataFloatNp=dataFloat.getNdArray()
-        dataDoubleNp=dataDouble.getNdArray()
-        dataDoubleNp[:]=dataFloatNp
+		# Check that data was provided
+		dataFile=parObject.getString("data","noDataFile")
+		if (dataFile == "noDataFile"):
+			print("**** ERROR: User did not provide data file ****\n")
+			quit()
 
-        # Apply adjoint
-        tomoExtOp.adjoint(False,modelDouble,dataDouble)
+		# Read data
+		dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=3)
+		dataFloatNp=dataFloat.getNdArray()
+		dataDoubleNp=dataDouble.getNdArray()
+		dataDoubleNp[:]=dataFloatNp
 
-        # Write model
-        modelFloat=SepVector.getSepVector(modelDouble.getHyper(),storage="dataFloat")
-        modelFloatNp=modelFloat.getNdArray()
-        modelDoubleNp=modelDouble.getNdArray()
-        modelFloatNp[:]=modelDoubleNp
-        modelFile=parObject.getString("model","noModelFile")
-        if (modelFile == "noModelFile"):
-            print("**** ERROR: User did not provide model file name ****\n")
-            quit()
-        genericIO.defaultIO.writeVector(modelFile,modelFloat)
+		# Apply adjoint
+		tomoExtOp.adjoint(False,modelDouble,dataDouble)
 
-        print("-------------------------------------------------------------------")
-        print("--------------------------- All done ------------------------------")
-        print("-------------------------------------------------------------------\n")
+		# Write model
+		modelFloat=SepVector.getSepVector(modelDouble.getHyper(),storage="dataFloat")
+		modelFloatNp=modelFloat.getNdArray()
+		modelDoubleNp=modelDouble.getNdArray()
+		modelFloatNp[:]=modelDoubleNp
+		modelFile=parObject.getString("model","noModelFile")
+		if (modelFile == "noModelFile"):
+			print("**** ERROR: User did not provide model file name ****\n")
+			quit()
+		genericIO.defaultIO.writeVector(modelFile,modelFloat)
+
+		print("-------------------------------------------------------------------")
+		print("--------------------------- All done ------------------------------")
+		print("-------------------------------------------------------------------\n")

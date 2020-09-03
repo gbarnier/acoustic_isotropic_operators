@@ -9,9 +9,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-/****************************************************************************************/
-/******************************* Set GPU propagation parameters *************************/
-/****************************************************************************************/
+/******************************************************************************/
+/************************ Set GPU propagation parameters **********************/
+/******************************************************************************/
 bool getGpuInfo(std::vector<int> gpuList, int info, int deviceNumberInfo){
 
 	int nDevice, driver;
@@ -252,9 +252,11 @@ void deallocateBornShotsGpu(int iGpu, int iGpuId){
 		cuda_call(cudaFree(dev_modelBorn[iGpu]));
 }
 
-/****************************************************************************************/
-/************************************** Born forward ************************************/
-/****************************************************************************************/
+/******************************************************************************/
+/****************************** Born forward **********************************/
+/******************************************************************************/
+
+/********************************** Normal ************************************/
 void BornShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *scatWavefieldDts, int iGpu, int iGpuId){
 
 	// We assume the source wavelet/signals already contain the second time derivative
@@ -384,6 +386,7 @@ void BornShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignals, 
     cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 
 }
+
 void BornShotsFwdGpuWavefield(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *scatWavefieldDts, int iGpu, int iGpuId){
 
 	// Non-extended Born modeling operator (FORWARD)
@@ -529,9 +532,300 @@ void BornShotsFwdGpuWavefield(double *model, double *dataRegDts, double *sources
 
 }
 
-/****************************************************************************************/
-/************************************** Born adjoint ************************************/
-/****************************************************************************************/
+/****************************** Free surface **********************************/
+void BornShotsFwdFsGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *scatWavefieldDts, int iGpu, int iGpuId){
+
+	// We assume the source wavelet/signals already contain the second time derivative
+	// Set device number
+	cudaSetDevice(iGpuId);
+
+	// Sources geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_sourcesPositionReg[iGpu], nSourcesReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_sourcesPositionReg[iGpu], sourcesPositionReg, nSourcesReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Sources signals
+  	cuda_call(cudaMalloc((void**) &dev_sourcesSignals[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_sourcesSignals[iGpu], sourcesSignals, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Receivers geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nReceiversReg, &nReceiversReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_receiversPositionReg[iGpu], nReceiversReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Initialize source wavefield on device
+	cuda_call(cudaMemset(dev_BornSrcWavefield[iGpu], 0, host_nz*host_nx*host_nts*sizeof(double))); // Initialize wavefield on device
+
+	// Initialize time-slices for time-stepping
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+   	// Kernel parameters
+	int nblockx = (host_nz-2*FAT) / BLOCK_SIZE;
+	int nblocky = (host_nx-2*FAT) / BLOCK_SIZE;
+	int nblockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	dim3 dimGrid(nblockx, nblocky);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+
+	/************************** Source wavefield computation ****************************/
+
+	for (int its = 0; its < host_nts-1; its++){
+
+		for (int it2 = 1; it2 < host_sub+1; it2++){
+
+			// Compute fine time-step index
+			int itw = its * host_sub + it2;
+
+			// Apply free surface condition for Laplacian
+			kernel_exec(setFsConditionFwdGpu<<<nblocky, BLOCK_SIZE>>>(dev_p1[iGpu]));
+
+			// Step forward
+			kernel_exec(stepFwdGpu<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu], dev_p0[iGpu], dev_vel2Dtw2[iGpu]));
+
+			// Inject source
+			kernel_exec(injectSource<<<1, nSourcesReg>>>(dev_sourcesSignals[iGpu], dev_p0[iGpu], itw-1, dev_sourcesPositionReg[iGpu]));
+
+			// Damp wavefields
+			kernel_exec(dampCosineEdgeFs<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu]));
+
+			// Extract wavefield
+			kernel_exec(interpWavefield<<<dimGrid, dimBlock>>>(dev_BornSrcWavefield[iGpu], dev_p0[iGpu], its, it2));
+
+			// Switch pointers
+			dev_temp1[iGpu] = dev_p0[iGpu];
+			dev_p0[iGpu] = dev_p1[iGpu];
+			dev_p1[iGpu] = dev_temp1[iGpu];
+			dev_temp1[iGpu] = NULL;
+
+		}
+	}
+
+	/************************** Scattered wavefield computation *************************/
+	// Initialize time slices on device
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_ssLeft[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+	// Copy model to device
+	cuda_call(cudaMemcpy(dev_modelBorn[iGpu], model, host_nz*host_nx*sizeof(double), cudaMemcpyHostToDevice)); // Copy model (reflectivity) on device
+
+	// Allocate and initialize data
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate data at coarse time-sampling on device
+  	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize data on device
+
+	// Apply both scalings to reflectivity: (1) 2.0*1/v^3 (2) v^2*dtw^2
+	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+	// Compute secondary source for first coarse time index (its = 0)
+	kernel_exec(imagingFwdGpu<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_ssLeft[iGpu], 0, dev_BornSrcWavefield[iGpu]));
+
+	// Start propagating scattered wavefield
+	for (int its = 0; its < host_nts-1; its++){
+
+		// Compute secondary source for first coarse time index (its+1)
+		kernel_exec(imagingFwdGpu<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_ssRight[iGpu], its+1, dev_BornSrcWavefield[iGpu]));
+
+		for (int it2 = 1; it2 < host_sub+1; it2++){
+
+			// Apply free surface condition for Laplacian
+			kernel_exec(setFsConditionFwdGpu<<<nblocky, BLOCK_SIZE>>>(dev_p1[iGpu]));
+
+			// Step forward
+			kernel_exec(stepFwdGpu<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu], dev_p0[iGpu], dev_vel2Dtw2[iGpu]));
+
+			// Inject secondary source sample itw-1
+			kernel_exec(injectSecondarySource<<<dimGrid, dimBlock>>>(dev_ssLeft[iGpu], dev_ssRight[iGpu], dev_p0[iGpu], it2-1));
+
+			// Damp wavefields
+			kernel_exec(dampCosineEdgeFs<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu]));
+
+			// Extract data
+			kernel_exec(recordInterpData<<<nblockData, BLOCK_SIZE_DATA>>>(dev_p0[iGpu], dev_dataRegDts[iGpu], its, it2, dev_receiversPositionReg[iGpu]));
+
+			// Switch pointers
+			dev_temp1[iGpu] = dev_p0[iGpu];
+			dev_p0[iGpu] = dev_p1[iGpu];
+			dev_p1[iGpu] = dev_temp1[iGpu];
+			dev_temp1[iGpu] = NULL;
+
+		}
+
+		// Switch pointers for secondary source
+		dev_ssTemp1[iGpu] = dev_ssLeft[iGpu];
+		dev_ssLeft[iGpu] = dev_ssRight[iGpu];
+		dev_ssRight[iGpu] = dev_ssTemp1[iGpu];
+		cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double)));
+	}
+
+	// Copy data back to host
+	cuda_call(cudaMemcpy(dataRegDts, dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+
+	/******************************* Deallocation ***************************************/
+	// Deallocate all slices
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_sourcesSignals[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+
+}
+
+void BornShotsFwdFsGpuWavefield(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *scatWavefieldDts, int iGpu, int iGpuId){
+
+	// Non-extended Born modeling operator (FORWARD)
+	// The source wavelet/signals already contain the second time derivative
+	// Set device number
+	cudaSetDevice(iGpuId);
+
+	// Sources geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_sourcesPositionReg[iGpu], nSourcesReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_sourcesPositionReg[iGpu], sourcesPositionReg, nSourcesReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Sources signals
+  	cuda_call(cudaMalloc((void**) &dev_sourcesSignals[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_sourcesSignals[iGpu], sourcesSignals, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Receivers geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nReceiversReg, &nReceiversReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_receiversPositionReg[iGpu], nReceiversReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Allocate and initialize data
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate data at coarse time-sampling on device
+  	cuda_call(cudaMemset(dev_dataRegDts[iGpu], 0, nReceiversReg*host_nts*sizeof(double))); // Initialize data on device
+
+	// Initialize source wavefield on device
+	cuda_call(cudaMemset(dev_BornSrcWavefield[iGpu], 0, host_nz*host_nx*host_nts*sizeof(double))); // Initialize wavefield on device
+
+	// Initialize time-slices for time-stepping
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+   	// Kernel parameters
+	int nblockx = (host_nz-2*FAT) / BLOCK_SIZE;
+	int nblocky = (host_nx-2*FAT) / BLOCK_SIZE;
+	int nblockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	dim3 dimGrid(nblockx, nblocky);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+
+	/************************** Source wavefield computation ****************************/
+
+	for (int its = 0; its < host_nts-1; its++){
+		for (int it2 = 1; it2 < host_sub+1; it2++){
+
+			// Compute fine time-step index
+			int itw = its * host_sub + it2;
+
+			// Apply free surface condition for Laplacian
+			kernel_exec(setFsConditionFwdGpu<<<nblocky, BLOCK_SIZE>>>(dev_p1[iGpu]));
+
+			// Step forward
+			kernel_exec(stepFwdGpu<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu], dev_p0[iGpu], dev_vel2Dtw2[iGpu]));
+
+			// Inject source
+			kernel_exec(injectSource<<<1, nSourcesReg>>>(dev_sourcesSignals[iGpu], dev_p0[iGpu], itw-1, dev_sourcesPositionReg[iGpu]));
+
+			// Damp wavefields
+			kernel_exec(dampCosineEdgeFs<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu]));
+
+			// Extract wavefield
+			kernel_exec(interpWavefield<<<dimGrid, dimBlock>>>(dev_BornSrcWavefield[iGpu], dev_p0[iGpu], its, it2));
+
+			// Switch pointers
+			dev_temp1[iGpu] = dev_p0[iGpu];
+			dev_p0[iGpu] = dev_p1[iGpu];
+			dev_p1[iGpu] = dev_temp1[iGpu];
+			dev_temp1[iGpu] = NULL;
+		}
+	}
+
+	// Copy wavefield back to host
+	cuda_call(cudaMemcpy(srcWavefieldDts, dev_BornSrcWavefield[iGpu], host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+
+	/************************** Scattered wavefield computation *************************/
+	// Initialize time slices on device
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_ssLeft[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+	// Allocate and copy model
+	cuda_call(cudaMemcpy(dev_modelBorn[iGpu], model, host_nz*host_nx*sizeof(double), cudaMemcpyHostToDevice)); // Copy model (reflectivity) on device
+
+	// Allocate and initialize scattered wavefield on device
+	cuda_call(cudaMalloc((void**) &dev_BornSecWavefield, host_nz*host_nx*host_nts*sizeof(double))); // Allocate on device
+	cuda_call(cudaMemset(dev_BornSecWavefield, 0, host_nz*host_nx*host_nts*sizeof(double))); // Initialize wavefield on device
+
+	// Apply both scalings to reflectivity:
+	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+	// Compute secondary source for first coarse time index (its = 0)
+	kernel_exec(imagingFwdGpu<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_ssLeft[iGpu], 0, dev_BornSrcWavefield[iGpu]));
+
+	// Start propagating scattered wavefield
+	for (int its = 0; its < host_nts-1; its++){
+
+		// Compute secondary source for first coarse time index (its+1)
+		kernel_exec(imagingFwdGpu<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_ssRight[iGpu], its+1, dev_BornSrcWavefield[iGpu]));
+
+		for (int it2 = 1; it2 < host_sub+1; it2++){
+
+			// Apply free surface condition for Laplacian
+			kernel_exec(setFsConditionFwdGpu<<<nblocky, BLOCK_SIZE>>>(dev_p1[iGpu]));
+
+			// Step forward
+			kernel_exec(stepFwdGpu<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu], dev_p0[iGpu], dev_vel2Dtw2[iGpu]));
+
+			// Inject secondary source sample itw-1
+			kernel_exec(injectSecondarySource<<<dimGrid, dimBlock>>>(dev_ssLeft[iGpu], dev_ssRight[iGpu], dev_p0[iGpu], it2-1));
+
+			// Damp wavefields
+			kernel_exec(dampCosineEdgeFs<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu]));
+
+			// Record wavefield
+			kernel_exec(interpWavefield<<<dimGrid, dimBlock>>>(dev_BornSecWavefield, dev_p0[iGpu], its, it2));
+
+			// Extract data
+			kernel_exec(recordInterpData<<<nblockData, BLOCK_SIZE_DATA>>>(dev_p0[iGpu], dev_dataRegDts[iGpu], its, it2, dev_receiversPositionReg[iGpu]));
+
+			// Switch pointers
+			dev_temp1[iGpu] = dev_p0[iGpu];
+			dev_p0[iGpu] = dev_p1[iGpu];
+			dev_p1[iGpu] = dev_temp1[iGpu];
+			dev_temp1[iGpu] = NULL;
+
+		}
+
+		// Switch pointers for secondary source
+		dev_ssTemp1[iGpu] = dev_ssLeft[iGpu];
+		dev_ssLeft[iGpu] = dev_ssRight[iGpu];
+		dev_ssRight[iGpu] = dev_ssTemp1[iGpu];
+		cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+	}
+
+	// Copy data back to host
+	cuda_call(cudaMemcpy(dataRegDts, dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+
+	// Copy scattered wavefield back to host
+	cuda_call(cudaMemcpy(scatWavefieldDts, dev_BornSecWavefield, host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+
+	/******************************* Deallocation ***************************************/
+	// Deallocate all slices
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_sourcesSignals[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_BornSecWavefield));
+
+}
+
+/******************************************************************************/
+/****************************** Born adjoint **********************************/
+/******************************************************************************/
+
+/********************************** Normal ************************************/
 void BornShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *recWavefieldDts, int iGpu, int iGpuId){
 
 	// Non-extended Born modeling operator (ADJOINT)
@@ -661,6 +955,7 @@ void BornShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignals, 
     cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
 
 }
+
 void BornShotsAdjGpuWavefield(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *recWavefieldDts, int iGpu, int iGpuId){
 
 	// Non-extended Born modeling operator (ADJOINT)
@@ -755,6 +1050,287 @@ void BornShotsAdjGpuWavefield(double *model, double *dataRegDts, double *sources
 
 			// Damp wavefield
 			kernel_exec(dampCosineEdge<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu]));
+
+			// Interpolate and record time slices of receiver wavefield at coarse sampling (no scaling applied yet)
+			extractInterpAdjointWavefield<<<dimGrid, dimBlock>>>(dev_ssLeft[iGpu], dev_ssRight[iGpu], dev_p0[iGpu], it2);
+
+			// Switch pointers for time slices at fine time-sampling
+			dev_temp1[iGpu] = dev_p0[iGpu];
+			dev_p0[iGpu] = dev_p1[iGpu];
+			dev_p1[iGpu] = dev_temp1[iGpu];
+			dev_temp1[iGpu] = NULL;
+		}
+
+		// Apply imaging condition for its+1
+  		kernel_exec(imagingAdjGpu<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_ssRight[iGpu], dev_BornSrcWavefield[iGpu], its+1));
+
+		// Record and scale receiver wavefield at coarse sampling for its+1
+		kernel_exec(recordScaleWavefield<<<dimGrid, dimBlock>>>(dev_BornSecWavefield, dev_ssRight[iGpu], its+1, dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+		// Switch pointers for receiver wavefield before imaging time derivative
+		dev_ssTemp1[iGpu] = dev_ssRight[iGpu];
+		dev_ssRight[iGpu] = dev_ssLeft[iGpu];
+		dev_ssLeft[iGpu] = dev_ssTemp1[iGpu];
+  	cuda_call(cudaMemset(dev_ssLeft[iGpu], 0, host_nz*host_nx*sizeof(double))); // Reinitialize slice for coarse time-sampling before time derivative
+
+	} // Finished main loop - we still have to compute imaging condition for its=0
+
+	// Save receiver wavefield at its=0
+	kernel_exec(recordScaleWavefield<<<dimGrid, dimBlock>>>(dev_BornSecWavefield, dev_ssRight[iGpu], 0, dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+	// Apply imaging condition for its=0
+  	kernel_exec(imagingAdjGpu<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_ssRight[iGpu], dev_BornSrcWavefield[iGpu], 0));
+
+  	// Scale model for finite-difference and secondary source coefficient
+	// It's better to apply it once and for all than at every time-steps
+	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+	// Copy model back to host
+	cuda_call(cudaMemcpy(model, dev_modelBorn[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToHost));
+
+	// Copy scattered wavefield back to host
+	cuda_call(cudaMemcpy(recWavefieldDts, dev_BornSecWavefield, host_nz*host_nx*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+
+	/******************************* Deallocation ***************************************/
+	// Deallocate all slices
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_sourcesSignals[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_BornSecWavefield));
+}
+
+/****************************** Free surface **********************************/
+void BornShotsAdjFsGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *recWavefieldDts, int iGpu, int iGpuId){
+
+	// Non-extended Born modeling operator (ADJOINT)
+	// We assume the source wavelet/signals already contain the second time derivative
+	// Set device number
+	cudaSetDevice(iGpuId);
+
+	// Sources geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_sourcesPositionReg[iGpu], nSourcesReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_sourcesPositionReg[iGpu], sourcesPositionReg, nSourcesReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Sources signals
+  	cuda_call(cudaMalloc((void**) &dev_sourcesSignals[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_sourcesSignals[iGpu], sourcesSignals, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Receivers geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nReceiversReg, &nReceiversReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_receiversPositionReg[iGpu], nReceiversReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Initialize source wavefield on device
+	cuda_call(cudaMemset(dev_BornSrcWavefield[iGpu], 0, host_nz*host_nx*host_nts*sizeof(double))); // Initialize wavefield on device
+
+	// Initialize time-slices for time-stepping
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+   	// Kernel parameters
+	int nblockx = (host_nz-2*FAT) / BLOCK_SIZE;
+	int nblocky = (host_nx-2*FAT) / BLOCK_SIZE;
+	int nblockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	dim3 dimGrid(nblockx, nblocky);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+
+	/************************** Source wavefield computation ****************************/
+
+	for (int its = 0; its < host_nts-1; its++){
+		for (int it2 = 1; it2 < host_sub+1; it2++){
+
+			// Compute fine time-step index
+			int itw = its * host_sub + it2;
+
+			// Apply free surface condition for Laplacian
+			kernel_exec(setFsConditionFwdGpu<<<nblocky, BLOCK_SIZE>>>(dev_p1[iGpu]));
+
+			// Step forward
+			kernel_exec(stepFwdGpu<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu], dev_p0[iGpu], dev_vel2Dtw2[iGpu]));
+
+			// Inject source
+			kernel_exec(injectSource<<<1, nSourcesReg>>>(dev_sourcesSignals[iGpu], dev_p0[iGpu], itw-1, dev_sourcesPositionReg[iGpu]));
+
+			// Damp wavefields
+			kernel_exec(dampCosineEdgeFs<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu]));
+
+			// Extract wavefield
+			kernel_exec(interpWavefield<<<dimGrid, dimBlock>>>(dev_BornSrcWavefield[iGpu], dev_p0[iGpu], its, it2));
+
+			// Switch pointers
+			dev_temp1[iGpu] = dev_p0[iGpu];
+			dev_p0[iGpu] = dev_p1[iGpu];
+			dev_p1[iGpu] = dev_temp1[iGpu];
+			dev_temp1[iGpu] = NULL;
+		}
+	}
+
+	/************************** Receiver wavefield computation **************************/
+	// Initialize time slices on device
+  	cuda_call(cudaMemset(dev_ssLeft[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+	// Model
+  	cuda_call(cudaMemset(dev_modelBorn[iGpu], 0, host_nz*host_nx*sizeof(double))); // Initialize model on device
+
+	// Data
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate data on device
+	cuda_call(cudaMemcpy(dev_dataRegDts[iGpu], dataRegDts, nReceiversReg*host_nts*sizeof(double), cudaMemcpyHostToDevice)); // Copy data on device
+
+  	// Main loop
+	for (int its = host_nts-2; its > -1; its--){
+
+		for (int it2 = host_sub-1; it2 > -1; it2--){
+
+			// Step adjoint in time
+			kernel_exec(stepAdjFsGpu<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu], dev_p0[iGpu], dev_vel2Dtw2[iGpu]));
+
+			// Inject data
+			kernel_exec(interpInjectData<<<nblockData, BLOCK_SIZE_DATA>>>(dev_dataRegDts[iGpu], dev_p0[iGpu], its, it2, dev_receiversPositionReg[iGpu]));
+
+			// Damp wavefield
+			kernel_exec(dampCosineEdgeFs<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu]));
+
+			// Interpolate and record time slices of receiver wavefield at coarse sampling (no scaling applied yet)
+			extractInterpAdjointWavefield<<<dimGrid, dimBlock>>>(dev_ssLeft[iGpu], dev_ssRight[iGpu], dev_p0[iGpu], it2);
+
+			// Switch pointers for time slices at fine time-sampling
+			dev_temp1[iGpu] = dev_p0[iGpu];
+			dev_p0[iGpu] = dev_p1[iGpu];
+			dev_p1[iGpu] = dev_temp1[iGpu];
+			dev_temp1[iGpu] = NULL;
+		}
+
+		// Apply imaging condition for its+1
+  		kernel_exec(imagingAdjGpu<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_ssRight[iGpu], dev_BornSrcWavefield[iGpu], its+1));
+
+		// Switch pointers for receiver wavefield before imaging time derivative
+		dev_ssTemp1[iGpu] = dev_ssRight[iGpu];
+		dev_ssRight[iGpu] = dev_ssLeft[iGpu];
+		dev_ssLeft[iGpu] = dev_ssTemp1[iGpu];
+  		cuda_call(cudaMemset(dev_ssLeft[iGpu], 0, host_nz*host_nx*sizeof(double))); // Reinitialize slice for coarse time-sampling before time derivative
+
+	} // Finished main loop - we still have to compute imaging condition for its=0
+
+	// Apply imaging condition for its=0
+  	kernel_exec(imagingAdjGpu<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_ssRight[iGpu], dev_BornSrcWavefield[iGpu], 0));
+
+  	// Scale model for finite-difference and secondary source coefficient
+	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelBorn[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+
+	// Copy model back to host
+	cuda_call(cudaMemcpy(model, dev_modelBorn[iGpu], host_nz*host_nx*sizeof(double), cudaMemcpyDeviceToHost));
+
+	/******************************* Deallocation ***************************************/
+	// Deallocate all slices
+    cuda_call(cudaFree(dev_dataRegDts[iGpu]));
+    cuda_call(cudaFree(dev_sourcesPositionReg[iGpu]));
+    cuda_call(cudaFree(dev_sourcesSignals[iGpu]));
+    cuda_call(cudaFree(dev_receiversPositionReg[iGpu]));
+
+}
+
+void BornShotsAdjFsGpuWavefield(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *recWavefieldDts, int iGpu, int iGpuId){
+
+	// Non-extended Born modeling operator (ADJOINT)
+	// We assume the source wavelet/signals already contain the second time derivative
+	// Set device number
+	cudaSetDevice(iGpuId);
+
+	// Sources geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nSourcesReg, &nSourcesReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_sourcesPositionReg[iGpu], nSourcesReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_sourcesPositionReg[iGpu], sourcesPositionReg, nSourcesReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Sources signals
+  	cuda_call(cudaMalloc((void**) &dev_sourcesSignals[iGpu], nSourcesReg*host_ntw*sizeof(double))); // Allocate sources signals on device
+	cuda_call(cudaMemcpy(dev_sourcesSignals[iGpu], sourcesSignals, nSourcesReg*host_ntw*sizeof(double), cudaMemcpyHostToDevice)); // Copy sources signals on device
+
+	// Receivers geometry
+	cuda_call(cudaMemcpyToSymbol(dev_nReceiversReg, &nReceiversReg, sizeof(int), 0, cudaMemcpyHostToDevice));
+	cuda_call(cudaMalloc((void**) &dev_receiversPositionReg[iGpu], nReceiversReg*sizeof(int)));
+	cuda_call(cudaMemcpy(dev_receiversPositionReg[iGpu], receiversPositionReg, nReceiversReg*sizeof(int), cudaMemcpyHostToDevice));
+
+	// Initialize source wavefield on device
+	cuda_call(cudaMemset(dev_BornSrcWavefield[iGpu], 0, host_nz*host_nx*host_nts*sizeof(double))); // Initialize wavefield on device
+
+	// Initialize time-slices for time-stepping
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+   	// Kernel parameters
+	int nblockx = (host_nz-2*FAT) / BLOCK_SIZE;
+	int nblocky = (host_nx-2*FAT) / BLOCK_SIZE;
+	int nblockData = (nReceiversReg+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	dim3 dimGrid(nblockx, nblocky);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+
+	/************************** Source wavefield computation ****************************/
+
+	for (int its = 0; its < host_nts-1; its++){
+		for (int it2 = 1; it2 < host_sub+1; it2++){
+
+			// Compute fine time-step index
+			int itw = its * host_sub + it2;
+
+			// Apply free surface condition for Laplacian
+			kernel_exec(setFsConditionFwdGpu<<<nblocky, BLOCK_SIZE>>>(dev_p1[iGpu]));
+
+			// Step forward
+			kernel_exec(stepFwdGpu<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu], dev_p0[iGpu], dev_vel2Dtw2[iGpu]));
+
+			// Inject source
+			kernel_exec(injectSource<<<1, nSourcesReg>>>(dev_sourcesSignals[iGpu], dev_p0[iGpu], itw-1, dev_sourcesPositionReg[iGpu]));
+
+			// Damp wavefields
+			kernel_exec(dampCosineEdgeFs<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu]));
+
+			// Extract wavefield
+			kernel_exec(interpWavefield<<<dimGrid, dimBlock>>>(dev_BornSrcWavefield[iGpu], dev_p0[iGpu], its, it2));
+
+			// Switch pointers
+			dev_temp1[iGpu] = dev_p0[iGpu];
+			dev_p0[iGpu] = dev_p1[iGpu];
+			dev_p1[iGpu] = dev_temp1[iGpu];
+			dev_temp1[iGpu] = NULL;
+		}
+	}
+
+	/************************** Receiver wavefield computation **************************/
+	// Initialize time slices on device
+  	cuda_call(cudaMemset(dev_ssLeft[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_ssRight[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p0[iGpu], 0, host_nz*host_nx*sizeof(double)));
+  	cuda_call(cudaMemset(dev_p1[iGpu], 0, host_nz*host_nx*sizeof(double)));
+
+	// Allocate and initialize receiver wavefield on device
+	cuda_call(cudaMalloc((void**) &dev_BornSecWavefield, host_nz*host_nx*host_nts*sizeof(double))); // Allocate on device
+	cuda_call(cudaMemset(dev_BornSecWavefield, 0, host_nz*host_nx*host_nts*sizeof(double))); // Initialize wavefield on device
+
+	// Model
+  	cuda_call(cudaMemset(dev_modelBorn[iGpu], 0, host_nz*host_nx*sizeof(double))); // Initialize model on device
+
+	// Data
+  	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double))); // Allocate data on device
+	cuda_call(cudaMemcpy(dev_dataRegDts[iGpu], dataRegDts, nReceiversReg*host_nts*sizeof(double), cudaMemcpyHostToDevice)); // Copy data on device
+
+  	// Main loop
+	for (int its = host_nts-2; its > -1; its--){
+
+		for (int it2 = host_sub-1; it2 > -1; it2--){
+
+			// Step adjoint in time
+			kernel_exec(stepAdjFsGpu<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu], dev_p0[iGpu], dev_vel2Dtw2[iGpu]));
+
+			// Inject data
+			kernel_exec(interpInjectData<<<nblockData, BLOCK_SIZE_DATA>>>(dev_dataRegDts[iGpu], dev_p0[iGpu], its, it2, dev_receiversPositionReg[iGpu]));
+
+			// Damp wavefield
+			kernel_exec(dampCosineEdgeFs<<<dimGrid, dimBlock>>>(dev_p0[iGpu], dev_p1[iGpu]));
 
 			// Interpolate and record time slices of receiver wavefield at coarse sampling (no scaling applied yet)
 			extractInterpAdjointWavefield<<<dimGrid, dimBlock>>>(dev_ssLeft[iGpu], dev_ssRight[iGpu], dev_p0[iGpu], it2);

@@ -38,6 +38,9 @@ PYBIND11_MODULE(pyAcoustic_iso_double_nl, clsGeneric) {
       .def("setVel",(void (nonlinearPropShotsGpu::*)(std::shared_ptr<double2DReg>)) &nonlinearPropShotsGpu::setVel,"Function to set background velocity")
 
       .def("dotTest",(bool (nonlinearPropShotsGpu::*)(const bool, const float)) &nonlinearPropShotsGpu::dotTest,"Dot-Product Test")
+
+      .def("getWavefield",(std::shared_ptr<double3DReg> (nonlinearPropShotsGpu::*)()) &nonlinearPropShotsGpu::getWavefield,"Function to get nl wavefield")
+
   ;
 
 }

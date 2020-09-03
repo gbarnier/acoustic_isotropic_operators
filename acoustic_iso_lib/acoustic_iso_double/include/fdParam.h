@@ -42,7 +42,7 @@ class fdParam{
 		int _nz, _nx, _nExt, _hExt;
 		int _zPadMinus, _zPadPlus, _xPadMinus, _xPadPlus, _zPad, _xPad, _minPad;
 		double _dz, _dx, _oz, _ox, _fMax;
-		int _saveWavefield, _blockSize, _fat;
+		int _saveWavefield, _blockSize, _fat, _freeSurface;
 		double _alphaCos;
 		std::string _extension;
 

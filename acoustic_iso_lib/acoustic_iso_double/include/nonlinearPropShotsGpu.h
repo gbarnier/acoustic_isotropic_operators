@@ -44,7 +44,10 @@ class nonlinearPropShotsGpu : public Operator<SEP::double3DReg, SEP::double3DReg
 		void adjointWavefield(const bool add, const std::shared_ptr<double3DReg> model, std::shared_ptr<double3DReg> data);
 
 		/* Accessor */
-		std::shared_ptr<SEP::double3DReg> getWavefield(){ return _wavefield; }
+		std::shared_ptr<SEP::double3DReg> getWavefield(){
+			std::cout << "Returning wavefield" << std::endl;
+			return _wavefield;
+		}
 
 		/* Mutator */
 		void setVel(std::shared_ptr<SEP::double2DReg> vel){_vel = vel;}

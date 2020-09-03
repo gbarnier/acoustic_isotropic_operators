@@ -171,6 +171,14 @@ class nonlinearPropShotsGpu(Op.Operator):
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
+	def getWfld(self):
+		print("In function")
+		with pyAcoustic_iso_double_nl.ostream_redirect():
+			wfld = self.pyOp.getWavefield()
+			print("wfld = ",wfld)
+			wfld = SepVector.floatVector(fromCpp=wfld)
+		return wfld
+
 class nonlinearVelocityPropShotsGpu(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for non-linear propagator where the model vector is the velocity"""
 

@@ -52,9 +52,15 @@ fdParam::fdParam(const std::shared_ptr<float2DReg> vel, const std::shared_ptr<pa
 		_dExt = _dts;
 		_extAxis = axis(_nExt, _oExt, _dExt);
 	}
-	if (_nExt>1 && _extension=="offset"){
+	else if (_nExt>1 && _extension=="offset"){
 		_oExt = -_dx*_hExt;
 		_dExt = _dx;
+		_extAxis = axis(_nExt, _oExt, _dExt);
+	}
+	else {
+        // Extended axis #1
+		_oExt = 0.0;
+		_dExt = 1.0;
 		_extAxis = axis(_nExt, _oExt, _dExt);
 	}
 

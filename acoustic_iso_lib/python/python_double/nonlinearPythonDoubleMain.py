@@ -18,6 +18,8 @@ if __name__ == '__main__':
 	#Testing dot-product test of the operator
 	if (parObject.getInt("dpTest",0) == 1):
 		nonlinearOp.dotTest(True)
+		nonlinearOp.dotTest(True)
+		nonlinearOp.dotTest(True)
 		quit(0)
 
 	# Forward
@@ -41,7 +43,10 @@ if __name__ == '__main__':
 		modelDMat[:]=modelSMat
 
 		# Apply forward
-		nonlinearOp.forward(False,modelDouble,dataDouble)
+		if (parObject.getInt("saveWavefield",0) == 0):
+			nonlinearOp.forward(False,modelDouble,dataDouble)
+		else:
+			nonlinearOp.forwardWavefield(False,modelDouble,dataDouble)
 
 		# Write data
 		dataFloat=SepVector.getSepVector(dataDouble.getHyper(),storage="dataFloat")
@@ -53,6 +58,17 @@ if __name__ == '__main__':
 			print("**** ERROR: User did not provide data file name ****\n")
 			quit()
 		genericIO.defaultIO.writeVector(dataFile,dataFloat)
+
+		# Save wavefield
+		if (parObject.getInt("saveWavefield",0) == 1):
+			wfldFile=parObject.getString("wfldFile","noWfldFile")
+			wavefieldDouble = nonlinearOp.getWfld()
+			print("wavefieldDouble = ",wavefieldDouble)
+			wavefieldDoubleNp=wavefieldDouble.getNdArray()
+			wavefieldFloat=SepVector.getSepVector(wavefieldDouble.getHyper(),storage="dataFloat")
+			wavefieldFloatNp=wavefieldFloat.getNdArray()
+			wavefieldFloatNp[:]=wavefieldDoubleNp
+			genericIO.defaultIO.writeVector(wfldFile,wavefieldFloat)
 
 		print("-------------------------------------------------------------------")
 		print("--------------------------- All done ------------------------------")
@@ -78,8 +94,11 @@ if __name__ == '__main__':
 		dataDoubleNp=dataDouble.getNdArray()
 		dataDoubleNp[:]=dataFloatNp
 
-		# Apply adjoint
-		nonlinearOp.adjoint(False,modelDouble,dataDouble)
+		# Apply forward
+		if (parObject.getInt("saveWavefield",0) == 0):
+			nonlinearOp.adjoint(False,modelDouble,dataDouble)
+		else:
+			nonlinearOp.adjointWavefield(False,modelDouble,dataDouble)
 
 		# Write model
 		modelFloat=SepVector.getSepVector(modelDouble.getHyper(),storage="dataFloat")
@@ -91,6 +110,17 @@ if __name__ == '__main__':
 			print("**** ERROR: User did not provide model file name ****\n")
 			quit()
 		genericIO.defaultIO.writeVector(modelFile,modelFloat)
+
+		# Save wavefield
+		if (parObject.getInt("saveWavefield",0) == 1):
+			wfldFile=parObject.getString("wfldFile","noWfldFile")
+			wavefieldDouble = nonlinearOp.getWfld()
+			print("wavefieldDouble = ",wavefieldDouble)
+			wavefieldDoubleNp=wavefieldDouble.getNdArray()
+			wavefieldFloat=SepVector.getSepVector(wavefieldDouble.getHyper(),storage="dataFloat")
+			wavefieldFloatNp=wavefieldFloat.getNdArray()
+			wavefieldFloatNp[:]=wavefieldDoubleNp
+			genericIO.defaultIO.writeVector(wfldFile,wavefieldFloat)
 
 		print("-------------------------------------------------------------------")
 		print("--------------------------- All done ------------------------------")
