@@ -26,12 +26,29 @@ fdParam::fdParam(const std::shared_ptr<float2DReg> vel, const std::shared_ptr<pa
 
 	/***** Vertical axis *****/
 	_nz = _par->getInt("nz");
+	_freeSurface = _par->getInt("freeSurface", 0);
 	_zPadPlus = _par->getInt("zPadPlus");
 	_zPadMinus = _par->getInt("zPadMinus");
-	_zPad = std::min(_zPadMinus, _zPadPlus);
+	if (_freeSurface == 1){
+		_zPad = _zPadPlus;
+	}else{
+		_zPad = std::min(_zPadMinus, _zPadPlus);
+	}
 	_dz = _par->getFloat("dz",-1.0);
 	_oz = _vel->getHyper()->getAxis(1).o;
 	_zAxis = axis(_nz, _oz, _dz);
+
+	// Make sure the user (me) didn't forget to set the freeSurface flag to 1
+	if ( (_zPadMinus == 0 &&  _freeSurface !=1) || (_zPadMinus > 0 &&  _freeSurface == 1) ){
+		std::cout << "**** ERROR [fdParam]: zPadMinus and freeSurface flag are inconsistent ****" << std::endl;
+		throw std::runtime_error("");
+	}
+
+	// Check that nz is the same from _vel and from parfile (otherwise _vel2Dtw2 can go out of bounds)
+	if (_nz != _vel->getHyper()->getAxis(1).n) {
+		std::cout << "**** ERROR [fdParam]: nz from vel tag not consistent with nz from parfile ****" << std::endl;
+		throw std::runtime_error("");
+	}
 
 	/***** Horizontal axis *****/
 	_nx = _par->getInt("nx");
@@ -41,6 +58,12 @@ fdParam::fdParam(const std::shared_ptr<float2DReg> vel, const std::shared_ptr<pa
 	_dx = _par->getFloat("dx",-1.0);
 	_ox = _vel->getHyper()->getAxis(2).o;
 	_xAxis = axis(_nx, _ox, _dx);
+
+	// Check that nx is the same from _vel and from parfile (otherwise _vel2Dtw2 can go out of bounds)
+	if (_nx != _vel->getHyper()->getAxis(2).n) {
+		std::cout << "**** ERROR [fdParam]: nx from vel tag not consistent with nx from parfile ****" << std::endl;
+		throw std::runtime_error("");
+	}
 
 	/***** Extended axis *****/
 	_nExt = _par->getInt("nExt", 1);
@@ -56,9 +79,8 @@ fdParam::fdParam(const std::shared_ptr<float2DReg> vel, const std::shared_ptr<pa
 		_oExt = -_dx*_hExt;
 		_dExt = _dx;
 		_extAxis = axis(_nExt, _oExt, _dExt);
-	}
-	else {
-        // Extended axis #1
+	} else{
+		// Extended axis #1
 		_oExt = 0.0;
 		_dExt = 1.0;
 		_extAxis = axis(_nExt, _oExt, _dExt);

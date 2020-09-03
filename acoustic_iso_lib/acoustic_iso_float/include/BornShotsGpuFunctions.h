@@ -8,12 +8,28 @@ void initBornGpu(float dz, float dx, int nz, int nx, int nts, float dts, int sub
 void allocateBornShotsGpu(float *vel2Dtw2, float *reflectivityScale, int iGpu, int iGpuId);
 void deallocateBornShotsGpu(int iGpu, int iGpuId);
 
-/************************************** Born FWD ****************************************/
+/******************************************************************************/
+/****************************** Born forward **********************************/
+/******************************************************************************/
+
+/********************************** Normal ************************************/
 void BornShotsFwdGpu(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *scatWavefield, int iGpu, int iGpuId);
 void BornShotsFwdGpuWavefield(float *model, float *dataRegDts, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefieldDts, float *scatWavefieldDts, int iGpu, int iGpuId);
 
-/************************************** Born ADJ ****************************************/
+/****************************** Free surface **********************************/
+void BornShotsFwdFsGpu(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *scatWavefield, int iGpu, int iGpuId);
+void BornShotsFwdFsGpuWavefield(float *model, float *dataRegDts, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefieldDts, float *scatWavefieldDts, int iGpu, int iGpuId);
+
+/******************************************************************************/
+/****************************** Born adjoint **********************************/
+/******************************************************************************/
+
+/********************************** Normal ************************************/
 void BornShotsAdjGpu(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *recWavefield, int iGpu, int iGpuId);
 void BornShotsAdjGpuWavefield(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *recWavefield, int iGpu, int iGpuId);
+
+/******************************** Free surface ********************************/
+void BornShotsAdjFsGpu(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *recWavefield, int iGpu, int iGpuId);
+void BornShotsAdjFsGpuWavefield(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *recWavefield, int iGpu, int iGpuId);
 
 #endif

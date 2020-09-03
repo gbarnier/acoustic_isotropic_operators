@@ -17,6 +17,7 @@
 /************************************* DEVICE DECLARATION *******************************/
 // Device function
 __device__ int min4(int v1,int v2,int v3,int v4){return min2(min2(v1,v2),min2(v3,v4));}
+__device__ int min3(int v1,int v2,int v3){return min2(min2(v1,v2),v3);} // For the free surface damping
 
 // Constant memory variables
 __constant__ float dev_zCoeff[COEFF_SIZE]; // 10th-order Laplacian coefficients on Device

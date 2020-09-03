@@ -50,10 +50,20 @@ void nonlinearPropGpu::forward(const bool add, const std::shared_ptr<float2DReg>
 	_timeInterp->forward(false, modelRegDts, modelRegDtw);
 
 	/* Propagate */
-	if (_saveWavefield == 0) {
-		propShotsFwdGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
-    } else {
-		propShotsFwdGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+	// No free surface
+	if (_fdParam->_freeSurface == 0){
+		if (_saveWavefield == 0) {
+			propShotsFwdGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+    	} else {
+			propShotsFwdGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+		}
+	// Free surface
+	} else {
+		if (_saveWavefield == 0) {
+			propShotsFwdFsGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+    	} else {
+			propShotsFwdFsGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+		}
 	}
 
 	/* Interpolate to irregular grid */
@@ -74,10 +84,18 @@ void nonlinearPropGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model
 	_receivers->adjoint(false, dataRegDts, data);
 
 	/* Propagate */
-	if (_saveWavefield == 0) {
-		propShotsAdjGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+	if (_fdParam->_freeSurface == 0){
+		if (_saveWavefield == 0) {
+			propShotsAdjGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+		} else {
+			propShotsAdjGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+		}
 	} else {
-		propShotsAdjGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+		if (_saveWavefield == 0) {
+			propShotsAdjFsGpu(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+		} else{
+			propShotsAdjFsGpuWavefield(modelRegDtw->getVals(), dataRegDts->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _wavefield->getVals(), _iGpu, _iGpuId);
+		}
 	}
 
 	/* Scale adjoint wavefield */

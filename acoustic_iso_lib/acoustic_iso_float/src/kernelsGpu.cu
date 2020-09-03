@@ -218,6 +218,26 @@ __global__ void dampCosineEdge(float *dev_p1, float *dev_p2) {
 	}
 }
 
+__global__ void dampCosineEdgeFs(float *dev_p1, float *dev_p2) {
+
+	int izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+	int ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+	int iGlobal = dev_nz * ixGlobal + izGlobal; // 1D array index for the model on the global memory
+
+	// Compute distance to the closest edge of model
+	int distToEdge = min2(ixGlobal-FAT, dev_nz-izGlobal-1-FAT);
+	distToEdge = min2(distToEdge, dev_nx-ixGlobal-1-FAT);
+	if (distToEdge < dev_minPad){
+
+		// Compute damping coefficient
+		float damp = dev_cosDampingCoeff[distToEdge];
+
+		// Apply damping
+		dev_p1[iGlobal] *= damp;
+		dev_p2[iGlobal] *= damp;
+	}
+}
+
 /****************************************************************************************/
 /************************************** Scaling *****************************************/
 /****************************************************************************************/
@@ -517,6 +537,21 @@ __global__ void stepFwdGpu(float *dev_o, float *dev_c, float *dev_n, float *dev_
 				   +  shared_c[ixLocal][izLocal] + shared_c[ixLocal][izLocal] - dev_o[iGlobal];
 }
 
+/* Forward stepper (no damping) */
+__global__ void setFsConditionFwdGpu(float *dev_c) {
+
+	// Global coordinates for the slowest axis
+	long long ixGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Coordinate on x-axis
+	long long iGlobal = ixGlobal * dev_nz; // Global coordinate
+
+	dev_c[iGlobal+FAT] = 0.0; // Set the value of the pressure field to zero at the free surface
+	dev_c[iGlobal] = -dev_c[iGlobal+2*FAT];
+	dev_c[iGlobal+1] = -dev_c[iGlobal+2*FAT-1];
+	dev_c[iGlobal+2] = -dev_c[iGlobal+2*FAT-2];
+	dev_c[iGlobal+3] = -dev_c[iGlobal+2*FAT-3];
+	dev_c[iGlobal+4] = -dev_c[iGlobal+2*FAT-4];
+}
+
 /****************************************************************************************/
 /*********************************** Adjoint steppers ***********************************/
 /****************************************************************************************/
@@ -558,4 +593,134 @@ __global__ void stepAdjGpu(float *dev_o, float *dev_c, float *dev_n, float *dev_
 				   +  dev_xCoeff[4] * ( shared_c[ixLocal+4][izLocal] + shared_c[ixLocal-4][izLocal] )
 				   +  dev_xCoeff[5] * ( shared_c[ixLocal+5][izLocal] + shared_c[ixLocal-5][izLocal] ) )
 				   +  dev_c[iGlobal] + dev_c[iGlobal] - dev_n[iGlobal];
+}
+
+/* Adjoint stepper (no damping) */
+__global__ void stepAdjFsGpu(float *dev_o, float *dev_c, float *dev_n, float *dev_vel2Dtw2) {
+
+	__shared__ float shared_c[BLOCK_SIZE+2*FAT][BLOCK_SIZE+2*FAT]; // Allocate shared memory
+	int izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+	int ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+	int izLocal = FAT + threadIdx.x; // z-coordinate on the shared grid
+	int ixLocal = FAT + threadIdx.y; // z-coordinate on the shared grid
+	int iGlobal = dev_nz * ixGlobal + izGlobal; // 1D array index for the model on the global memory
+
+	// Copy current slice from global memory to shared memory
+	shared_c[ixLocal][izLocal] = dev_c[iGlobal] * dev_vel2Dtw2[iGlobal];
+
+	// Copy current slice from global memory to shared -- edges ("halo")
+	if (threadIdx.y < FAT) {
+		shared_c[ixLocal-FAT][izLocal] = dev_c[iGlobal-dev_nz*FAT] * dev_vel2Dtw2[iGlobal-dev_nz*FAT]; // Left side
+		shared_c[ixLocal+BLOCK_SIZE][izLocal] = dev_c[iGlobal+dev_nz*BLOCK_SIZE] * dev_vel2Dtw2[iGlobal+dev_nz*BLOCK_SIZE]; // Right side
+	}
+	if (threadIdx.x < FAT) {
+		shared_c[ixLocal][izLocal-FAT] = dev_c[iGlobal-FAT] * dev_vel2Dtw2[iGlobal-FAT]; // Up
+		shared_c[ixLocal][izLocal+BLOCK_SIZE] = dev_c[iGlobal+BLOCK_SIZE] * dev_vel2Dtw2[iGlobal+BLOCK_SIZE]; // Down
+	}
+	__syncthreads(); // Synchronise all threads within each block
+
+	if (izGlobal == 6){
+		dev_o[iGlobal] =  ( dev_zCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_zCoeff[1] * ( shared_c[ixLocal][izLocal-1] + shared_c[ixLocal][izLocal+1] )
+					   +  dev_zCoeff[2] * ( shared_c[ixLocal][izLocal-2] + shared_c[ixLocal][izLocal+2] )
+					   +  dev_zCoeff[3] * ( shared_c[ixLocal][izLocal-3] + shared_c[ixLocal][izLocal+3] )
+					   +  dev_zCoeff[4] * ( shared_c[ixLocal][izLocal-4] + shared_c[ixLocal][izLocal+4] )
+					   +  dev_zCoeff[5] * ( shared_c[ixLocal][izLocal-5] + shared_c[ixLocal][izLocal+5] )
+
+					   // Free surface conditions
+					   - dev_zCoeff[2] * shared_c[ixLocal][izLocal]
+					   - dev_zCoeff[3] * shared_c[ixLocal][izLocal+1]
+					   - dev_zCoeff[4] * shared_c[ixLocal][izLocal+2]
+					   - dev_zCoeff[5] * shared_c[ixLocal][izLocal+3]
+
+					   +  dev_xCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_xCoeff[1] * ( shared_c[ixLocal+1][izLocal] + shared_c[ixLocal-1][izLocal] )
+					   +  dev_xCoeff[2] * ( shared_c[ixLocal+2][izLocal] + shared_c[ixLocal-2][izLocal] )
+					   +  dev_xCoeff[3] * ( shared_c[ixLocal+3][izLocal] + shared_c[ixLocal-3][izLocal] )
+					   +  dev_xCoeff[4] * ( shared_c[ixLocal+4][izLocal] + shared_c[ixLocal-4][izLocal] )
+					   +  dev_xCoeff[5] * ( shared_c[ixLocal+5][izLocal] + shared_c[ixLocal-5][izLocal] ) )
+					   +  dev_c[iGlobal] + dev_c[iGlobal] - dev_n[iGlobal];
+}
+	else if (izGlobal == 7){
+
+		dev_o[iGlobal] =  ( dev_zCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_zCoeff[1] * ( shared_c[ixLocal][izLocal-1] + shared_c[ixLocal][izLocal+1] )
+					   +  dev_zCoeff[2] * ( shared_c[ixLocal][izLocal-2] + shared_c[ixLocal][izLocal+2] )
+					   +  dev_zCoeff[3] * ( shared_c[ixLocal][izLocal-3] + shared_c[ixLocal][izLocal+3] )
+					   +  dev_zCoeff[4] * ( shared_c[ixLocal][izLocal-4] + shared_c[ixLocal][izLocal+4] )
+					   +  dev_zCoeff[5] * ( shared_c[ixLocal][izLocal-5] + shared_c[ixLocal][izLocal+5] )
+
+					   // Free surface conditions
+					   - dev_zCoeff[3] * shared_c[ixLocal][izLocal-1]
+					   - dev_zCoeff[4] * shared_c[ixLocal][izLocal]
+					   - dev_zCoeff[5] * shared_c[ixLocal][izLocal+1]
+
+					   +  dev_xCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_xCoeff[1] * ( shared_c[ixLocal+1][izLocal] + shared_c[ixLocal-1][izLocal] )
+					   +  dev_xCoeff[2] * ( shared_c[ixLocal+2][izLocal] + shared_c[ixLocal-2][izLocal] )
+					   +  dev_xCoeff[3] * ( shared_c[ixLocal+3][izLocal] + shared_c[ixLocal-3][izLocal] )
+					   +  dev_xCoeff[4] * ( shared_c[ixLocal+4][izLocal] + shared_c[ixLocal-4][izLocal] )
+					   +  dev_xCoeff[5] * ( shared_c[ixLocal+5][izLocal] + shared_c[ixLocal-5][izLocal] ) )
+					   +  dev_c[iGlobal] + dev_c[iGlobal] - dev_n[iGlobal];
+
+	}
+	else if (izGlobal == 8){
+
+		dev_o[iGlobal] =  ( dev_zCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_zCoeff[1] * ( shared_c[ixLocal][izLocal-1] + shared_c[ixLocal][izLocal+1] )
+					   +  dev_zCoeff[2] * ( shared_c[ixLocal][izLocal-2] + shared_c[ixLocal][izLocal+2] )
+					   +  dev_zCoeff[3] * ( shared_c[ixLocal][izLocal-3] + shared_c[ixLocal][izLocal+3] )
+					   +  dev_zCoeff[4] * ( shared_c[ixLocal][izLocal-4] + shared_c[ixLocal][izLocal+4] )
+					   +  dev_zCoeff[5] * ( shared_c[ixLocal][izLocal-5] + shared_c[ixLocal][izLocal+5] )
+
+					   // Free surface conditions
+					   - dev_zCoeff[4] * shared_c[ixLocal][izLocal-2]
+					   - dev_zCoeff[5] * shared_c[ixLocal][izLocal-1]
+
+					   +  dev_xCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_xCoeff[1] * ( shared_c[ixLocal+1][izLocal] + shared_c[ixLocal-1][izLocal] )
+					   +  dev_xCoeff[2] * ( shared_c[ixLocal+2][izLocal] + shared_c[ixLocal-2][izLocal] )
+					   +  dev_xCoeff[3] * ( shared_c[ixLocal+3][izLocal] + shared_c[ixLocal-3][izLocal] )
+					   +  dev_xCoeff[4] * ( shared_c[ixLocal+4][izLocal] + shared_c[ixLocal-4][izLocal] )
+					   +  dev_xCoeff[5] * ( shared_c[ixLocal+5][izLocal] + shared_c[ixLocal-5][izLocal] ) )
+					   +  dev_c[iGlobal] + dev_c[iGlobal] - dev_n[iGlobal];
+
+	}
+	else if (izGlobal == 9){
+
+		dev_o[iGlobal] =  ( dev_zCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_zCoeff[1] * ( shared_c[ixLocal][izLocal-1] + shared_c[ixLocal][izLocal+1] )
+					   +  dev_zCoeff[2] * ( shared_c[ixLocal][izLocal-2] + shared_c[ixLocal][izLocal+2] )
+					   +  dev_zCoeff[3] * ( shared_c[ixLocal][izLocal-3] + shared_c[ixLocal][izLocal+3] )
+					   +  dev_zCoeff[4] * ( shared_c[ixLocal][izLocal-4] + shared_c[ixLocal][izLocal+4] )
+					   +  dev_zCoeff[5] * ( shared_c[ixLocal][izLocal-5] + shared_c[ixLocal][izLocal+5] )
+
+					   // Free surface conditions
+					   - dev_zCoeff[5] * shared_c[ixLocal][izLocal-3]
+
+					   +  dev_xCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_xCoeff[1] * ( shared_c[ixLocal+1][izLocal] + shared_c[ixLocal-1][izLocal] )
+					   +  dev_xCoeff[2] * ( shared_c[ixLocal+2][izLocal] + shared_c[ixLocal-2][izLocal] )
+					   +  dev_xCoeff[3] * ( shared_c[ixLocal+3][izLocal] + shared_c[ixLocal-3][izLocal] )
+					   +  dev_xCoeff[4] * ( shared_c[ixLocal+4][izLocal] + shared_c[ixLocal-4][izLocal] )
+					   +  dev_xCoeff[5] * ( shared_c[ixLocal+5][izLocal] + shared_c[ixLocal-5][izLocal] ) )
+					   +  dev_c[iGlobal] + dev_c[iGlobal] - dev_n[iGlobal];
+
+	}
+	if (izGlobal > 9){
+
+		dev_o[iGlobal] =  ( dev_zCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_zCoeff[1] * ( shared_c[ixLocal][izLocal-1] + shared_c[ixLocal][izLocal+1] )
+					   +  dev_zCoeff[2] * ( shared_c[ixLocal][izLocal-2] + shared_c[ixLocal][izLocal+2] )
+					   +  dev_zCoeff[3] * ( shared_c[ixLocal][izLocal-3] + shared_c[ixLocal][izLocal+3] )
+					   +  dev_zCoeff[4] * ( shared_c[ixLocal][izLocal-4] + shared_c[ixLocal][izLocal+4] )
+					   +  dev_zCoeff[5] * ( shared_c[ixLocal][izLocal-5] + shared_c[ixLocal][izLocal+5] )
+					   +  dev_xCoeff[0] * shared_c[ixLocal][izLocal]
+					   +  dev_xCoeff[1] * ( shared_c[ixLocal+1][izLocal] + shared_c[ixLocal-1][izLocal] )
+					   +  dev_xCoeff[2] * ( shared_c[ixLocal+2][izLocal] + shared_c[ixLocal-2][izLocal] )
+					   +  dev_xCoeff[3] * ( shared_c[ixLocal+3][izLocal] + shared_c[ixLocal-3][izLocal] )
+					   +  dev_xCoeff[4] * ( shared_c[ixLocal+4][izLocal] + shared_c[ixLocal-4][izLocal] )
+					   +  dev_xCoeff[5] * ( shared_c[ixLocal+5][izLocal] + shared_c[ixLocal-5][izLocal] ) )
+					   +  dev_c[iGlobal] + dev_c[iGlobal] - dev_n[iGlobal];
+	}
 }
