@@ -243,7 +243,6 @@ void nonlinearPropShotsGpu::forwardWavefield(const bool add, const std::shared_p
 
 		// Get the wavefield
 		if (iShot == _wavefieldShotNumber) {
-			std::cout << "Getting wavefield" << std::endl;
 			_wavefield = propObjectVector[iGpu]->getWavefield();
 		}
 	}

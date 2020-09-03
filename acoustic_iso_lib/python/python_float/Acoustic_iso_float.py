@@ -247,7 +247,7 @@ def buildSourceGeometry(parObject,vel,client=None):
 
 	#Reading source geometry from file
 	if(sourceGeomFile != "None"):
-		sourceGeomVectorNd = genericIO.defaultIO.getVector(sourceGeomFile).getNdArray()
+		sourceGeomVectorNd = genericIO.defaultIO.getVector(sourceGeomFile,ndims=2).getNdArray()
 		#Check for consistency between number of shots and provided coordinates
 		if(nShot != sourceGeomVectorNd.shape[1]):
 			raise ValueError("Number of shots (#shot=%s) not consistent with geometry file (#shots=%s)!"%(nShot,sourceGeomVectorNd.shape[1]))
@@ -304,7 +304,7 @@ def buildSourceGeometryDask(parObject,vel,hyper_vel,client):
 
 	#Reading source geometry from file
 	if(sourceGeomFile != "None"):
-		sourceGeomVectorNd = genericIO.defaultIO.getVector(sourceGeomFile).getNdArray()
+		sourceGeomVectorNd = genericIO.defaultIO.getVector(sourceGeomFile,ndims=2).getNdArray()
 		nShot = np.sum(List_Shots)
 		#Check for consistency between number of shots and provided coordinates
 		if(nShot != sourceGeomVectorNd.shape[1]):
@@ -408,7 +408,7 @@ def buildReceiversGeometry(parObject,vel,client=None):
 		# Second axis: receiver index !!! The number of receivers per shot must be constant
 		# Third axis: shot index
 
-		receiverGeomVectorNd = genericIO.defaultIO.getVector(receiverGeomFile).getNdArray()
+		receiverGeomVectorNd = genericIO.defaultIO.getVector(receiverGeomFile,ndims=3).getNdArray()
 
 		# Check consistency with total number of shots
 		nShot = parObject.getInt("nShot",-1)
@@ -479,7 +479,7 @@ def buildReceiversGeometryDask(parObject,vel,hyper_vel,client=None):
 		# Second axis: receiver index !!! The number of receivers per shot must be constant
 		# Third axis: shot index
 
-		receiverGeomVectorNd = genericIO.defaultIO.getVector(receiverGeomFile).getNdArray()
+		receiverGeomVectorNd = genericIO.defaultIO.getVector(receiverGeomFile,ndims=3).getNdArray()
 
 		# Check consistency with total number of shots
 		List_Shots = parObject.getInts("nShot",0)

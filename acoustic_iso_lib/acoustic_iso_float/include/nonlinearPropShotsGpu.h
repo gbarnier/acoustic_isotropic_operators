@@ -45,7 +45,6 @@ class nonlinearPropShotsGpu : public Operator<SEP::float3DReg, SEP::float3DReg> 
 
 		/* Accessor */
 		std::shared_ptr<SEP::float3DReg> getWavefield(){
-			std::cout << "Returning wavefield" << std::endl;
 			return _wavefield;
 		}
 
