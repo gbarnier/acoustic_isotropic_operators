@@ -134,7 +134,7 @@ def inversionVpInit(args):
 	if (bufferSizeLin==0): bufferSizeLin=None
 	iterSamplingLin=par.getInt("iterSamplingLin",10)
 	restartFolderLin=par.getString("restartFolderLin","None")
-	flushMemoryLin=par.getInt("flushMemoryLin",0)
+	flushMemoryLin=par.getInt("flushMemoryLin",1)
 
 	# Inversion components to save
 	saveObjLin=par.getInt("saveObjLin",1)
