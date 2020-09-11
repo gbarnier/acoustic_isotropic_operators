@@ -286,8 +286,10 @@ if __name__ == '__main__':
 
 	############################# Stepper ######################################
 	if (stepper == "parabolic"):
+		nlSolver.stepper=Stepper.ParabolicStep()
 		nlSolver.stepper.eval_parab=True
 	elif (stepper == "linear"):
+		nlSolver.stepper=Stepper.ParabolicStep()
 		nlSolver.stepper.eval_parab=False
 	elif (stepper == "parabolicNew"):
 		print("New parabolic stepper")
