@@ -30,10 +30,10 @@ def inversionFullWRIInit(args):
 
 	# Recording parameters
 	bufferSize_p=par.getInt("bufferSize_p",3)
-	if (bufferSize_p==0): bufferSize_p=None
+	# if (bufferSize_p==0): bufferSize_p=None
 	iterSampling_p=par.getInt("iterSampling_p",1000)
 	bufferSize_m=par.getInt("bufferSize_m",3)
-	if (bufferSize_m==0): bufferSize_m=None
+	# if (bufferSize_m==0): bufferSize_m=None
 	iterSampling_m=par.getInt("iterSampling_m",20)
 	restartFolder=par.getString("restartFolder","None")
 	flushMemory=par.getInt("flushMemory",1)
@@ -72,7 +72,7 @@ def inversionInit(args):
 
 	# Recording parameters
 	bufferSize=par.getInt("bufferSize",3)
-	if (bufferSize==0): bufferSize=None
+	# if (bufferSize==0): bufferSize=None
 	iterSampling=par.getInt("iterSampling",10)
 	restartFolder=par.getString("restartFolder","None")
 	flushMemory=par.getInt("flushMemory",1)
@@ -109,7 +109,7 @@ def inversionVpInit(args):
 
 	# Recording parameters
 	bufferSizeNl=par.getInt("bufferSizeNl",1)
-	if (bufferSizeNl==0): bufferSizeNl=None
+	# if (bufferSizeNl==0): bufferSizeNl=None
 	iterSamplingNl=par.getInt("iterSamplingNl",1)
 	restartFolderNl=par.getString("restartFolderNl","None")
 	flushMemoryNl=par.getInt("flushMemoryNl",1)
@@ -131,7 +131,7 @@ def inversionVpInit(args):
 
 	# Recording parameters
 	bufferSizeLin=par.getInt("bufferSizeLin",3)
-	if (bufferSizeLin==0): bufferSizeLin=None
+	# if (bufferSizeLin==0): bufferSizeLin=None
 	iterSamplingLin=par.getInt("iterSamplingLin",10)
 	restartFolderLin=par.getString("restartFolderLin","None")
 	flushMemoryLin=par.getInt("flushMemoryLin",1)
