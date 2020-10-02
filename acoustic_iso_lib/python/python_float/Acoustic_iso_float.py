@@ -432,7 +432,7 @@ def buildReceiversGeometry(parObject,vel,client=None):
 				receiversVector.append(deviceGpu(zCoordFloat.getCpp(), xCoordFloat.getCpp(), vel.getCpp(), nts, dipole, zDipoleShift, xDipoleShift))
 
 		# Generate receiver axis
-		receiverAxis=Hypercube.axis(n=nReceiverPerShot,o=0.0,d=1.0)
+		receiverAxis=Hypercube.axis(n=nReceiverPerShot,o=1.0,d=1.0)
 
 	else:
 
