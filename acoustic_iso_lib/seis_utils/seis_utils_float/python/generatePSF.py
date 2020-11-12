@@ -47,7 +47,6 @@ if __name__ == "__main__":
 	nx_nopad = nx - 2*fat - xPadMinus - xPadPlus
 	PSF1_pos = np.linspace(zPadMinus+fat, zPadMinus+fat+nz_nopad, nPSF1).astype(np.int)
 	PSF2_pos = np.linspace(xPadMinus+fat, xPadMinus+fat+nx_nopad, nPSF2).astype(np.int)
-	print(PSF1_pos)
 	if nPSF3 != 1:
 		PSF3_pos = np.linspace(0, nExt-1, nPSF3).astype(np.int)
 		zz,xx,ee = np.meshgrid(PSF1_pos,PSF2_pos,PSF3_pos)
