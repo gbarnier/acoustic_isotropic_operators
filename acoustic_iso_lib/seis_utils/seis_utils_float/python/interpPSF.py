@@ -49,12 +49,21 @@ if __name__ == "__main__":
 	nx_nopad = nx - 2*fat - xPadMinus - xPadPlus
 	PSF1_pos = np.linspace(zPadMinus+fat, zPadMinus+fat+nz_nopad, nPSF1).astype(np.int)
 	PSF2_pos = np.linspace(xPadMinus+fat, xPadMinus+fat+nx_nopad, nPSF2).astype(np.int)
-	PSF3_pos = np.linspace(0, nExt-1, nPSF3).astype(np.int)
-	ee,xx,zz = np.meshgrid(PSF3_pos,PSF2_pos,PSF1_pos,indexing='ij',sparse=True)
-	PSF_values = modelNd[ee,xx,zz]
-	points = (PSF3_pos,PSF2_pos,PSF1_pos)
-	ee1,xx1,zz1 = np.meshgrid(np.arange(nExt),np.arange(nx),np.arange(nz),indexing='ij',sparse=True)
-	modelMesh = (ee1,xx1,zz1)
+	if nExt == 1:
+		xx,zz = np.meshgrid(PSF2_pos,PSF1_pos,indexing='ij',sparse=True)
+		PSF_values = modelNd[0,xx,zz]
+		points = (PSF2_pos,PSF1_pos)
+		xx1,zz1 = np.meshgrid(np.arange(nx),np.arange(nz),indexing='ij',sparse=True)
+		modelMesh = (xx1,zz1)
+	else:
+		PSF3_pos = np.linspace(0, nExt-1, nPSF3).astype(np.int)
+		ee,xx,zz = np.meshgrid(PSF3_pos,PSF2_pos,PSF1_pos,indexing='ij',sparse=True)
+		PSF_values = modelNd[ee,xx,zz]
+		points = (PSF3_pos,PSF2_pos,PSF1_pos)
+		ee1,xx1,zz1 = np.meshgrid(np.arange(nExt),np.arange(nx),np.arange(nz),indexing='ij',sparse=True)
+		modelMesh = (ee1,xx1,zz1)
+	# Removing negative values
+	PSF_values[PSF_values < 0.0] = 0.0
 
 	f = RegularGridInterpolator(points, PSF_values, bounds_error=False)
 	modelNd[:] = f(modelMesh)
