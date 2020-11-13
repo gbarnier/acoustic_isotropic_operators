@@ -59,7 +59,7 @@ class off2ang2D(Op.Operator):
 		d_tmp = np.zeros(shape_data, dtype=complex)
 
 		# Fourier transform of input ADCIGs
-		m_kz = np.fft.rfft(m_arr, axis=-1, norm="ortho")
+		m_kz = np.fft.rfft(m_arr, n=self.nz, axis=-1, norm="ortho")
 
 		# Precomputing scaling factor for transformation
 		h_axis = np.linspace(self.oh,self.oh+(self.nh-1)*self.dh,self.nh)
@@ -72,7 +72,7 @@ class off2ang2D(Op.Operator):
 
 		for h_idx,off_val in enumerate(h_axis):
 			d_tmp[h_idx,:,:] = np.sum(m_kz[:,:,:]*np.exp(exp_arg*off_val),axis=0)
-		d_arr += np.real(np.fft.irfft(d_tmp, axis=-1, norm="ortho"))
+		d_arr += np.real(np.fft.irfft(d_tmp, n=self.nz, axis=-1, norm="ortho"))
 		return
 
 	def adjoint(self,add,model,data):
@@ -94,7 +94,7 @@ class off2ang2D(Op.Operator):
 		m_tmp = np.zeros(shape_model, dtype=complex)
 
 		# Fourier transform of input ODCIGs
-		d_kz = np.fft.rfft(d_arr, axis=-1, norm="ortho")
+		d_kz = np.fft.rfft(d_arr, n=self.nz, axis=-1, norm="ortho")
 
 		# Precomputing scaling factor for transformation
 		h_axis = np.linspace(self.oh,self.oh+(self.nh-1)*self.dh,self.nh)
@@ -112,5 +112,5 @@ class off2ang2D(Op.Operator):
 				m_tmp[g_idx,:,:] = scale*np.sum(d_kz[:,:,:]*np.exp(exp_arg*np.tan(g_val))*mask[g_idx,:],axis=0)
 			else:
 				m_tmp[g_idx,:,:] = scale*np.sum(d_kz[:,:,:]*np.exp(exp_arg*np.tan(g_val)),axis=0)
-		m_arr += np.real(np.fft.irfft(m_tmp, axis=-1, norm="ortho"))
+		m_arr += np.real(np.fft.irfft(m_tmp, n=self.nz, axis=-1, norm="ortho"))
 		return
