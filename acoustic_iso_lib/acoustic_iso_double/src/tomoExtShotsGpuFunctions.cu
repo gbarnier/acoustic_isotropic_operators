@@ -352,7 +352,7 @@ void deallocateTomoExtShotsGpu(int iGpu, int iGpuId){
 
 /********************************** Normal ************************************/
 // Time-lag extension
-void tomoTimeShotsFwdGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int iGpuId, int saveWavefield){
+void tomoTimeShotsFwdGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int sloth, int iGpu, int iGpuId, int saveWavefield){
 
 	// We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
@@ -402,9 +402,13 @@ void tomoTimeShotsFwdGpu(double *model, double *dataRegDts, double *extReflectiv
 	cuda_call(cudaMemcpy(dev_modelTomo[iGpu], model, host_nz*host_nx*sizeof(double), cudaMemcpyHostToDevice));
 	kernel_exec(scaleReflectivity<<<dimGrid, dimBlock>>>(dev_modelTomo[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
 
-	// Scale reflectivity (both scaling at the same time)
 	cuda_call(cudaMemcpy(dev_extReflectivity[iGpu], extReflectivity, host_nz*host_nx*host_nExt*sizeof(double), cudaMemcpyHostToDevice));
-	kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+	// Scale reflectivity (both scaling at the same time)
+	if (sloth == 0){
+		kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+	} else {
+		kernel_exec(scaleReflectivitySlothExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_vel2Dtw2[iGpu]));
+	}
 
 	// Allocate data and initialize to zero
 	cuda_call(cudaMalloc((void**) &dev_dataRegDts[iGpu], nReceiversReg*host_nts*sizeof(double)));
@@ -790,7 +794,7 @@ void tomoOffsetShotsFwdFsGpu(double *model, double *dataRegDts, double *extRefle
 
 /********************************** Normal ************************************/
 // Time-lag extension
-void tomoTimeShotsAdjGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int iGpuId, int saveWavefield){
+void tomoTimeShotsAdjGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int sloth, int iGpu, int iGpuId, int saveWavefield){
 
 	// We assume the source wavelet/signals already contain(s) the second time derivative
 	// Set device number
@@ -853,7 +857,11 @@ void tomoTimeShotsAdjGpu(double *model, double *dataRegDts, double *extReflectiv
 
 	// Scale reflectivity (both scalings at the same time)
 	cuda_call(cudaMemcpy(dev_extReflectivity[iGpu], extReflectivity, host_nz*host_nx*host_nExt*sizeof(double), cudaMemcpyHostToDevice));
-	kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+	if (sloth == 0){
+		kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+	} else{
+		kernel_exec(scaleReflectivitySlothExt<<<dimGridExt, dimBlockExt>>>(dev_extReflectivity[iGpu], dev_vel2Dtw2[iGpu]));
+	}
 
 	// Initialize model for both legs
     cuda_call(cudaMemset(dev_modelTomo[iGpu], 0, host_nz*host_nx*sizeof(double)));

@@ -13,7 +13,7 @@ void deallocateTomoExtShotsGpu(int iGpu, int iGpuId);
 /******************************************************************************/
 
 /********************************** Normal ************************************/
-void tomoTimeShotsFwdGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int iGpuId, int saveWavefield);
+void tomoTimeShotsFwdGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int sloth, int iGpu, int iGpuId, int saveWavefield);
 void tomoOffsetShotsFwdGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int iGpuId, int saveWavefield);
 
 /********************************** Adjoint ************************************/
@@ -25,7 +25,7 @@ void tomoOffsetShotsFwdFsGpu(double *model, double *dataRegDts, double *extRefle
 /******************************************************************************/
 
 /********************************** Normal ************************************/
-void tomoTimeShotsAdjGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int iGpuId, int saveWavefield);
+void tomoTimeShotsAdjGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int sloth, int iGpu, int iGpuId, int saveWavefield);
 void tomoOffsetShotsAdjGpu(double *model, double *dataRegDts, double *extReflectivity, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *tomoSrcWavefieldDt2, double *tomoSecWavefield1, double *tomoSecWavefield2, int iGpu, int iGpuId, int saveWavefield);
 
 /********************************** Adjoint ************************************/

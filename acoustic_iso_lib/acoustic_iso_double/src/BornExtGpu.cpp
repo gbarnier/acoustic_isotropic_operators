@@ -11,6 +11,8 @@ BornExtGpu::BornExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<pa
 	_iGpu = iGpu;
 	_nGpu = nGpu;
 	_iGpuId = iGpuId;
+	_sloth = par->getInt("sloth");
+	// std::cout << "BornExt, sloth = " << _sloth << std::endl;
 
 	// Initialize GPU
 	initBornExtGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _fdParam->_nExt, _nGpu, _iGpuId, iGpuAlloc);
@@ -39,7 +41,7 @@ void BornExtGpu::forward(const bool add, const std::shared_ptr<double3DReg> mode
 		/* Time-lag extension */
 		if (_fdParam->_extension == "time") {
 			if (_saveWavefield == 0){
-				BornTimeShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _iGpu, _iGpuId);
+				BornTimeShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _sloth, _iGpu, _iGpuId);
 			} else {
 				BornTimeShotsFwdGpuWavefield(model->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _iGpu, _iGpuId);
 			}
@@ -93,7 +95,7 @@ void BornExtGpu::adjoint(const bool add, std::shared_ptr<double3DReg> model, con
 		/* Launch time-extended Born adjoint */
 		if (_fdParam->_extension == "time") {
 			if (_saveWavefield == 0){
-				BornTimeShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _iGpu, _iGpuId);
+				BornTimeShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _sloth, _iGpu, _iGpuId);
 			} else {
 				BornTimeShotsAdjGpuWavefield(modelTemp->getVals(), dataRegDts->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield->getVals(), _iGpu, _iGpuId);
 			}

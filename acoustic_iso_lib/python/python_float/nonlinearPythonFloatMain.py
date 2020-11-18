@@ -63,10 +63,10 @@ if __name__ == '__main__':
 			wfldFile=parObject.getString("wfldFile","noWfldFile")
 			if (wfldFile == "noWfldFile"):
 				raise IOError("**** ERROR: User specified saveWavefield=1 but did not provide wavefield file name (wfldFile)****")
+
 			# Run Nonlinear forward with wavefield saving
-			print("here 1")
 			nonlinearOp.forwardWavefield(False,modelFloat,dataFloat)
-			print("here 2")
+
 			# Save wavefield to disk
 			wavefieldFloat = nonlinearOp.getWfld()
 			wavefieldFloat.writeVec(wfldFile)

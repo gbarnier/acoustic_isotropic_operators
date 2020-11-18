@@ -22,6 +22,7 @@ class BornExtGpu : public seismicOperator2D<SEP::double3DReg, SEP::double2DReg> 
 
 	private:
 
+		int _sloth;
 		std::shared_ptr<double3DReg> _srcWavefield, _secWavefield;
 
 	public:

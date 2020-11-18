@@ -12,6 +12,7 @@ tomoExtGpu::tomoExtGpu(std::shared_ptr<SEP::float2DReg> vel, std::shared_ptr<par
 	_iGpu = iGpu;
 	_nGpu = nGpu;
 	_iGpuId = iGpuId;
+	_sloth = par->getInt("sloth", 0);
 
 	setAllWavefields(par->getInt("saveWavefield", 0));
 
@@ -45,7 +46,7 @@ void tomoExtGpu::forward(const bool add, const std::shared_ptr<float2DReg> model
 	if (_fdParam->_freeSurface == 0){
 
 		if (_fdParam->_extension == "time"){
-			tomoTimeShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
+			tomoTimeShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _sloth, _iGpu, _iGpuId, _saveWavefield);
 		}
 		if (_fdParam->_extension == "offset"){
 			tomoOffsetShotsFwdGpu(model->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
@@ -79,12 +80,12 @@ void tomoExtGpu::adjoint(const bool add, std::shared_ptr<float2DReg> model, cons
 	if (_fdParam->_freeSurface == 0){
 
 		if (_fdParam->_extension == "time"){
-			tomoTimeShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
+			tomoTimeShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _sloth, _iGpu, _iGpuId, _saveWavefield);
 		}
 		if (_fdParam->_extension == "offset"){
 			tomoOffsetShotsAdjGpu(modelTemp->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);
 		}
-	// Free surface		
+	// Free surface
 	} else {
 		if (_fdParam->_extension == "time"){
 			tomoTimeShotsAdjFsGpu(modelTemp->getVals(), dataRegDts->getVals(), _reflectivityExt->getVals(), _sourcesSignalsRegDtwDt2->getVals(), _sourcesPositionReg, _nSourcesReg, _receiversPositionReg, _nReceiversReg, _srcWavefield->getVals(), _secWavefield1->getVals(), _secWavefield2->getVals(), _iGpu, _iGpuId, _saveWavefield);

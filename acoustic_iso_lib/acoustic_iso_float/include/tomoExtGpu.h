@@ -22,6 +22,7 @@ class tomoExtGpu : public seismicOperator2D<SEP::float2DReg, SEP::float2DReg> {
 
 	private:
 
+		int _sloth;
 		int _leg1, _leg2;
 		std::shared_ptr<float3DReg> _srcWavefield, _secWavefield1, _secWavefield2;
 		std::shared_ptr<float3DReg> _reflectivityExt;

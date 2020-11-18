@@ -132,14 +132,14 @@ def inversionVpInit(args):
 	# Recording parameters
 	bufferSizeLin=par.getInt("bufferSizeLin",3)
 	# if (bufferSizeLin==0): bufferSizeLin=None
-	iterSamplingLin=par.getInt("iterSamplingLin",10)
+	iterSamplingLin=par.getInt("iterSamplingLin",20)
 	restartFolderLin=par.getString("restartFolderLin","None")
 	flushMemoryLin=par.getInt("flushMemoryLin",1)
 
 	# Inversion components to save
 	saveObjLin=par.getInt("saveObjLin",1)
-	saveResLin=par.getInt("saveResLin",1)
-	saveGradLin=par.getInt("saveGradLin",1)
+	saveResLin=par.getInt("saveResLin",0)
+	saveGradLin=par.getInt("saveGradLin",0)
 	saveModelLin=par.getInt("saveModelLin",1)
 
 	# Info

@@ -63,13 +63,13 @@ if __name__ == '__main__':
 	######################### Create salt mask #################################
 	############################################################################
 	# Coordinates of box containing the salt body
-	zMaxSalt=11.200 # [km]
-	zMaxCarapace=3.500 # [km]
-	xMinSalt=2.800 # [km]
-	xMaxSalt=23.500 # [km]
-	velMinSalt=4440 # [m/s]
-	velMaxSalt=4500 # [m/s]
-	velMinCarapace=4000 # [km]
+	zMaxSalt=7.000 # [km]
+	# zMaxCarapace=3.500 # [km]
+	xMinSalt=0 # [km]
+	xMaxSalt=22.500 # [km]
+	velMinSalt=4.440 # [m/s]
+	velMaxSalt=4.600 # [m/s]
+	# velMinCarapace=4000 # [km]
 
 	# Salt mask
 	maskSalt=SepVector.getSepVector(model.getHyper())
@@ -84,11 +84,11 @@ if __name__ == '__main__':
 			for iz in range(nz):
 				z=oz+(iz-1)*dz
 				if (z>zWaterBottom and z<zMaxSalt): # Check if you are inside the box
-					# Case 1: you are in the depth range where there are carapaces
-					if (z<zMaxCarapace and modelNp[ix][iz]>velMinCarapace):
-						maskSaltNp[ix][iz]=1
+					# # Case 1: you are in the depth range where there are carapaces
+					# if (z<zMaxCarapace and modelNp[ix][iz]>velMinCarapace):
+					# 	maskSaltNp[ix][iz]=1
 					# Case 2: you are below the depth range where there are carapaces
-					if (z>zMaxCarapace and modelNp[ix][iz]>velMinSalt and modelNp[ix][iz]<velMaxSalt):
+					if (modelNp[ix][iz]>velMinSalt and modelNp[ix][iz]<velMaxSalt):
 						maskSaltNp[ix][iz]=1
 
 	# Write mask

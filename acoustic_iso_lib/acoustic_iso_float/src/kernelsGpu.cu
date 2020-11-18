@@ -288,6 +288,20 @@ __global__ void scaleReflectivityExt(float *dev_model, float *dev_reflectivitySc
 	}
 }
 
+// Apply finite difference scaling and "-" sign for the slowness squared perturbation
+__global__ void scaleReflectivitySlothExt(float *dev_model, float *dev_vel2Dtw2In){
+
+	int iz = FAT + blockIdx.x * BLOCK_SIZE_EXT + threadIdx.x; // z-coordinate
+	int ix = FAT + blockIdx.y * BLOCK_SIZE_EXT + threadIdx.y; // x-coordinate
+	int iSpace = dev_nz * ix + iz;
+	int iExt = blockIdx.z * BLOCK_SIZE_EXT + threadIdx.z; // Extended axis coordinate
+	int iModel = iExt * dev_nz * dev_nx + iSpace; // 1D array index for the model on the global memory
+
+	if (iExt < dev_nExt){
+		dev_model[iModel] *= (-1.0*dev_vel2Dtw2In[iSpace]);
+	}
+}
+
 /****************************************************************************************/
 /************************************** Imaging *****************************************/
 /****************************************************************************************/

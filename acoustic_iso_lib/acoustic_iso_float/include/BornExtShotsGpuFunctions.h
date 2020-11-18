@@ -15,7 +15,7 @@ void deallocateBornExtShotsGpu(int iGpu, int iGpuId);
 /********************************** Normal ************************************/
 
 // Time-lags
-void BornTimeShotsFwdGpu(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *scatWavefield, int iGpu, int iGpuId);
+void BornTimeShotsFwdGpu(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *scatWavefield, int sloth, int iGpu, int iGpuId);
 void BornTimeShotsFwdGpuWavefield(float *model, float *dataRegDts, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefieldDts, float *scatWavefieldDts, int iGpu, int iGpuId);
 
 // Subsurface offsets
@@ -37,7 +37,7 @@ void BornOffsetShotsFwdFsGpuWavefield(float *model, float *dataRegDts, float *so
 
 /********************************** Normal ************************************/
 // Time-lags
-void BornTimeShotsAdjGpu(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *recWavefield, int iGpu, int iGpuId);
+void BornTimeShotsAdjGpu(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *recWavefield, int sloth, int iGpu, int iGpuId);
 void BornTimeShotsAdjGpuWavefield(float *model, float *dataRegDtw, float *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, float *srcWavefield, float *recWavefield, int iGpu, int iGpuId);
 
 // Subsurface offsets

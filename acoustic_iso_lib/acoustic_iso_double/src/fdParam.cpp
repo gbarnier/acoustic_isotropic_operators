@@ -94,7 +94,7 @@ fdParam::fdParam(const std::shared_ptr<double2DReg> vel, const std::shared_ptr<p
 	_saveWavefield = _par->getInt("saveWavefield", 0);
 	_alphaCos = par->getFloat("alphaCos", 0.99);
 	_errorTolerance = par->getFloat("errorTolerance", 0.000001);
-
+	
 	/***** QC *****/
 	if( not checkParfileConsistencySpace(_vel, "Velocity file")){
 		throw std::runtime_error("");

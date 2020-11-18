@@ -267,7 +267,7 @@ void deallocateBornExtShotsGpu(int iGpu, int iGpuId){
 /********************************** Normal ************************************/
 
 // Time-lags
-void BornTimeShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *scatWavefieldDts, int iGpu, int iGpuId){
+void BornTimeShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *scatWavefieldDts, int sloth, int iGpu, int iGpuId){
 
 	// We assume the source wavelet/signals already contain the second time derivative
 	// Set device number
@@ -352,7 +352,11 @@ void BornTimeShotsFwdGpu(double *model, double *dataRegDts, double *sourcesSigna
 
 	// Apply both scalings to reflectivity:
 	// First: -2.0 * 1/v^3 * v^2 * dtw^2
-	kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_modelBornExt[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+	if (sloth == 0){
+		kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_modelBornExt[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+	} else {
+		kernel_exec(scaleReflectivitySlothExt<<<dimGridExt, dimBlockExt>>>(dev_modelBornExt[iGpu], dev_vel2Dtw2[iGpu]));
+	}
 
 	// Compute secondary source for first coarse time index (its = 0)
 	int its = 0;
@@ -1519,7 +1523,7 @@ void BornOffsetShotsFwdFsGpuWavefield(double *model, double *dataRegDts, double 
 
 /********************************** Normal ************************************/
 // Time-lags
-void BornTimeShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *recWavefieldDts, int iGpu, int iGpuId){
+void BornTimeShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSignals, int *sourcesPositionReg, int nSourcesReg, int *receiversPositionReg, int nReceiversReg, double *srcWavefieldDts, double *recWavefieldDts, int sloth, int iGpu, int iGpuId){
 
 	// We assume the source wavelet/signals already contain the second time derivative
 	// Set device number
@@ -1656,7 +1660,11 @@ void BornTimeShotsAdjGpu(double *model, double *dataRegDts, double *sourcesSigna
 	kernel_exec(imagingTimeAdjGpu<<<dimGridExt, dimBlockExt>>>(dev_modelBornExt[iGpu], dev_ssRight[iGpu], dev_BornSrcWavefield[iGpu], its, iExtMin, iExtMax)); // Imaging kernel for its=0
 
   	// Scale model for finite-difference and secondary source coefficient
-	kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_modelBornExt[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+	if (sloth==0){
+		kernel_exec(scaleReflectivityExt<<<dimGridExt, dimBlockExt>>>(dev_modelBornExt[iGpu], dev_reflectivityScale[iGpu], dev_vel2Dtw2[iGpu]));
+	} else {
+		kernel_exec(scaleReflectivitySlothExt<<<dimGridExt, dimBlockExt>>>(dev_modelBornExt[iGpu], dev_vel2Dtw2[iGpu]));
+	}
 
 	// Copy model back to host
 	cuda_call(cudaMemcpy(model, dev_modelBornExt[iGpu], host_nz*host_nx*host_nExt*sizeof(double), cudaMemcpyDeviceToHost));
