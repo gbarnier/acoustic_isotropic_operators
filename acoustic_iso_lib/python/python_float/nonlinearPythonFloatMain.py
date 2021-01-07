@@ -96,7 +96,20 @@ if __name__ == '__main__':
 			dataFloat = Acoustic_iso_float.chunkData(dataFloat,nonlinearOp.getRange())
 
 		# Apply adjoint
-		nonlinearOp.adjoint(False,modelFloatLocal,dataFloat)
+		if (parObject.getInt("saveWavefield",0) == 1):
+			wfldFile=parObject.getString("wfldFile","noWfldFile")
+			if (wfldFile == "noWfldFile"):
+				raise IOError("**** ERROR: User specified saveWavefield=1 but did not provide wavefield file name (wfldFile)****")
+
+			# Run Nonlinear forward with wavefield saving
+			nonlinearOp.adjointWavefield(False,modelFloat,dataFloat)
+
+			# Save wavefield to disk
+			wavefieldFloat = nonlinearOp.getWfld()
+			wavefieldFloat.writeVec(wfldFile)
+		else:
+			# Apply forward
+			nonlinearOp.adjoint(False,modelFloatLocal,dataFloat)
 
 		# Write model
 		modelFile=parObject.getString("model","noModelFile")
