@@ -191,9 +191,9 @@ void BornExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<dou
 
 		// Change the wavefield flag
 		if (iShot == _wavefieldShotNumber) {
-			std::cout << "Allocating wavefields" << std::endl;
+			// std::cout << "Allocating wavefields" << std::endl;
 			BornExtGpuObjectVector[iGpu]->setAllWavefields(1);
-			std::cout << "Done allocating wavefields" << std::endl;
+			// std::cout << "Done allocating wavefields" << std::endl;
 		} else {
 			BornExtGpuObjectVector[iGpu]->setAllWavefields(0);
 		}
@@ -228,7 +228,7 @@ void BornExtShotsGpu::forwardWavefield(const bool add, const std::shared_ptr<dou
 
 		// Get the wavefields
 		if (iShot == _wavefieldShotNumber) {
-			std::cout << "Finished propagation of shot# " << iShot << ", computed by gpu# " << iGpu << " - saving wavefield" << std::endl;
+			// std::cout << "Finished propagation of shot# " << iShot << ", computed by gpu# " << iGpu << " - saving wavefield" << std::endl;
 			_srcWavefield = BornExtGpuObjectVector[iGpu]->getSrcWavefield();
 			_secWavefield = BornExtGpuObjectVector[iGpu]->getSecWavefield();
 		}
@@ -425,7 +425,7 @@ void BornExtShotsGpu::adjointWavefield(const bool add, std::shared_ptr<double3DR
 
 		// Get the wavefields
 		if (iShot == _wavefieldShotNumber) {
-			std::cout << "Finished propagation of shot# " << iShot << ", computed by gpu# " << iGpu << " - saving wavefield" << std::endl;
+			// std::cout << "Finished propagation of shot# " << iShot << ", computed by gpu# " << iGpu << " - saving wavefield" << std::endl;
 			_srcWavefield = BornExtObjectVector[iGpu]->getSrcWavefield();
 			_secWavefield = BornExtObjectVector[iGpu]->getSecWavefield();
 		}

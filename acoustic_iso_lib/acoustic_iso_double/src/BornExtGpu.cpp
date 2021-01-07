@@ -6,13 +6,11 @@ BornExtGpu::BornExtGpu(std::shared_ptr<SEP::double2DReg> vel, std::shared_ptr<pa
 	_fdParam = std::make_shared<fdParam>(vel, par);
 	_timeInterp = std::make_shared<interpTimeLinTbb>(_fdParam->_nts, _fdParam->_dts, _fdParam->_ots, _fdParam->_sub);
 	_secTimeDer = std::make_shared<secondTimeDerivative>(_fdParam->_nts, _fdParam->_dts);
-	// setWavefield(par->getInt("saveWavefield"));
 	setAllWavefields(par->getInt("saveWavefield", 0));
 	_iGpu = iGpu;
 	_nGpu = nGpu;
 	_iGpuId = iGpuId;
 	_sloth = par->getInt("sloth");
-	// std::cout << "BornExt, sloth = " << _sloth << std::endl;
 
 	// Initialize GPU
 	initBornExtGpu(_fdParam->_dz, _fdParam->_dx, _fdParam->_nz, _fdParam->_nx, _fdParam->_nts, _fdParam->_dts, _fdParam->_sub, _fdParam->_minPad, _fdParam->_blockSize, _fdParam->_alphaCos, _fdParam->_nExt, _nGpu, _iGpuId, iGpuAlloc);
