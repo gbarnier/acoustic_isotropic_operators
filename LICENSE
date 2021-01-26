@@ -1,3 +1,16 @@
+#################################################################################################################################
+#################################################################################################################################
+#################################################################################################################################
+THIS SOFTWARE IS FREELY AVAILABLE, BUT WE EXPECT THAT ALL PUBLICATIONS DESCRIBING WORK USING THIS SOFTWARE OR PART OF IT, OR ALL COMMERCIAL PRODUCTS USING IT, QUOTE AT LEAST ONE OF THE REFERENCES GIVEN BELOW AND, IF POSSIBLE, THE GITHUB REPOSITORY.
+
+REFERENCES LIST:
+
+E. Biondi, G. Barnier, R. G. Clapp, F. Picetti, and S. Farris, 2021, An object-oriented optimization framework for large-scale inverse problems: Computers&Geosciences (submitted)
+
+#################################################################################################################################
+#################################################################################################################################
+#################################################################################################################################
+
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
     * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
