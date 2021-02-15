@@ -37,7 +37,7 @@ conda install -c conda-forge flex
 conda install -c anaconda boost
 conda install -c statiskit libboost-dev
 conda install -c conda-forge tbb tbb-devel
-conda install -c conda-forge pybind11
+#conda install -c conda-forge pybind11
 conda install dask
 conda install -c conda-forge dask-jobqueue
 conda install -c anaconda scipy
@@ -51,7 +51,7 @@ conda install numba
 # The code installation requires that C++, CC, FORTRAN, and CUDA compilers are installed (e.g., g++, gcc, gfortran, nvcc)
 
 # Installing GPU-wave-equation library
-git clone http://zapad.Stanford.EDU/barnier/acoustic_isotropic_operators.git
+git clone https://github.com/gbarnier/acoustic_isotropic_operators.git 
 cd acoustic_isotropic_operators
 git submodule update --init --recursive -- acoustic_iso_lib/external/ioLibs
 git submodule update --init --recursive -- acoustic_iso_lib/external/pySolver
