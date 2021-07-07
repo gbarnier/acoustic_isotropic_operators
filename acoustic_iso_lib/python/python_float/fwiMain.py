@@ -19,6 +19,7 @@ import phaseOnlyXkModule
 import pyOperator as pyOp
 from pyNonLinearSolver import NLCGsolver as NLCG
 from pyNonLinearSolver import LBFGSsolver as LBFGS
+from pyNonLinearSolver import LBFGSBsolver as LBFGSB
 from pyNonLinearSolver import MCMCsolver as MCMC
 import pyProblem as Prblm
 import pyStepper as Stepper
@@ -263,6 +264,11 @@ if __name__ == '__main__':
 		if m_steps < 0:
 			m_steps = None
 		nlSolver = LBFGS(stop, m_steps=m_steps, H0=H0_Op, logger=inv_log)
+	elif solverType == "lbfgsb":
+		m_steps = parObject.getInt("m_steps", 10)
+		if m_steps < 0:
+			m_steps = None
+		nlSolver = LBFGSB(stop, m_steps=m_steps, logger=inv_log)
 	# Steepest descent
 	elif solverType == "sd":
 		nlSolver = NLCG(stop,beta_type="SD",logger=inv_log)
