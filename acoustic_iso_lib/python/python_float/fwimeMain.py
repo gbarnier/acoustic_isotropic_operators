@@ -20,6 +20,7 @@ import pyOperator as pyOp
 from pyLinearSolver import LCGsolver as LCG
 from pyNonLinearSolver import NLCGsolver as NLCG
 from pyNonLinearSolver import LBFGSsolver as LBFGS
+from pyNonLinearSolver import LBFGSBsolver as LBFGSB
 import pyProblem as Prblm
 from sys_util import logger
 import inversionUtils
@@ -294,6 +295,11 @@ if __name__ == '__main__':
 			H0_Op = pyOp.DiagonalOp(illumination)
 		# By default, Lbfgs uses MT stepper
 		nlSolver=LBFGS(stopNl, H0=H0_Op, logger=logger(logFileNl))
+	elif solverType == "lbfgsb":
+		m_steps = parObject.getInt("m_steps", 10)
+		if m_steps < 0:
+			m_steps = None
+		nlSolver = LBFGSB(stopNl, m_steps=m_steps, logger=logger(logFileNl))
 	else:
 		print("**** ERROR: User did not provide a nonlinear solver type ****")
 		quit()
